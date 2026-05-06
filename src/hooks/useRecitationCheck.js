@@ -55,7 +55,7 @@ const LIVE_DEBOUNCE = 350;
  *   stopAndCheck()  — stop recognition and run final comparison
  *   clearResults()  — reset for next turn
  */
-export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accuracyThreshold = 100, ayahWordCounts = []) => {
+export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accuracyThreshold = 100, ayahWordCounts = [], onStuck = null) => {
   const SR = getSpeechRecognition();
   const isSupported = !!SR;
 
@@ -75,12 +75,39 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accurac
   const workerRef = useRef(null);          // Web Worker instance
   const pendingIdRef = useRef(0);          // track latest request to discard stale results
 
+  // Stuck detection refs
+  const stuckTimerRef = useRef(null);
+  const latestVerseStatsRef = useRef(null);
+  const onStuckRef = useRef(onStuck);
+
   // Keep refs in sync without restarting recognition
   useEffect(() => { expectedRef.current = expectedText; }, [expectedText]);
   useEffect(() => { onAutoFinishRef.current = onAutoFinish; }, [onAutoFinish]);
+  useEffect(() => { onStuckRef.current = onStuck; }, [onStuck]);
   useEffect(() => { thresholdRef.current = accuracyThreshold; }, [accuracyThreshold]);
   const ayahWordCountsRef = useRef(ayahWordCounts);
   useEffect(() => { ayahWordCountsRef.current = ayahWordCounts; }, [ayahWordCounts]);
+
+  const clearStuckTimer = useCallback(() => {
+    if (stuckTimerRef.current) {
+      clearTimeout(stuckTimerRef.current);
+      stuckTimerRef.current = null;
+    }
+  }, []);
+
+  const restartStuckTimer = useCallback(() => {
+    clearStuckTimer();
+    stuckTimerRef.current = setTimeout(() => {
+      const stats = latestVerseStatsRef.current;
+      if (stats && stats.length > 0 && onStuckRef.current) {
+        // Find the first verse that is either pending or below threshold
+        const stuckIndex = stats.findIndex(stat => stat.hasPending || stat.accuracy < thresholdRef.current);
+        if (stuckIndex !== -1) {
+          onStuckRef.current(stuckIndex);
+        }
+      }
+    }, 2500); // 2.5 seconds of silence before playing hint
+  }, [clearStuckTimer]);
 
   // ── Web Worker lifecycle ────────────────────────────────────────────────────
   useEffect(() => {
@@ -101,12 +128,14 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accurac
         //   3. The last word of the chunk must be correct (smart anchor)
         if (payload && payload.results && payload.results.length > 0) {
           const { verseStats } = payload;
+          latestVerseStatsRef.current = verseStats;
           
           const allPassed = verseStats && verseStats.length > 0 && verseStats.every(stat => 
             stat.accuracy >= thresholdRef.current && !stat.hasPending
           );
 
           if (allPassed) {
+            clearStuckTimer();
             if (silenceTimerRef.current) {
                clearTimeout(silenceTimerRef.current);
                silenceTimerRef.current = null;
@@ -188,11 +217,14 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accurac
 
       // Dispatch to worker for live word overlay — non-blocking
       if (combined) dispatchLiveCompare(combined);
+      
+      restartStuckTimer();
     };
 
     // ── Silence detection ──────────────────────────────────────────────────
     recognition.onspeechstart = () => {
       hasSpeechRef.current = true;
+      clearStuckTimer();
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = null;
@@ -201,6 +233,7 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accurac
 
     recognition.onspeechend = () => {
       hasSpeechRef.current = true;
+      restartStuckTimer();
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = null;
@@ -230,6 +263,7 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accurac
   // ── Stop & run final comparison ─────────────────────────────────────────────
   const stopAndCheck = useCallback(() => {
     if (!recognitionRef.current) return;
+    clearStuckTimer();
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
@@ -254,7 +288,7 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accurac
         ayahWordCounts: ayahWordCountsRef.current,
       });
     }
-  }, []);
+  }, [clearStuckTimer]);
 
   // ── Clear for next turn ────────────────────────────────────────────────────
   const clearResults = useCallback(() => {
@@ -263,7 +297,8 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accurac
     setLiveResults(null);
     setTranscript('');
     transcriptRef.current = '';
-  }, []);
+    clearStuckTimer();
+  }, [clearStuckTimer]);
 
   // ── Auto-start / stop based on isActive ────────────────────────────────────
   useEffect(() => {
@@ -274,6 +309,7 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accurac
         recognitionRef.current._shouldRestart = false;
         try { recognitionRef.current.stop(); } catch (_) {}
       }
+      clearStuckTimer();
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       setIsListening(false);
       // Clear live results when turn switches away from user (prevents lingering state)
@@ -284,6 +320,7 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accurac
   // ── Cleanup on unmount ────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
+      clearStuckTimer();
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       if (liveDebounceRef.current) clearTimeout(liveDebounceRef.current);
       if (recognitionRef.current) {

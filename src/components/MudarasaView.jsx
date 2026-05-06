@@ -422,26 +422,6 @@ const MudarasaView = ({
                   }
                 }
 
-                if (ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9) {
-                  const cleanText = displayText.replace(/\uFEFF/g, '');
-                  const bismillahEnd = "ٱلرَّحِيمِ";
-                  const plainBismillahEnd = "بسم الله الرحمن الرحيم";
-
-                  const bIndex = cleanText.indexOf(bismillahEnd);
-                  const bIndexPlain = cleanText.indexOf(plainBismillahEnd);
-
-                  const originalWordCount = cleanText.split(/\s+/).filter(Boolean).length;
-                  let stripped = false;
-
-                  if (bIndex !== -1 && bIndex < 50) {
-                    displayText = cleanText.substring(bIndex + bismillahEnd.length).trim();
-                    displayText = displayText.replace(/^[\u200B-\u200D\uFEFF]+/, '');
-                    stripped = true;
-                  } else if (bIndexPlain !== -1 && bIndexPlain < 50) {
-                    displayText = cleanText.substring(bIndexPlain + plainBismillahEnd.length).trim();
-                    stripped = true;
-                  }
-                }
 
                 const isFirstAyahOfSurah = ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9;
                 
@@ -556,20 +536,7 @@ const MudarasaView = ({
                   <>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.6rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                        <button
-                          onClick={handleRetryVerse}
-                          style={{
-                            padding: '0.45rem 0.85rem', borderRadius: '999px', cursor: 'pointer',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            background: 'rgba(255,255,255,0.04)',
-                            color: 'var(--text-secondary)', fontWeight: '700', fontSize: '0.65rem',
-                            textTransform: 'uppercase', letterSpacing: '0.08em',
-                            display: 'flex', alignItems: 'center', gap: '0.35rem',
-                            transition: 'all 0.2s',
-                          }}
-                        >
-                          <RefreshCw size={10} /> Retry Verse
-                        </button>
+
                         <button
                           onClick={handleMarkSatisfied}
                           style={{
@@ -583,20 +550,6 @@ const MudarasaView = ({
                           }}
                         >
                           <CheckCircle2 size={10} /> Mark Satisfied
-                        </button>
-                        <button
-                          onClick={handleManualFinish}
-                          style={{
-                            padding: '0.45rem 0.85rem', borderRadius: '999px', cursor: 'pointer',
-                            border: '1px solid rgba(212,175,55,0.3)',
-                            background: 'rgba(212,175,55,0.08)',
-                            color: 'var(--accent-gold)', fontWeight: '800', fontSize: '0.65rem',
-                            textTransform: 'uppercase', letterSpacing: '0.08em',
-                            display: 'flex', alignItems: 'center', gap: '0.35rem',
-                            transition: 'all 0.2s',
-                          }}
-                        >
-                          <FastForward size={10} /> Finish Early
                         </button>
                       </div>
                       {activeStat && (

@@ -4,7 +4,7 @@ import MudarasaView from './MudarasaView';
 import QuizEngine from './QuizEngine';
 import { useMic } from '../hooks/useMic';
 import { useRecitationCheck } from '../hooks/useRecitationCheck';
-import { removeTashkeel, normalizeArabic, expandMuqattaat } from '../utils/quranUtils';
+import { removeTashkeel, normalizeArabic, expandMuqattaat, getAudioUrl } from '../utils/quranUtils';
 
 /**
  * Build expected text for the current chunk by concatenating ayah texts.
@@ -121,6 +121,34 @@ const PartnerSession = ({
   // We use a ref to avoid stale closure issues with the initial callback registration.
   const handleFinishedTurnRef = useRef(null);
 
+  const isHintPlayingRef = useRef(false);
+
+  const clearResultsRef = useRef(null);
+
+  const handleStuck = useCallback((stuckIndex) => {
+    if (isHintPlayingRef.current || !activeChunkSlice[stuckIndex]) return;
+    
+    isHintPlayingRef.current = true;
+    const ayah = activeChunkSlice[stuckIndex];
+    // Default reciter is 'ar.alafasy' or user's selected reciter
+    const reciter = params.reciter || 'ar.alafasy';
+    const url = getAudioUrl(ayah.number, reciter, ayah.surahNumber, ayah.numberInSurah);
+    
+    const hintAudio = new Audio(url);
+    hintAudio.play().catch(e => console.warn('Failed to play hint audio:', e));
+    
+
+    // Play for exactly 3 seconds (3000ms) then pause
+    setTimeout(() => {
+      try {
+        hintAudio.pause();
+        hintAudio.currentTime = 0;
+      } catch (e) {}
+      // Reset after another 2 seconds to prevent spamming hints if they are still stuck
+      setTimeout(() => { isHintPlayingRef.current = false; }, 2000);
+    }, 3000);
+  }, [activeChunkSlice, params.reciter, retryStartIndex]);
+
   // STT error detection — active during user's recitation turn only
   // onAutoFinish fires automatically after silence, triggering handleFinishedTurn
   const sttActive = !!(enableErrorDetection && subView === 'mudarasa' && turn === 'user');
@@ -138,7 +166,12 @@ const PartnerSession = ({
     useCallback(() => { handleFinishedTurnRef.current?.(); }, []),
     params.errorThreshold ?? 55,
     ayahWordCounts,
+    handleStuck
   );
+
+  useEffect(() => {
+    clearResultsRef.current = clearResults;
+  }, [clearResults]);
 
   const autoAdvanceTimerRef = useRef(null);
 

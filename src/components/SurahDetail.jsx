@@ -63,7 +63,7 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 100);
 
-    audio.play().catch(() => {});
+    audio.play().catch(() => { });
     audio.onended = () => {
       if (shouldPlayRef.current) playFromIndex(idx + 1);
     };
@@ -154,16 +154,16 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
   // Feature 3: Auto-scroll to last-read ayah when returning to a surah, or top if no last-read
   useEffect(() => {
     if (!selectedSurah || !quranAr || !quranEn) return;
-    
+
     // Check if we've already scrolled for this surah
     if (scrollEffectRef.current.surahNumber === selectedSurah.number && scrollEffectRef.current.hasScrolled) {
       return;
     }
-    
+
     // Update the ref to track this surah
     scrollEffectRef.current.surahNumber = selectedSurah.number;
     scrollEffectRef.current.hasScrolled = true;
-    
+
     if (lastRead && lastRead.surahNumber === selectedSurah.number) {
       // Scroll to last-read ayah - wait for DOM to render
       const attemptScroll = (attempts = 0) => {
@@ -250,124 +250,124 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
       style={{ display: 'flex', flexDirection: 'column', gap: '2rem', cursor: 'grab' }}
       whileTap={{ cursor: 'grabbing' }}
     >
-       {/* Header — hides on scroll down, shows on scroll up */}
-       <motion.div
-         animate={{ y: headerVisible ? 0 : -80, opacity: headerVisible ? 1 : 0 }}
-         transition={{ duration: 0.25, ease: 'easeInOut' }}
-         style={{ position: 'sticky', top: '0.5rem', zIndex: 90 }}
-       >
-       <div className="glass-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem' }}>
-         <button onClick={() => setView('list')} className="icon-btn">
-           <ChevronLeft size={18} />
-         </button>
-         <div style={{ textAlign: 'center' }}>
-           <h2 style={{ fontSize: '1rem', fontWeight: '800', color: 'var(--text-primary)' }}>{selectedSurah.englishName}</h2>
-         </div>
-         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-           {/* Play Surah button */}
-           <button
-             onClick={handlePlaySurah}
-             className="icon-btn"
-             title="Play Surah"
-             style={{ color: isPlaying ? 'var(--accent-gold)' : 'var(--text-secondary)' }}
-           >
-             {isPlaying ? <Pause size={18} /> : <Play size={18} />}
-           </button>
-           {isSurahAudioDownloaded(selectedSurah.number) ? (
-             <button
-               onClick={() => deleteSurahAudio(selectedSurah.number)}
-               className="icon-btn"
-               title="Delete downloaded audio"
-               style={{ color: 'var(--text-secondary)' }}
-             >
-               <Trash2 size={18} />
-             </button>
-           ) : !downloadStatus.isDownloading && (
-             <button
-               onClick={() => downloadSurahAudio(selectedSurah.number)}
-               className="icon-btn"
-               title="Download audio for offline use"
-             >
-               <Download size={18} />
-             </button>
-           )}
-           {downloadStatus.isDownloading && (
-             <div className="icon-btn" style={{ position: 'relative' }}>
-               <Download size={18} style={{ opacity: 0.7 }} />
-               <div style={{
-                 position: 'absolute',
-                 top: '-8px',
-                 right: '-8px',
-                 background: 'var(--accent-gold)',
-                 color: 'white',
-                 borderRadius: '50%',
-                 padding: '2px 6px',
-                 fontSize: '0.7rem',
-                 minWidth: '18px',
-                 textAlign: 'center',
-               }}>
-                 {downloadStatus.progress}%
-               </div>
-             </div>
-           )}
-         </div>
-       </div>
-       </motion.div>
+      {/* Header — hides on scroll down, shows on scroll up */}
+      <motion.div
+        animate={{ y: headerVisible ? 0 : -80, opacity: headerVisible ? 1 : 0 }}
+        transition={{ duration: 0.25, ease: 'easeInOut' }}
+        style={{ position: 'sticky', top: '4.5rem', zIndex: 90 }}
+      >
+        <div className="glass-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem' }}>
+          <button onClick={() => setView('list')} className="icon-btn">
+            <ChevronLeft size={18} />
+          </button>
+          <div style={{ textAlign: 'center' }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: '800', color: 'var(--text-primary)' }}>{selectedSurah.englishName}</h2>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {/* Play Surah button */}
+            <button
+              onClick={handlePlaySurah}
+              className="icon-btn"
+              title="Play Surah"
+              style={{ color: isPlaying ? 'var(--accent-gold)' : 'var(--text-secondary)' }}
+            >
+              {isPlaying ? <Pause size={18} /> : <Play size={18} />}
+            </button>
+            {isSurahAudioDownloaded(selectedSurah.number) ? (
+              <button
+                onClick={() => deleteSurahAudio(selectedSurah.number)}
+                className="icon-btn"
+                title="Delete downloaded audio"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                <Trash2 size={18} />
+              </button>
+            ) : !downloadStatus.isDownloading && (
+              <button
+                onClick={() => downloadSurahAudio(selectedSurah.number)}
+                className="icon-btn"
+                title="Download audio for offline use"
+              >
+                <Download size={18} />
+              </button>
+            )}
+            {downloadStatus.isDownloading && (
+              <div className="icon-btn" style={{ position: 'relative' }}>
+                <Download size={18} style={{ opacity: 0.7 }} />
+                <div style={{
+                  position: 'absolute',
+                  top: '-8px',
+                  right: '-8px',
+                  background: 'var(--accent-gold)',
+                  color: 'white',
+                  borderRadius: '50%',
+                  padding: '2px 6px',
+                  fontSize: '0.7rem',
+                  minWidth: '18px',
+                  textAlign: 'center',
+                }}>
+                  {downloadStatus.progress}%
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
 
-       {/* Title + Session Button */}
-       <div style={{ textAlign: 'center', marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
-         <div style={{ position: 'relative' }}>
-           <h1 className="arabic-text" style={{ fontSize: '4rem', color: 'var(--text-primary)', marginBottom: '-0.5rem' }}>
-             {selectedSurah.name}
-           </h1>
-           <div style={{ height: '2px', width: '60%', background: 'linear-gradient(90deg, transparent, var(--accent-gold), transparent)', margin: '0 auto' }} />
-         </div>
-         {/* Download Status */}
-         {downloadStatus.message && (
-           <div style={{
-             background: downloadStatus.isDownloading ? 'rgba(30, 58, 138, 0.8)' : downloadStatus.error ? 'rgba(185, 28, 28, 0.8)' : 'rgba(16, 185, 129, 0.8)',
-             color: 'white',
-             padding: '0.5rem 1rem',
-             borderRadius: '9999px',
-             fontSize: '0.85rem',
-             display: 'flex',
-             alignItems: 'center',
-             gap: '0.5rem',
-             backdropFilter: 'blur(4px)',
-             border: `1px solid ${downloadStatus.isDownloading ? 'rgba(30, 58, 138, 0.6)' : downloadStatus.error ? 'rgba(185, 28, 28, 0.6)' : 'rgba(16, 185, 129, 0.6)'}`,
-           }}>
-             {downloadStatus.isDownloading && (
-               <div className="animate-pulse" style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(255,255,255,0.3)' }}></div>
-             )}
-             {!downloadStatus.isDownloading && !downloadStatus.error && (
-               <Download size={16} strokeWidth={1.5} />
-             )}
-             {downloadStatus.error && (
-               <span role="img" aria-label="error">⚠️</span>
-             )}
-             <span>{downloadStatus.message}</span>
-           </div>
-         )}
-         {waqarData && waqarData[selectedSurah.number] && (
-           <button
-             onClick={() => setView('mutashabihat-session')}
-             style={{
-               padding: '0.75rem 1.5rem',
-               background: 'rgba(212,175,55,0.08)',
-               border: '1px solid rgba(212,175,55,0.25)',
-               borderRadius: '1rem',
-               color: 'var(--accent-gold)',
-               display: 'flex', alignItems: 'center', gap: '0.6rem',
-               cursor: 'pointer', transition: 'all 0.2s',
-               boxShadow: '0 8px 24px -8px rgba(212,175,55,0.2)'
-             }}
-             className="hover-scale"
-           >
-             <Zap size={18} strokeWidth={2.5} />
-             <span style={{ fontSize: '0.75rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.15em' }}>Mutashabihat Session</span>
-           </button>
-         )}
-       </div>
+      {/* Title + Session Button */}
+      <div style={{ textAlign: 'center', marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
+        <div style={{ position: 'relative' }}>
+          <h1 className="arabic-text" style={{ fontSize: '4rem', color: 'var(--text-primary)', marginBottom: '-0.5rem' }}>
+            {selectedSurah.name}
+          </h1>
+          <div style={{ height: '2px', width: '60%', background: 'linear-gradient(90deg, transparent, var(--accent-gold), transparent)', margin: '0 auto' }} />
+        </div>
+        {/* Download Status */}
+        {downloadStatus.message && (
+          <div style={{
+            background: downloadStatus.isDownloading ? 'rgba(30, 58, 138, 0.8)' : downloadStatus.error ? 'rgba(185, 28, 28, 0.8)' : 'rgba(16, 185, 129, 0.8)',
+            color: 'white',
+            padding: '0.5rem 1rem',
+            borderRadius: '9999px',
+            fontSize: '0.85rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            backdropFilter: 'blur(4px)',
+            border: `1px solid ${downloadStatus.isDownloading ? 'rgba(30, 58, 138, 0.6)' : downloadStatus.error ? 'rgba(185, 28, 28, 0.6)' : 'rgba(16, 185, 129, 0.6)'}`,
+          }}>
+            {downloadStatus.isDownloading && (
+              <div className="animate-pulse" style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(255,255,255,0.3)' }}></div>
+            )}
+            {!downloadStatus.isDownloading && !downloadStatus.error && (
+              <Download size={16} strokeWidth={1.5} />
+            )}
+            {downloadStatus.error && (
+              <span role="img" aria-label="error">⚠️</span>
+            )}
+            <span>{downloadStatus.message}</span>
+          </div>
+        )}
+        {waqarData && waqarData[selectedSurah.number] && (
+          <button
+            onClick={() => setView('mutashabihat-session')}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: 'rgba(212,175,55,0.08)',
+              border: '1px solid rgba(212,175,55,0.25)',
+              borderRadius: '1rem',
+              color: 'var(--accent-gold)',
+              display: 'flex', alignItems: 'center', gap: '0.6rem',
+              cursor: 'pointer', transition: 'all 0.2s',
+              boxShadow: '0 8px 24px -8px rgba(212,175,55,0.2)'
+            }}
+            className="hover-scale"
+          >
+            <Zap size={18} strokeWidth={2.5} />
+            <span style={{ fontSize: '0.75rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.15em' }}>Mutashabihat Session</span>
+          </button>
+        )}
+      </div>
 
       {/* Ayahs List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem', maxWidth: '800px', margin: '0 auto', padding: '2rem 0 10rem' }}>
@@ -380,15 +380,6 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
 
         {arabicAyahs.map((ayah, idx) => {
           let displayText = ayah.text;
-          if (selectedSurah.number !== 1 && selectedSurah.number !== 9 && ayah.numberInSurah === 1) {
-            const cleanText = displayText.replace(/\uFEFF/g, '');
-            const bismillahEnd = "ٱلرَّحِيمِ";
-            const bIndex = cleanText.indexOf(bismillahEnd);
-            if (bIndex !== -1 && bIndex < 50) {
-              displayText = cleanText.substring(bIndex + bismillahEnd.length).trim();
-              displayText = displayText.replace(/^[\u200B-\u200D\uFEFF]+/, ''); // Clean leading zero-width chars
-            }
-          }
           const isActive = playingAyahIdx === idx;
 
           return (
@@ -452,59 +443,59 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
               backdropFilter: 'blur(20px)',
             }}
           >
-          <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {/* Ayah label + close */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.65rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                {selectedSurah.englishName}
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span style={{ fontSize: '0.65rem', fontWeight: '700', color: playingAyahIdx !== null ? 'var(--accent-gold)' : 'var(--text-muted)' }}>
-                  {playingAyahIdx !== null
-                    ? `Ayah ${arabicAyahs[playingAyahIdx]?.numberInSurah} of ${arabicAyahs.length}`
-                    : `${arabicAyahs.length} Ayahs`}
+            <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {/* Ayah label + close */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.65rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  {selectedSurah.englishName}
                 </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{ fontSize: '0.65rem', fontWeight: '700', color: playingAyahIdx !== null ? 'var(--accent-gold)' : 'var(--text-muted)' }}>
+                    {playingAyahIdx !== null
+                      ? `Ayah ${arabicAyahs[playingAyahIdx]?.numberInSurah} of ${arabicAyahs.length}`
+                      : `${arabicAyahs.length} Ayahs`}
+                  </span>
+                  <button
+                    onClick={handleClosePlayer}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.15rem', display: 'flex', alignItems: 'center' }}
+                    title="Close player"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Controls */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.5rem' }}>
                 <button
-                  onClick={handleClosePlayer}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.15rem', display: 'flex', alignItems: 'center' }}
-                  title="Close player"
+                  onClick={handlePrevAyah}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.5rem' }}
                 >
-                  <X size={14} />
+                  <SkipBack size={20} />
+                </button>
+
+                <button
+                  onClick={handlePlayPause}
+                  style={{
+                    width: '52px', height: '52px', borderRadius: '50%',
+                    background: 'var(--accent-gold)', border: 'none', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 4px 20px rgba(212,175,55,0.4)',
+                  }}
+                >
+                  {isPlaying
+                    ? <Pause size={22} color="#000" fill="#000" />
+                    : <Play size={22} color="#000" fill="#000" style={{ marginLeft: '2px' }} />}
+                </button>
+
+                <button
+                  onClick={handleNextAyah}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.5rem' }}
+                >
+                  <SkipForward size={20} />
                 </button>
               </div>
             </div>
-
-            {/* Controls */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.5rem' }}>
-              <button
-                onClick={handlePrevAyah}
-                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.5rem' }}
-              >
-                <SkipBack size={20} />
-              </button>
-
-              <button
-                onClick={handlePlayPause}
-                style={{
-                  width: '52px', height: '52px', borderRadius: '50%',
-                  background: 'var(--accent-gold)', border: 'none', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 4px 20px rgba(212,175,55,0.4)',
-                }}
-              >
-                {isPlaying
-                  ? <Pause size={22} color="#000" fill="#000" />
-                  : <Play size={22} color="#000" fill="#000" style={{ marginLeft: '2px' }} />}
-              </button>
-
-              <button
-                onClick={handleNextAyah}
-                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.5rem' }}
-              >
-                <SkipForward size={20} />
-              </button>
-            </div>
-          </div>
           </motion.div>
         )}
       </AnimatePresence>
