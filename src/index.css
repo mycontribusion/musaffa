@@ -5,27 +5,19 @@
   --bg-secondary: #0f172a;
   --bg-tertiary: #1e293b;
   --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
+  --text-secondary: #64748b;
   --accent-gold: #fbbf24;
   --accent-emerald: #10b981;
-  --glass: rgba(30, 41, 59, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.1);
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
+  --glass: rgba(15, 23, 42, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.05);
 }
 
 body {
   font-family: 'Inter', sans-serif;
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  line-height: 1.5;
-  overflow-x: hidden;
-  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
 .arabic {
@@ -35,62 +27,64 @@ body {
 
 .arabic-text {
   font-family: 'Scheherazade New', serif;
-  line-height: 2.2;
+  line-height: 2.5;
+  letter-spacing: 0.02em;
 }
 
-/* Glassmorphism */
+/* Minimalist Cards */
 .glass-card {
   background: var(--glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
   border: 1px solid var(--glass-border);
-  border-radius: 1.5rem;
-  transition: all 0.3s ease;
+  border-radius: 2rem;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-card:hover {
-  border-color: rgba(251, 191, 36, 0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(251, 191, 36, 0.2);
+  transform: translateY(-4px);
 }
 
-/* Animations */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+/* Typography Refinement */
+h1, h2, h3 {
+  letter-spacing: -0.02em;
 }
 
-.fade-in {
-  animation: fadeIn 0.5s ease forwards;
+.text-subtle {
+  color: var(--text-secondary);
+  font-weight: 400;
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--bg-primary);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--bg-tertiary);
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary);
-}
-
-/* Utilities */
+/* Spacious Container */
 .container {
-  max-width: 1200px;
+  max-width: 900px;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0 2rem;
 }
 
-.gradient-text {
-  background: linear-gradient(135deg, var(--accent-gold), #f59e0b);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+/* Bottom Nav Refinement */
+.bottom-nav {
+  background: rgba(2, 6, 23, 0.8);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--glass-border);
+}
+
+.nav-item {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.nav-item.active {
+  color: var(--accent-gold);
+}
+
+.nav-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  width: 4px;
+  height: 4px;
+  background: var(--accent-gold);
+  border-radius: 50%;
 }
