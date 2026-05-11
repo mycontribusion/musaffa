@@ -395,34 +395,49 @@ const App = () => {
                    </div>
                    {mudarasaTurn === 'user' && (
                      <div className="space-y-12 pt-12 border-t border-emerald-400/10">
-                       <div className="flex flex-col items-center gap-6">
+                       <div className="flex flex-col items-center gap-8">
                          <div className="relative">
-                            {/* PWA Resonating Sign - Enhanced */}
+                            {/* PWA Resonating Sign - Waveform & Pulsing Mic */}
                             <motion.div 
-                              className="absolute inset-0 bg-emerald-400/30 rounded-full blur-2xl"
-                              animate={{ scale: [1, 1 + (volume / 30), 1], opacity: [0.2, 0.5, 0.2] }}
-                              transition={{ duration: 0.15, repeat: Infinity }}
+                              className="absolute inset-0 bg-emerald-400/20 rounded-full blur-3xl"
+                              animate={{ 
+                                scale: [1, 1 + (volume / 25), 1],
+                                opacity: [0.3, 0.6, 0.3]
+                              }}
+                              transition={{ duration: 0.2 }}
                             />
-                            <motion.div 
-                              className="absolute inset-[-20px] border-2 border-emerald-400/20 rounded-full"
-                              animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.3, 0.1] }}
-                              transition={{ duration: 2, repeat: Infinity }}
-                            />
-                            <div className="relative w-24 h-24 bg-emerald-400/10 rounded-full flex items-center justify-center border border-emerald-400/40 shadow-xl shadow-emerald-400/10">
-                              <Mic className="text-emerald-400" size={40} />
+                            
+                            {/* Waveform Bars */}
+                            <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex items-end gap-1.5 h-16 w-48 justify-center">
+                              {[0.3, 0.5, 0.8, 1, 0.8, 0.5, 0.3, 0.6, 0.9, 0.7, 0.4].map((factor, i) => (
+                                <motion.div
+                                  key={i}
+                                  className="w-1.5 bg-emerald-400/80 rounded-full"
+                                  animate={{ 
+                                    height: `${Math.max(15, (volume * factor * 2))}%` 
+                                  }}
+                                  transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                                />
+                              ))}
                             </div>
+
+                            <motion.div 
+                              className="relative w-28 h-28 bg-emerald-400/10 rounded-full flex items-center justify-center border border-emerald-400/40 shadow-2xl shadow-emerald-400/20"
+                              animate={{ scale: 1 + (volume / 100) }}
+                              transition={{ duration: 0.1 }}
+                            >
+                              <Mic className="text-emerald-400" size={48} />
+                            </motion.div>
                          </div>
-                         <div className="space-y-2">
-                           <p className="text-emerald-400 font-bold uppercase tracking-[0.3em] text-[10px]">App is Listening...</p>
-                           <p className="text-slate-600 text-[10px] font-medium italic">Recite your part. Silence will trigger the App.</p>
+                         
+                         <div className="space-y-3 mt-12">
+                           <p className="text-emerald-400 font-bold uppercase tracking-[0.4em] text-[10px] animate-pulse">Recite Now</p>
+                           <p className="text-slate-600 text-[10px] font-medium max-w-[200px] mx-auto leading-relaxed">The App is tracking your voice. Stop for 15s to switch turns.</p>
                          </div>
-                       </div>
-                       <div className="flex flex-col items-center gap-6">
-                         <div className="flex gap-4">
-                           <button onClick={() => logStumble(chunks[currentChunkIndex][0])} className="px-6 py-3 border border-red-400/20 text-red-400 rounded-xl font-bold uppercase tracking-widest text-[8px]">Stumbled</button>
-                           <button onClick={handleNextTurn} className="px-10 py-4 bg-white text-slate-950 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-lg">Finished</button>
+                         <div className="flex gap-4 pt-4">
+                           <button onClick={() => logStumble(chunks[currentChunkIndex][0])} className="px-6 py-3 border border-red-400/20 text-red-400 rounded-xl font-bold uppercase tracking-widest text-[8px]">I Stumbled</button>
+                           <button onClick={handleNextTurn} className="px-12 py-5 bg-white text-slate-950 rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl hover:scale-105 active:scale-95 transition-all">Next Part</button>
                          </div>
-                         <p className="text-slate-600 text-[10px] font-medium italic">"Recite the verses above. App will skip these once you finish."</p>
                        </div>
                      </div>
                    )}
