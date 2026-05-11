@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
-import { Search, Book, Moon, Sun, ChevronLeft, Volume2, Play, Info, Users, RotateCcw, Eye, EyeOff, SkipForward, Mic, MicOff, Grid, List, Settings } from 'lucide-react'
+import { Search, Book, Moon, Sun, ChevronLeft, Volume2, Play, Info, Users, RotateCcw, Eye, EyeOff, SkipForward, Mic, MicOff, Grid, List, Settings, CheckCircle2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const App = () => {
@@ -10,7 +10,7 @@ const App = () => {
   const [quranAr, setQuranAr] = useState(null)
   const [quranEn, setQuranEn] = useState(null)
   const [view, setView] = useState('list') 
-  const [listType, setListType] = useState('surah') // 'surah', 'page', 'hizb', 'rubu', 'juz'
+  const [listType, setListType] = useState('surah')
   const [theme, setTheme] = useState('dark')
   
   // Partner Mode State
@@ -20,6 +20,7 @@ const App = () => {
   const [currentChunkIndex, setCurrentChunkIndex] = useState(0)
   const [currentAyahNumber, setCurrentAyahNumber] = useState(null)
   const [mudarasaTurn, setMudarasaTurn] = useState('app') 
+  const [whoStarts, setWhoStarts] = useState('app') // 'app' or 'user'
   const [isListening, setIsListening] = useState(false)
   const [volume, setVolume] = useState(0)
   
@@ -107,7 +108,7 @@ const App = () => {
   const resetSilenceTimer = () => {
     if (mudarasaTurn !== 'user') return
     clearTimeout(silenceTimerRef.current)
-    silenceTimerRef.current = setTimeout(() => handleNextTurn(), 15000) // 15 seconds
+    silenceTimerRef.current = setTimeout(() => handleNextTurn(), 15000)
   }
 
   const pagesList = useMemo(() => Array.from({ length: 604 }, (_, i) => i + 1), [])
@@ -176,11 +177,7 @@ const App = () => {
         if (currentHizb !== lastHizb) { newChunks.push(currentChunk); currentChunk = []; lastHizb = currentHizb; }
         currentChunk.push(a)
       })
-    } else {
-      // Default to 1 Ayah if something goes wrong
-      ayahs.forEach(a => newChunks.push([a]))
     }
-
     if (currentChunk.length) newChunks.push(currentChunk)
     setChunks(newChunks)
     return newChunks
@@ -188,7 +185,14 @@ const App = () => {
 
   const startMusaffa = () => {
     const newChunks = createChunks(selectedSurah.number, musaffaStart, musaffaEnd, chunkSize)
-    setCurrentChunkIndex(0); setMudarasaTurn('app'); setPartnerSubView('mudarasa'); playChunk(newChunks[0])
+    setCurrentChunkIndex(0)
+    setPartnerSubView('mudarasa')
+    if (whoStarts === 'app') {
+      playChunk(newChunks[0])
+    } else {
+      setMudarasaTurn('user')
+      if (isListening) resetSilenceTimer()
+    }
   }
 
   const playChunk = async (chunk) => {
@@ -212,8 +216,19 @@ const App = () => {
   const handleNextTurn = () => {
     clearTimeout(silenceTimerRef.current)
     const nextIdx = currentChunkIndex + 1
-    if (nextIdx < chunks.length) { setCurrentChunkIndex(nextIdx); playChunk(chunks[nextIdx]); }
-    else { setPartnerSubView('menu'); stopListening(); }
+    if (nextIdx < chunks.length) {
+      if (window.navigator.vibrate) window.navigator.vibrate([30, 100])
+      setCurrentChunkIndex(nextIdx)
+      if (mudarasaTurn === 'user') {
+        playChunk(chunks[nextIdx])
+      } else {
+        setMudarasaTurn('user')
+        if (isListening) resetSilenceTimer()
+      }
+    } else {
+      setPartnerSubView('menu')
+      stopListening()
+    }
   }
 
   const logStumble = (ayah) => {
@@ -237,13 +252,13 @@ const App = () => {
               <div className="flex bg-slate-900/50 p-1 rounded-xl border border-white/5">
                 <button 
                   onClick={() => setView('list')} 
-                  className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${view === 'list' || view === 'detail' ? 'bg-amber-400 text-slate-950' : 'text-slate-500'}`}
+                  className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${view === 'list' || view === 'detail' ? 'bg-amber-400 text-slate-950 shadow-lg shadow-amber-400/20' : 'text-slate-500 hover:text-slate-300'}`}
                 >
                   Reader
                 </button>
                 <button 
                   onClick={() => { setView('partner'); setPartnerSubView('menu'); }} 
-                  className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${view === 'partner' ? 'bg-amber-400 text-slate-950' : 'text-slate-500'}`}
+                  className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${view === 'partner' ? 'bg-amber-400 text-slate-950 shadow-lg shadow-amber-400/20' : 'text-slate-500 hover:text-slate-300'}`}
                 >
                   Partner
                 </button>
@@ -251,7 +266,7 @@ const App = () => {
             </div>
             
             <div className="flex gap-3">
-              <button onClick={() => isListening ? stopListening() : startListening()} className={`p-2 rounded-full transition-all ${isListening ? 'text-emerald-400 bg-emerald-400/10' : 'text-slate-500'}`}>
+              <button onClick={() => isListening ? stopListening() : startListening()} className={`p-2 rounded-full transition-all ${isListening ? 'text-emerald-400 bg-emerald-400/10' : 'text-slate-500 hover:text-slate-300'}`}>
                 {isListening ? <Mic size={20} /> : <MicOff size={20} />}
               </button>
               <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-2 text-slate-500 hover:text-slate-300 transition-colors">
@@ -283,22 +298,12 @@ const App = () => {
                     <div className="arabic text-2xl text-slate-400 group-hover:text-amber-400 transition-colors">{surah.name}</div>
                   </div>
                 ))}
-                
                 {listType === 'juz' && juzList.filter(j => j.toString().includes(searchQuery)).map(j => {
                   const surahOnJuz = quranAr.surahs.find(s => s.ayahs.some(a => a.juz === j))
                   return (
-                    <div key={j} onClick={() => startFromJuz(j)} className="glass-card p-6 cursor-pointer flex items-center justify-between hover:border-amber-400/20 group">
+                    <div key={j} onClick={() => startFromJuz(j)} className="glass-card p-6 cursor-pointer flex items-center justify-between group hover:border-amber-400/20">
                       <div className="flex flex-col"><span className="font-bold text-lg">Juz {j}</span><span className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">{surahOnJuz?.englishName || '...'}</span></div>
                       <div className="w-10 h-10 rounded-full border border-white/5 flex items-center justify-center text-slate-700 group-hover:text-amber-400 transition-all text-xs font-bold">{j}</div>
-                    </div>
-                  )
-                })}
-                {listType === 'page' && pagesList.filter(p => p.toString().includes(searchQuery)).map(p => {
-                  const surahOnPage = quranAr.surahs.find(s => s.ayahs.some(a => a.page === p))
-                  return (
-                    <div key={p} onClick={() => startFromPage(p)} className="glass-card p-6 cursor-pointer flex items-center justify-between hover:border-amber-400/20 group">
-                      <div className="flex flex-col"><span className="font-bold text-lg">Page {p}</span><span className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">{surahOnPage?.englishName || '...'}</span></div>
-                      <div className="w-10 h-10 rounded-full border border-white/5 flex items-center justify-center text-slate-700 group-hover:text-amber-400 group-hover:border-amber-400/20 transition-all text-xs font-bold">{p}</div>
                     </div>
                   )
                 })}
@@ -325,22 +330,33 @@ const App = () => {
           )}
 
           {partnerSubView === 'config' && selectedSurah && (
-             <motion.div key="config" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="max-w-md mx-auto space-y-12 pt-12">
+             <motion.div key="config" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="max-w-md mx-auto space-y-12 pt-12 pb-24">
                <div className="text-center space-y-4">
                   <h2 className="text-3xl font-bold">Session Setup</h2>
                   <p className="text-slate-500">Configure your Musaffa session for {selectedSurah.englishName}</p>
                </div>
                <div className="glass-card p-8 space-y-8">
                   <div className="space-y-4">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Who Starts?</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button onClick={() => setWhoStarts('app')} className={`p-4 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${whoStarts === 'app' ? 'bg-amber-400 text-slate-950 border-amber-400' : 'bg-slate-900 border-white/5 text-slate-500'}`}>
+                        {whoStarts === 'app' && <CheckCircle2 size={14} />} App Starts
+                      </button>
+                      <button onClick={() => setWhoStarts('user')} className={`p-4 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${whoStarts === 'user' ? 'bg-amber-400 text-slate-950 border-amber-400' : 'bg-slate-900 border-white/5 text-slate-500'}`}>
+                        {whoStarts === 'user' && <CheckCircle2 size={14} />} I Start
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Recitation Range</label>
                     <div className="flex items-center gap-4">
                       <div className="flex-1 space-y-2">
-                        <span className="text-xs text-slate-600">Start Ayah</span>
-                        <input type="number" min="1" max={selectedSurah.numberOfAyahs} value={musaffaStart} onChange={(e) => setMusaffaStart(Number(e.target.value))} className="w-full bg-slate-900 border border-white/5 p-4 rounded-xl focus:border-amber-400/50" />
+                        <span className="text-xs text-slate-600 font-medium">From Ayah</span>
+                        <input type="number" min="1" max={selectedSurah.numberOfAyahs} value={musaffaStart} onChange={(e) => setMusaffaStart(Number(e.target.value))} className="w-full bg-slate-900 border border-white/5 p-4 rounded-xl focus:border-amber-400/50 text-center" />
                       </div>
                       <div className="flex-1 space-y-2">
-                        <span className="text-xs text-slate-600">End Ayah</span>
-                        <input type="number" min="1" max={selectedSurah.numberOfAyahs} value={musaffaEnd} onChange={(e) => setMusaffaEnd(Number(e.target.value))} className="w-full bg-slate-900 border border-white/5 p-4 rounded-xl focus:border-amber-400/50" />
+                        <span className="text-xs text-slate-600 font-medium">To Ayah</span>
+                        <input type="number" min="1" max={selectedSurah.numberOfAyahs} value={musaffaEnd} onChange={(e) => setMusaffaEnd(Number(e.target.value))} className="w-full bg-slate-900 border border-white/5 p-4 rounded-xl focus:border-amber-400/50 text-center" />
                       </div>
                     </div>
                   </div>
@@ -348,18 +364,18 @@ const App = () => {
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Turn Size</label>
                     <div className="grid grid-cols-2 gap-3">
                       {['half-page', 'page', 'rubu', 'hizb'].map(s => (
-                        <button key={s} onClick={() => setChunkSize(s)} className={`p-4 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all ${chunkSize === s ? 'bg-amber-400 text-slate-950 border-amber-400' : 'bg-slate-900 border-white/5 text-slate-500'}`}>{s}</button>
+                        <button key={s} onClick={() => setChunkSize(s)} className={`p-4 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all ${chunkSize === s ? 'bg-amber-400 text-slate-950 border-amber-400' : 'bg-slate-900 border-white/5 text-slate-500'}`}>{s}</button>
                       ))}
                     </div>
                   </div>
-                  <button onClick={startMusaffa} className="w-full py-5 bg-amber-400 text-slate-950 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-amber-400/20 active:scale-95 transition-transform">Start Session</button>
+                  <button onClick={startMusaffa} className="w-full py-5 bg-amber-400 text-slate-950 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-amber-400/20 active:scale-95 transition-all">Launch Session</button>
                </div>
              </motion.div>
           )}
 
           {partnerSubView === 'mudarasa' && chunks[currentChunkIndex] && (
-            <motion.div key="mudarasa" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12 text-center pt-8 max-w-3xl mx-auto">
-              <div className="flex items-center justify-between sticky top-0 py-6 bg-slate-950/80 backdrop-blur-md z-50">
+            <motion.div key="mudarasa" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12 text-center pt-8 max-w-3xl mx-auto pb-32">
+              <div className="flex items-center justify-between sticky top-0 py-6 bg-slate-950/80 backdrop-blur-md z-50 px-2">
                 <button onClick={() => setPartnerSubView('config')} className="p-2"><ChevronLeft size={24} /></button>
                 <div className="flex items-center gap-3">
                   <div className={`w-3 h-3 rounded-full ${mudarasaTurn === 'app' ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
@@ -378,22 +394,35 @@ const App = () => {
                      ))}
                    </div>
                    {mudarasaTurn === 'user' && (
-                     <div className="space-y-8 pt-12 border-t border-emerald-400/10">
-                       <div className="flex flex-col items-center gap-4">
-                         <div className="flex items-center gap-3">
-                           <div className="w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
-                           <p className="text-emerald-400 font-bold uppercase tracking-widest text-[10px]">Listening...</p>
+                     <div className="space-y-12 pt-12 border-t border-emerald-400/10">
+                       <div className="flex flex-col items-center gap-6">
+                         <div className="relative">
+                            {/* PWA Resonating Sign - Enhanced */}
+                            <motion.div 
+                              className="absolute inset-0 bg-emerald-400/30 rounded-full blur-2xl"
+                              animate={{ scale: [1, 1 + (volume / 30), 1], opacity: [0.2, 0.5, 0.2] }}
+                              transition={{ duration: 0.15, repeat: Infinity }}
+                            />
+                            <motion.div 
+                              className="absolute inset-[-20px] border-2 border-emerald-400/20 rounded-full"
+                              animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.3, 0.1] }}
+                              transition={{ duration: 2, repeat: Infinity }}
+                            />
+                            <div className="relative w-24 h-24 bg-emerald-400/10 rounded-full flex items-center justify-center border border-emerald-400/40 shadow-xl shadow-emerald-400/10">
+                              <Mic className="text-emerald-400" size={40} />
+                            </div>
                          </div>
-                         <div className="w-32 h-1 bg-white/5 rounded-full overflow-hidden">
-                           <motion.div className="h-full bg-emerald-400" animate={{ width: `${Math.min(volume * 2, 100)}%` }} transition={{ type: 'spring', stiffness: 300, damping: 30 }} />
+                         <div className="space-y-2">
+                           <p className="text-emerald-400 font-bold uppercase tracking-[0.3em] text-[10px]">App is Listening...</p>
+                           <p className="text-slate-600 text-[10px] font-medium italic">Recite your part. Silence will trigger the App.</p>
                          </div>
                        </div>
                        <div className="flex flex-col items-center gap-6">
                          <div className="flex gap-4">
                            <button onClick={() => logStumble(chunks[currentChunkIndex][0])} className="px-6 py-3 border border-red-400/20 text-red-400 rounded-xl font-bold uppercase tracking-widest text-[8px]">Stumbled</button>
-                           <button onClick={handleNextTurn} className="px-10 py-4 bg-white text-slate-950 rounded-2xl font-bold uppercase tracking-widest text-xs">Finish Turn</button>
+                           <button onClick={handleNextTurn} className="px-10 py-4 bg-white text-slate-950 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-lg">Finished</button>
                          </div>
-                         <p className="text-slate-600 text-[10px]">App will take over after 15s of silence.</p>
+                         <p className="text-slate-600 text-[10px] font-medium italic">"Recite the verses above. App will skip these once you finish."</p>
                        </div>
                      </div>
                    )}
