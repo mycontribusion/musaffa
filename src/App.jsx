@@ -10,7 +10,7 @@ const App = () => {
   const [quranAr, setQuranAr] = useState(null)
   const [quranEn, setQuranEn] = useState(null)
   const [view, setView] = useState('list') 
-  const [listType, setListType] = useState('surah')
+  const [listType, setListType] = useState('surah') // 'surah', 'page', 'hizb', 'rubu', 'juz'
   const [theme, setTheme] = useState('dark')
   
   // Partner Mode State
@@ -21,9 +21,11 @@ const App = () => {
   const [currentAyahNumber, setCurrentAyahNumber] = useState(null)
   const [mudarasaTurn, setMudarasaTurn] = useState('app') 
   const [whoStarts, setWhoStarts] = useState('app') // 'app' or 'user'
-  const [isListening, setIsListening] = useState(false)
-  const [volume, setVolume] = useState(0)
-  const [sensitivity, setSensitivity] = useState(15) // Noise threshold
+  
+  const [recentSurahs, setRecentSurahs] = useState(() => {
+    const saved = localStorage.getItem('quran_recent')
+    return saved ? JSON.parse(saved) : []
+  })
   
   // Musaffa Config
   const [musaffaStart, setMusaffaStart] = useState(1)
@@ -35,22 +37,18 @@ const App = () => {
   })
 
   const audioRef = useRef(new Audio())
-  const silenceTimerRef = useRef(null)
-  const audioContextRef = useRef(null)
-  const analyserRef = useRef(null)
-  const streamRef = useRef(null)
+  const currentIndexRef = useRef(0)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
   }, [theme])
 
   useEffect(() => {
-    localStorage.setItem('quran_stumbles', JSON.stringify(stumbles))
-  }, [stumbles])
+    localStorage.setItem('quran_recent', JSON.stringify(recentSurahs))
+  }, [recentSurahs])
 
   useEffect(() => {
     fetchData()
-    return () => stopListening()
   }, [])
 
   const fetchData = async () => {
@@ -71,53 +69,6 @@ const App = () => {
     }
   }
 
-  const startListening = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        } 
-      })
-      streamRef.current = stream
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)()
-      const analyser = audioContext.createAnalyser()
-      const source = audioContext.createMediaStreamSource(stream)
-      source.connect(analyser)
-      analyser.fftSize = 512
-      audioContextRef.current = audioContext
-      analyserRef.current = analyser
-      setIsListening(true)
-      const bufferLength = analyser.frequencyBinCount
-      const dataArray = new Uint8Array(bufferLength)
-      const checkVolume = () => {
-        if (!analyserRef.current) return
-        analyserRef.current.getByteFrequencyData(dataArray)
-        let sum = 0
-        for (let i = 0; i < bufferLength; i++) sum += dataArray[i]
-        const average = sum / bufferLength
-        if (average > sensitivity) resetSilenceTimer()
-        setVolume(average)
-        requestAnimationFrame(checkVolume)
-      }
-      checkVolume()
-    } catch (err) { console.error("Mic access denied", err) }
-  }
-
-  const stopListening = () => {
-    if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop())
-    if (audioContextRef.current) audioContextRef.current.close()
-    clearTimeout(silenceTimerRef.current)
-    setIsListening(false)
-  }
-
-  const resetSilenceTimer = () => {
-    if (mudarasaTurn !== 'user') return
-    clearTimeout(silenceTimerRef.current)
-    silenceTimerRef.current = setTimeout(() => handleNextTurn(), 15000)
-  }
-
   const pagesList = useMemo(() => Array.from({ length: 604 }, (_, i) => i + 1), [])
   const juzList = useMemo(() => Array.from({ length: 30 }, (_, i) => i + 1), [])
   const hizbList = useMemo(() => Array.from({ length: 60 }, (_, i) => i + 1), [])
@@ -126,22 +77,30 @@ const App = () => {
   const startFromPage = (page) => {
     const sIndex = quranAr.surahs.findIndex(s => s.ayahs.some(a => a.page === page))
     const surah = surahs[sIndex]
-    setSelectedSurah(surah)
+    handleSelectSurah(surah)
     openMusaffaConfig(surah)
   }
 
   const startFromJuz = (juz) => {
     const sIndex = quranAr.surahs.findIndex(s => s.ayahs.some(a => a.juz === juz))
     const surah = surahs[sIndex]
-    setSelectedSurah(surah)
+    handleSelectSurah(surah)
     openMusaffaConfig(surah)
+  }
+
+  const handleSelectSurah = (surah) => {
+    setSelectedSurah(surah)
+    setRecentSurahs(prev => {
+      const filtered = prev.filter(s => s.number !== surah.number)
+      return [surah, ...filtered].slice(0, 5)
+    })
   }
 
   const startFromHizb = (hizb) => {
     const quarter = (hizb - 1) * 2 + 1
     const sIndex = quranAr.surahs.findIndex(s => s.ayahs.some(a => Math.ceil(a.hizbQuarter / 2) === hizb))
     const surah = surahs[sIndex]
-    setSelectedSurah(surah)
+    handleSelectSurah(surah)
     openMusaffaConfig(surah)
   }
 
@@ -192,25 +151,40 @@ const App = () => {
 
   const startMusaffa = () => {
     const newChunks = createChunks(selectedSurah.number, musaffaStart, musaffaEnd, chunkSize)
+    currentIndexRef.current = 0
     setCurrentChunkIndex(0)
     setPartnerSubView('mudarasa')
     if (whoStarts === 'app') {
-      playChunk(newChunks[0])
+      playCurrentIndex(newChunks)
     } else {
       setMudarasaTurn('user')
-      if (isListening) resetSilenceTimer()
     }
   }
 
-  const playChunk = async (chunk) => {
+  const playCurrentIndex = async (currentChunks = chunks) => {
+    const idx = currentIndexRef.current
+    if (idx >= currentChunks.length) {
+      setPartnerSubView('menu')
+      return
+    }
+    
     setMudarasaTurn('app')
+    const chunk = currentChunks[idx]
     for (const ayah of chunk) {
       setCurrentAyahNumber(ayah.number)
       await playAyahAudioAsync(ayah.number)
     }
     setCurrentAyahNumber(null)
-    setMudarasaTurn('user')
-    if (isListening) resetSilenceTimer()
+    
+    // Hand over turn for NEXT chunk
+    const nextIdx = idx + 1
+    if (nextIdx < currentChunks.length) {
+      currentIndexRef.current = nextIdx
+      setCurrentChunkIndex(nextIdx)
+      setMudarasaTurn('user')
+    } else {
+      setPartnerSubView('menu')
+    }
   }
 
   const playAyahAudioAsync = (number) => {
@@ -220,21 +194,15 @@ const App = () => {
     })
   }
 
-  const handleNextTurn = () => {
-    clearTimeout(silenceTimerRef.current)
-    const nextIdx = currentChunkIndex + 1
+  const handleNextTurnManual = () => {
+    const nextIdx = currentIndexRef.current + 1
     if (nextIdx < chunks.length) {
       if (window.navigator.vibrate) window.navigator.vibrate([30, 100])
+      currentIndexRef.current = nextIdx
       setCurrentChunkIndex(nextIdx)
-      if (mudarasaTurn === 'user') {
-        playChunk(chunks[nextIdx])
-      } else {
-        setMudarasaTurn('user')
-        if (isListening) resetSilenceTimer()
-      }
+      playCurrentIndex()
     } else {
       setPartnerSubView('menu')
-      stopListening()
     }
   }
 
@@ -259,13 +227,13 @@ const App = () => {
               <div className="flex bg-slate-900/50 p-1 rounded-xl border border-white/5">
                 <button 
                   onClick={() => setView('list')} 
-                  className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${view === 'list' || view === 'detail' ? 'bg-amber-400 text-slate-950 shadow-lg shadow-amber-400/20' : 'text-slate-500 hover:text-slate-300'}`}
+                  className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${view === 'list' || view === 'detail' ? 'bg-amber-400 text-slate-950' : 'text-slate-500'}`}
                 >
                   Reader
                 </button>
                 <button 
                   onClick={() => { setView('partner'); setPartnerSubView('menu'); }} 
-                  className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${view === 'partner' ? 'bg-amber-400 text-slate-950 shadow-lg shadow-amber-400/20' : 'text-slate-500 hover:text-slate-300'}`}
+                  className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${view === 'partner' ? 'bg-amber-400 text-slate-950' : 'text-slate-500'}`}
                 >
                   Partner
                 </button>
@@ -273,9 +241,6 @@ const App = () => {
             </div>
             
             <div className="flex gap-3">
-              <button onClick={() => isListening ? stopListening() : startListening()} className={`p-2 rounded-full transition-all ${isListening ? 'text-emerald-400 bg-emerald-400/10' : 'text-slate-500 hover:text-slate-300'}`}>
-                {isListening ? <Mic size={20} /> : <MicOff size={20} />}
-              </button>
               <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-2 text-slate-500 hover:text-slate-300 transition-colors">
                 {theme === 'dark' ? <Moon size={20} /> : <Sun size={20} />}
               </button>
@@ -284,6 +249,19 @@ const App = () => {
 
           {view === 'list' && (
             <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-8">
+              {recentSurahs.length > 0 && (
+                <div className="space-y-4">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-500">Recently Read</label>
+                  <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+                    {recentSurahs.map(s => (
+                      <button key={s.number} onClick={() => { handleSelectSurah(s); setView('detail'); }} className="flex-shrink-0 glass-card px-6 py-4 flex flex-col items-center gap-2 border-amber-400/20 bg-amber-400/5 min-w-[120px]">
+                        <span className="arabic text-xl text-amber-400">{s.name}</span>
+                        <span className="text-[9px] font-bold uppercase tracking-widest">{s.englishName}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="flex gap-2 p-1 bg-slate-900/50 rounded-xl border border-white/5 overflow-x-auto no-scrollbar">
                 {['surah', 'juz', 'hizb', 'rubu', 'page'].map((t) => (
                   <button key={t} onClick={() => setListType(t)} className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${listType === t ? 'bg-amber-400 text-slate-950' : 'text-slate-500 hover:text-slate-300'}`}>
@@ -297,7 +275,7 @@ const App = () => {
               </div>
               <div className="space-y-4">
                 {listType === 'surah' && surahs.filter(s => s.englishName.toLowerCase().includes(searchQuery.toLowerCase())).map((surah) => (
-                  <div key={surah.number} onClick={() => { setSelectedSurah(surah); setView('detail'); }} className="glass-card p-6 cursor-pointer flex items-center justify-between group">
+                  <div key={surah.number} onClick={() => { handleSelectSurah(surah); setView('detail'); }} className="glass-card p-6 cursor-pointer flex items-center justify-between group">
                     <div className="flex items-center gap-6">
                       <span className="text-xs font-bold text-slate-600">{surah.number}</span>
                       <h3 className="text-xl font-medium">{surah.englishName}</h3>
@@ -375,23 +353,6 @@ const App = () => {
                       ))}
                     </div>
                   </div>
-                  <div className="space-y-4">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 flex justify-between">
-                      Mic Sensitivity <span>{sensitivity < 10 ? 'High' : sensitivity > 30 ? 'Quiet' : 'Standard'}</span>
-                    </label>
-                    <div className="flex items-center gap-4 bg-slate-900 p-4 rounded-xl border border-white/5">
-                      <MicOff size={16} className="text-slate-600" />
-                      <input 
-                        type="range" 
-                        min="5" max="60" step="1" 
-                        value={sensitivity} 
-                        onChange={(e) => setSensitivity(Number(e.target.value))} 
-                        className="flex-1 accent-amber-400 h-1.5 bg-white/5 rounded-full appearance-none cursor-pointer"
-                      />
-                      <Mic size={16} className="text-amber-400" />
-                    </div>
-                    <p className="text-[9px] text-slate-600 italic">"Increase this if the app switches turns too early in a noisy room."</p>
-                  </div>
                   <button onClick={startMusaffa} className="w-full py-5 bg-amber-400 text-slate-950 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-amber-400/20 active:scale-95 transition-all">Launch Session</button>
                </div>
              </motion.div>
@@ -419,49 +380,23 @@ const App = () => {
                    </div>
                    {mudarasaTurn === 'user' && (
                      <div className="space-y-12 pt-12 border-t border-emerald-400/10">
-                       <div className="flex flex-col items-center gap-8">
-                         <div className="relative">
-                            {/* PWA Resonating Sign - Waveform & Pulsing Mic */}
-                            <motion.div 
-                              className="absolute inset-0 bg-emerald-400/20 rounded-full blur-3xl"
-                              animate={{ 
-                                scale: [1, 1 + (volume / 25), 1],
-                                opacity: [0.3, 0.6, 0.3]
-                              }}
-                              transition={{ duration: 0.2 }}
-                            />
-                            
-                            {/* Waveform Bars */}
-                            <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex items-end gap-1.5 h-16 w-48 justify-center">
-                              {[0.3, 0.5, 0.8, 1, 0.8, 0.5, 0.3, 0.6, 0.9, 0.7, 0.4].map((factor, i) => (
-                                <motion.div
-                                  key={i}
-                                  className="w-1.5 bg-emerald-400/80 rounded-full"
-                                  animate={{ 
-                                    height: `${Math.max(15, (volume * factor * 2))}%` 
-                                  }}
-                                  transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-                                />
-                              ))}
-                            </div>
-
-                            <motion.div 
-                              className="relative w-28 h-28 bg-emerald-400/10 rounded-full flex items-center justify-center border border-emerald-400/40 shadow-2xl shadow-emerald-400/20"
-                              animate={{ scale: 1 + (volume / 100) }}
-                              transition={{ duration: 0.1 }}
-                            >
-                              <Mic className="text-emerald-400" size={48} />
-                            </motion.div>
+                       <div className="flex flex-col items-center gap-10">
+                         <div className="text-center space-y-4">
+                           <p className="text-emerald-400 font-bold uppercase tracking-[0.4em] text-[10px]">Your Turn</p>
+                           <h2 className="text-2xl font-bold">Recite the verses above</h2>
                          </div>
                          
-                         <div className="space-y-3 mt-12">
-                           <p className="text-emerald-400 font-bold uppercase tracking-[0.4em] text-[10px] animate-pulse">Recite Now</p>
-                           <p className="text-slate-600 text-[10px] font-medium max-w-[200px] mx-auto leading-relaxed">The App is tracking your voice. Stop for 15s to switch turns.</p>
-                         </div>
-                         <div className="flex gap-4 pt-4">
-                           <button onClick={() => logStumble(chunks[currentChunkIndex][0])} className="px-6 py-3 border border-red-400/20 text-red-400 rounded-xl font-bold uppercase tracking-widest text-[8px]">I Stumbled</button>
-                           <button onClick={handleNextTurn} className="px-12 py-5 bg-white text-slate-950 rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl hover:scale-105 active:scale-95 transition-all">Next Part</button>
-                         </div>
+                         <button 
+                           onClick={handleNextTurnManual} 
+                           className="w-full max-w-sm py-12 bg-white text-slate-950 rounded-[2.5rem] font-black uppercase tracking-[0.3em] text-xl shadow-[0_20px_50px_rgba(255,255,255,0.15)] hover:scale-105 active:scale-95 transition-all flex flex-col items-center gap-4"
+                         >
+                           <div className="w-12 h-12 bg-slate-950 rounded-full flex items-center justify-center">
+                             <ChevronLeft className="text-white rotate-180" size={32} />
+                           </div>
+                           I am Done
+                         </button>
+
+                         <button onClick={() => logStumble(chunks[currentChunkIndex][0])} className="text-red-400 font-bold uppercase tracking-widest text-[10px] hover:text-red-300 transition-colors">I Stumbled here</button>
                        </div>
                      </div>
                    )}
