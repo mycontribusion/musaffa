@@ -23,6 +23,7 @@ const App = () => {
   const [whoStarts, setWhoStarts] = useState('app') // 'app' or 'user'
   const [isListening, setIsListening] = useState(false)
   const [volume, setVolume] = useState(0)
+  const [sensitivity, setSensitivity] = useState(15) // Noise threshold
   
   // Musaffa Config
   const [musaffaStart, setMusaffaStart] = useState(1)
@@ -72,7 +73,13 @@ const App = () => {
 
   const startListening = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        } 
+      })
       streamRef.current = stream
       const audioContext = new (window.AudioContext || window.webkitAudioContext)()
       const analyser = audioContext.createAnalyser()
@@ -90,7 +97,7 @@ const App = () => {
         let sum = 0
         for (let i = 0; i < bufferLength; i++) sum += dataArray[i]
         const average = sum / bufferLength
-        if (average > 15) resetSilenceTimer()
+        if (average > sensitivity) resetSilenceTimer()
         setVolume(average)
         requestAnimationFrame(checkVolume)
       }
@@ -367,6 +374,23 @@ const App = () => {
                         <button key={s} onClick={() => setChunkSize(s)} className={`p-4 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all ${chunkSize === s ? 'bg-amber-400 text-slate-950 border-amber-400' : 'bg-slate-900 border-white/5 text-slate-500'}`}>{s}</button>
                       ))}
                     </div>
+                  </div>
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 flex justify-between">
+                      Mic Sensitivity <span>{sensitivity < 10 ? 'High' : sensitivity > 30 ? 'Quiet' : 'Standard'}</span>
+                    </label>
+                    <div className="flex items-center gap-4 bg-slate-900 p-4 rounded-xl border border-white/5">
+                      <MicOff size={16} className="text-slate-600" />
+                      <input 
+                        type="range" 
+                        min="5" max="60" step="1" 
+                        value={sensitivity} 
+                        onChange={(e) => setSensitivity(Number(e.target.value))} 
+                        className="flex-1 accent-amber-400 h-1.5 bg-white/5 rounded-full appearance-none cursor-pointer"
+                      />
+                      <Mic size={16} className="text-amber-400" />
+                    </div>
+                    <p className="text-[9px] text-slate-600 italic">"Increase this if the app switches turns too early in a noisy room."</p>
                   </div>
                   <button onClick={startMusaffa} className="w-full py-5 bg-amber-400 text-slate-950 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-amber-400/20 active:scale-95 transition-all">Launch Session</button>
                </div>
