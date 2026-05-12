@@ -22,6 +22,15 @@ const PartnerSession = ({
     setMusaffaParams(prev => ({ ...prev, [key]: value }));
   };
 
+  // Helper to get number of ayahs for a specific surah
+  const getAyahCount = (surahNum) => {
+    const surah = surahs.find(s => s.number === surahNum);
+    return surah ? surah.numberOfAyahs : 7; // Default to Fatihah length
+  };
+
+  const startAyahCount = getAyahCount(startSurah);
+  const endAyahCount = getAyahCount(endSurah);
+
   if (subView === 'config') {
     return (
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto space-y-8 pt-4 pb-24 px-2">
@@ -44,13 +53,15 @@ const PartnerSession = ({
                 >
                   {surahs.map(s => <option key={s.number} value={s.number}>{s.number}. {s.englishName}</option>)}
                 </select>
-                <input 
-                  type="number" 
+                <select 
                   value={startAyah} 
                   onChange={(e) => handleParamChange('startAyah', Number(e.target.value))}
-                  placeholder="Ayah"
                   style={{ flex: '1', minWidth: '0', background: 'var(--bg-accent)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)', padding: '0.8rem', borderRadius: 'var(--radius-md)', textAlign: 'center', outline: 'none', fontSize: '0.85rem' }}
-                />
+                >
+                  {Array.from({ length: startAyahCount }, (_, i) => i + 1).map(num => (
+                    <option key={num} value={num}>Ayah {num}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -65,13 +76,15 @@ const PartnerSession = ({
                 >
                   {surahs.map(s => <option key={s.number} value={s.number}>{s.number}. {s.englishName}</option>)}
                 </select>
-                <input 
-                  type="number" 
+                <select 
                   value={endAyah} 
                   onChange={(e) => handleParamChange('endAyah', Number(e.target.value))}
-                  placeholder="Ayah"
                   style={{ flex: '1', minWidth: '0', background: 'var(--bg-accent)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)', padding: '0.8rem', borderRadius: 'var(--radius-md)', textAlign: 'center', outline: 'none', fontSize: '0.85rem' }}
-                />
+                >
+                  {Array.from({ length: endAyahCount }, (_, i) => i + 1).map(num => (
+                    <option key={num} value={num}>Ayah {num}</option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>
