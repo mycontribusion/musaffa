@@ -296,8 +296,8 @@ const PartnerSession = ({
                 
                 // Clean Bismillah from Ayah 1 (unless Surah 1 or 9)
                 if (ayah.numberInSurah === 1 && sNum !== 1 && sNum !== 9) {
-                  // Robust regex to match Bismillah with variations and optional BOM
-                  const bismillahRegex = /^(\ufeff)?\s*بِسْمِ.*?ٱلرَّحِيمِ\s*/;
+                  // Robust regex to match Bismillah with variations (including Tajweed marks like Shadda)
+                  const bismillahRegex = /^(\ufeff)?\s*ب[\u064b-\u065f]*سْمِ.*?ٱلرَّحِيمِ\s*/;
                   displayText = displayText.replace(bismillahRegex, "").trim();
                 }
 
