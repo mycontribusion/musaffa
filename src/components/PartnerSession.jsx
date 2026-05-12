@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, LayoutGrid, Layers, FileText } from 'lucide-react';
+import { ChevronLeft, LayoutGrid, Layers, FileText, AlertCircle } from 'lucide-react';
 
 const PartnerSession = ({
   subView,
@@ -17,19 +17,42 @@ const PartnerSession = ({
   setPartnerSubView,
 }) => {
   const { startSurah, startAyah, endSurah, endAyah, portion, whoStarts } = musaffaParams;
+  const activeAyahRef = useRef(null);
 
   const handleParamChange = (key, value) => {
     setMusaffaParams(prev => ({ ...prev, [key]: value }));
   };
 
-  // Helper to get number of ayahs for a specific surah
+  // Auto-scroll logic
+  useEffect(() => {
+    if (activeAyahRef.current && mudarasaTurn === 'app') {
+      activeAyahRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }
+  }, [currentAyahNumber]);
+
+  // Also scroll to top when chunk changes for user turn
+  useEffect(() => {
+    if (mudarasaTurn === 'user') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [currentChunkIndex, mudarasaTurn]);
+
   const getAyahCount = (surahNum) => {
     const surah = surahs.find(s => s.number === surahNum);
-    return surah ? surah.numberOfAyahs : 7; // Default to Fatihah length
+    return surah ? surah.numberOfAyahs : 7;
   };
 
   const startAyahCount = getAyahCount(startSurah);
   const endAyahCount = getAyahCount(endSurah);
+
+  const isRangeValid = () => {
+    if (startSurah < endSurah) return true;
+    if (startSurah === endSurah && startAyah <= endAyah) return true;
+    return false;
+  };
 
   if (subView === 'config') {
     return (
@@ -42,7 +65,6 @@ const PartnerSession = ({
         <div className="glass-card" style={{ padding: 'clamp(1.5rem, 5vw, 2.5rem)', display: 'flex', flexDirection: 'column', gap: '2.5rem', width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
           {/* Range Selection */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
-            {/* Start From */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div className="section-label">Start From</div>
               <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
@@ -65,7 +87,6 @@ const PartnerSession = ({
               </div>
             </div>
 
-            {/* End At */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div className="section-label">End At</div>
               <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
@@ -88,6 +109,13 @@ const PartnerSession = ({
               </div>
             </div>
           </div>
+
+          {!isRangeValid() && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-red)', fontSize: '0.75rem', fontWeight: '700', background: 'rgba(239, 68, 68, 0.1)', padding: '0.75rem', borderRadius: 'var(--radius-md)' }}>
+              <AlertCircle size={14} />
+              <span>Start must be earlier than End.</span>
+            </div>
+          )}
 
           {/* Portion Selection */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -149,8 +177,9 @@ const PartnerSession = ({
 
           <button 
             onClick={startMusaffa} 
+            disabled={!isRangeValid()}
             className="btn-primary"
-            style={{ width: '100%', padding: '1.25rem', fontSize: '0.9rem', marginTop: '1rem' }}
+            style={{ width: '100%', padding: '1.25rem', fontSize: '0.9rem', marginTop: '1rem', opacity: isRangeValid() ? 1 : 0.3, cursor: isRangeValid() ? 'pointer' : 'not-allowed' }}
           >
             Start Musaffa Session
           </button>
@@ -188,9 +217,11 @@ const PartnerSession = ({
               {chunks[currentChunkIndex].map((ayah) => (
                 <span 
                   key={ayah.number} 
+                  ref={currentAyahNumber === ayah.number ? activeAyahRef : null}
                   style={{ 
                     transition: 'var(--transition-smooth)',
-                    color: currentAyahNumber === ayah.number ? 'var(--accent-gold)' : mudarasaTurn === 'app' ? 'rgba(255,255,255,0.1)' : 'var(--text-primary)'
+                    color: currentAyahNumber === ayah.number ? 'var(--accent-gold)' : mudarasaTurn === 'app' ? 'var(--text-muted)' : 'var(--text-primary)',
+                    opacity: currentAyahNumber === ayah.number ? 1 : 0.2
                   }}
                 >
                   {ayah.text} 

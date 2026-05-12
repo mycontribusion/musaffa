@@ -58,14 +58,63 @@ const App = () => {
     return saved ? JSON.parse(saved) : []
   })
 
-  // Audio Preloading Logic
   const audioRef = useRef(new Audio())
   const nextAudioRef = useRef(new Audio())
   const currentIndexRef = useRef(0)
+  const isInternalNavigation = useRef(false);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
   }, [theme])
+
+  // Improved Navigation & URL Sync
+  const syncStateWithURL = (surahList = surahs) => {
+    const params = new URLSearchParams(window.location.search);
+    const surahParam = params.get('surah');
+    const viewParam = params.get('view');
+    const partnerView = params.get('partnerView');
+
+    if (viewParam) setView(viewParam);
+    if (partnerView) setPartnerSubView(partnerView);
+    if (surahParam) {
+      const s = surahList.find(s => s.number === Number(surahParam));
+      if (s) setSelectedSurah(s);
+    } else {
+      setSelectedSurah(null);
+    }
+  };
+
+  const updateURL = (newView, newSurah, newPartnerView) => {
+    if (isInternalNavigation.current) {
+      isInternalNavigation.current = false;
+      return;
+    }
+
+    const params = new URLSearchParams();
+    if (newSurah) params.set('surah', newSurah.number);
+    if (newView) params.set('view', newView);
+    if (newPartnerView && newView === 'partner') params.set('partnerView', newPartnerView);
+
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    if (window.location.search !== `?${params.toString()}`) {
+      window.history.pushState({ view: newView, surah: newSurah?.number, partnerView: newPartnerView }, '', newUrl);
+    }
+  };
+
+  // Handle Back/Forward buttons
+  useEffect(() => {
+    const handlePopState = (event) => {
+      isInternalNavigation.current = true;
+      syncStateWithURL();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [surahs]);
+
+  useEffect(() => {
+    updateURL(view, selectedSurah, partnerSubView);
+  }, [view, selectedSurah, partnerSubView]);
 
   useEffect(() => {
     fetchData()
@@ -77,12 +126,16 @@ const App = () => {
       const sData = await sRes.json()
       const surahList = Array.isArray(sData) ? sData : sData.data;
       setSurahs(surahList)
+      
       const arRes = await fetch('/data/quran-ar.json')
       const arData = await arRes.json()
       setQuranAr(arData.data || arData)
+      
       const enRes = await fetch('/data/quran-en.json')
       const enData = await enRes.json()
       setQuranEn(enData.data || enData)
+      
+      syncStateWithURL(surahList);
       setLoading(false)
     } catch (err) {
       setLoading(false)
@@ -196,21 +249,13 @@ const App = () => {
     
     setMudarasaTurn('app');
     const chunk = currentChunks[idx];
-    
     for (let i = 0; i < chunk.length; i++) {
       const ayah = chunk[i];
       setCurrentAyahNumber(ayah.number);
-      
-      // Preload next ayah if available
       const nextAyah = chunk[i + 1];
-      if (nextAyah) {
-        nextAudioRef.current.src = getAudioUrl(nextAyah.number);
-        nextAudioRef.current.load();
-      }
-
+      if (nextAyah) { nextAudioRef.current.src = getAudioUrl(nextAyah.number); nextAudioRef.current.load(); }
       await playAyahAudioAsync(ayah.number);
     }
-    
     setCurrentAyahNumber(null);
     const nextIdx = idx + 1;
     if (nextIdx < currentChunks.length) {
@@ -224,16 +269,11 @@ const App = () => {
 
   const playAyahAudioAsync = (number) => {
     return new Promise((resolve) => {
-      // Check if nextAudioRef already has the right source
       if (nextAudioRef.current.src === getAudioUrl(number)) {
-        // Swap refs
-        const temp = audioRef.current;
-        audioRef.current = nextAudioRef.current;
-        nextAudioRef.current = temp;
+        const temp = audioRef.current; audioRef.current = nextAudioRef.current; nextAudioRef.current = temp;
       } else {
         audioRef.current.src = getAudioUrl(number);
       }
-      
       audioRef.current.play();
       audioRef.current.onended = resolve;
     });
