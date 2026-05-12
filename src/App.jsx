@@ -32,7 +32,7 @@ const App = () => {
     portion: 'page',
     whoStarts: 'app',
     autoNext: false,
-    micSensitivity: 30 // New: Adjustable sensitivity (0-100)
+    micSensitivity: 30 
   });
 
   const mutashabihat = [
@@ -146,7 +146,8 @@ const App = () => {
       const surahAyahs = quranAr.surahs[s - 1].ayahs;
       let startIdx = (s === startSurah) ? startAyah - 1 : 0;
       let endIdx = (s === endSurah) ? endAyah : surahAyahs.length;
-      allAyahsInRange = [...allAyahsInRange, ...surahAyahs.slice(startIdx, endIdx)];
+      const ayahsWithMetadata = surahAyahs.slice(startIdx, endIdx).map(a => ({ ...a, surahNumber: s }));
+      allAyahsInRange = [...allAyahsInRange, ...ayahsWithMetadata];
     }
     if (allAyahsInRange.length === 0) return [];
     const newChunks = []; let currentChunk = [];
@@ -174,6 +175,20 @@ const App = () => {
     const finalChunks = newChunks.filter(c => c.length > 0); setChunks(finalChunks); return finalChunks;
   }
 
+  const getAudioUrl = (number) => `https://cdn.islamic.network/quran/audio/128/ar.alafasy/${number}.mp3`;
+
+  // Pre-download next audio during user turn
+  useEffect(() => {
+    if (mudarasaTurn === 'user' && partnerSubView === 'mudarasa' && chunks.length > 0) {
+      const nextIdx = (currentIndexRef.current) % chunks.length; 
+      const firstAyahOfNextTurn = chunks[nextIdx][0];
+      if (firstAyahOfNextTurn) {
+        nextAudioRef.current.src = getAudioUrl(firstAyahOfNextTurn.number);
+        nextAudioRef.current.load();
+      }
+    }
+  }, [mudarasaTurn, currentChunkIndex, partnerSubView, chunks]);
+
   const startMusaffa = () => {
     const finalChunks = createChunksGlobal(); if (finalChunks.length === 0) return;
     currentIndexRef.current = 0; setCurrentChunkIndex(0); setPartnerSubView('mudarasa');
@@ -181,35 +196,57 @@ const App = () => {
     else setMudarasaTurn('user');
   }
 
-  const getAudioUrl = (number) => `https://cdn.islamic.network/quran/audio/128/ar.alafasy/${number}.mp3`;
-
   const playCurrentIndex = async (currentChunks = chunks) => {
-    const idx = currentIndexRef.current; if (idx >= currentChunks.length) { setPartnerSubView('config'); return; }
-    setMudarasaTurn('app'); const chunk = currentChunks[idx];
+    if (currentChunks.length === 0) return;
+    let idx = currentIndexRef.current;
+    
+    // Looping Logic
+    if (idx >= currentChunks.length) {
+      idx = 0;
+      currentIndexRef.current = 0;
+      setCurrentChunkIndex(0);
+    }
+
+    setMudarasaTurn('app');
+    const chunk = currentChunks[idx];
+
     for (let i = 0; i < chunk.length; i++) {
       const ayah = chunk[i]; setCurrentAyahNumber(ayah.number);
-      const nextAyah = chunk[i + 1]; if (nextAyah) { nextAudioRef.current.src = getAudioUrl(nextAyah.number); nextAudioRef.current.load(); }
+      const nextAyah = chunk[i + 1]; 
+      if (nextAyah) { nextAudioRef.current.src = getAudioUrl(nextAyah.number); nextAudioRef.current.load(); }
       await playAyahAudioAsync(ayah.number);
     }
-    setCurrentAyahNumber(null); const nextIdx = idx + 1;
-    if (nextIdx < currentChunks.length) { currentIndexRef.current = nextIdx; setCurrentChunkIndex(nextIdx); setMudarasaTurn('user'); }
-    else setPartnerSubView('config');
+
+    setCurrentAyahNumber(null);
+    const nextIdx = (idx + 1) % currentChunks.length;
+    currentIndexRef.current = nextIdx;
+    setCurrentChunkIndex(nextIdx);
+    setMudarasaTurn('user');
   }
 
   const playAyahAudioAsync = (number) => {
     return new Promise((resolve) => {
-      if (nextAudioRef.current.src === getAudioUrl(number)) { const temp = audioRef.current; audioRef.current = nextAudioRef.current; nextAudioRef.current = temp; }
-      else audioRef.current.src = getAudioUrl(number);
-      audioRef.current.play(); audioRef.current.onended = resolve;
+      if (nextAudioRef.current.src === getAudioUrl(number)) {
+        const temp = audioRef.current; audioRef.current = nextAudioRef.current; nextAudioRef.current = temp;
+      } else { audioRef.current.src = getAudioUrl(number); }
+      audioRef.current.play().catch(e => console.log("Audio play blocked", e));
+      audioRef.current.onended = resolve;
     });
   }
 
   const handleNextTurnManual = () => {
-    const nextIdx = currentIndexRef.current + 1;
-    if (nextIdx < chunks.length) {
-      if (window.navigator.vibrate) window.navigator.vibrate([40, 150]);
-      currentIndexRef.current = nextIdx; setCurrentChunkIndex(nextIdx); playCurrentIndex();
-    } else { setPartnerSubView('config'); }
+    if (chunks.length === 0) return;
+    
+    // Increment index to move to the next portion (the app's turn)
+    const nextIdx = (currentIndexRef.current + 1) % chunks.length;
+    
+    if (window.navigator.vibrate) window.navigator.vibrate([40, 150]);
+    
+    currentIndexRef.current = nextIdx;
+    setCurrentChunkIndex(nextIdx);
+    
+    // Reset state for the new turn
+    playCurrentIndex();
   }
 
   const handleQuizAnswer = (answer) => {

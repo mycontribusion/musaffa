@@ -56,7 +56,7 @@ const PartnerSession = ({
         const dataArray = new Uint8Array(bufferLength);
 
         let silenceStart = null;
-        const SILENCE_DURATION = 3500; // 3.5 seconds
+        const SILENCE_DURATION = 3500; // Reverted to 3.5s as requested
 
         const checkVolume = () => {
           analyserRef.current.getByteFrequencyData(dataArray);
@@ -281,26 +281,24 @@ const PartnerSession = ({
         <div className="glass-card" style={{ padding: '3rem 1rem', minHeight: '400px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
             <div className="arabic-text" style={{ fontSize: 'clamp(1.75rem, 5vw, 2.5rem)', lineHeight: '2', textAlign: 'center', direction: 'rtl' }}>
-              {/* Unnumbered Bismillah for Musaffa */}
-              {chunks[currentChunkIndex][0].numberInSurah === 1 && startSurah !== 1 && startSurah !== 9 && (
-                <div style={{ marginBottom: '2rem', fontSize: '1.5rem', color: 'var(--accent-gold)', opacity: 0.6 }}>
+              {/* Unnumbered Bismillah for Musaffa - Shows at the start of any Surah (except 1 & 9) */}
+              {chunks[currentChunkIndex][0].numberInSurah === 1 && 
+               chunks[currentChunkIndex][0].surahNumber !== 1 && 
+               chunks[currentChunkIndex][0].surahNumber !== 9 && (
+                <div style={{ marginBottom: '2.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--glass-border)', fontSize: '1.5rem', color: 'var(--accent-gold)', opacity: 0.6 }}>
                   بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
                 </div>
               )}
 
               {chunks[currentChunkIndex].map((ayah) => {
                 let displayText = ayah.text;
-                // Clean Bismillah from Ayah 1
-                if (ayah.numberInSurah === 1 && startSurah !== 1 && startSurah !== 9) {
-                  const BISMILLAH = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ";
-                  if (displayText.includes(BISMILLAH)) {
-                    displayText = displayText.split(BISMILLAH).pop().trim();
-                  } else if (displayText.startsWith("\ufeff")) {
-                    displayText = displayText.replace(/^\ufeff/, "").trim();
-                    if (displayText.includes(BISMILLAH)) {
-                      displayText = displayText.split(BISMILLAH).pop().trim();
-                    }
-                  }
+                const sNum = ayah.surahNumber;
+                
+                // Clean Bismillah from Ayah 1 (unless Surah 1 or 9)
+                if (ayah.numberInSurah === 1 && sNum !== 1 && sNum !== 9) {
+                  // Robust regex to match Bismillah with variations and optional BOM
+                  const bismillahRegex = /^(\ufeff)?\s*بِسْمِ.*?ٱلرَّحِيمِ\s*/;
+                  displayText = displayText.replace(bismillahRegex, "").trim();
                 }
 
                 return (

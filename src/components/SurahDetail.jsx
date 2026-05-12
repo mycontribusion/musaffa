@@ -62,16 +62,8 @@ const SurahDetail = ({ selectedSurah, quranAr, quranEn, setView, openMusaffaConf
           // Clean Ayah 1 text if it contains Bismillah
           let displayText = ayah.text;
           if (selectedSurah.number !== 1 && selectedSurah.number !== 9 && ayah.numberInSurah === 1) {
-            const BISMILLAH = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ";
-            if (displayText.includes(BISMILLAH)) {
-              displayText = displayText.split(BISMILLAH).pop().trim();
-            } else if (displayText.startsWith("\ufeff")) {
-               // Handle potential BOM or hidden characters
-               displayText = displayText.replace(/^\ufeff/, "").trim();
-               if (displayText.includes(BISMILLAH)) {
-                 displayText = displayText.split(BISMILLAH).pop().trim();
-               }
-            }
+            const bismillahRegex = /^(\ufeff)?\s*بِسْمِ.*?ٱلرَّحِيمِ\s*/;
+            displayText = displayText.replace(bismillahRegex, "").trim();
           }
 
           return (
