@@ -51,10 +51,10 @@ const PartnerSession = ({
         const source = audioContextRef.current.createMediaStreamSource(stream);
         source.connect(analyserRef.current);
         analyserRef.current.fftSize = 256;
-        
+
         const bufferLength = analyserRef.current.frequencyBinCount;
         const dataArray = new Uint8Array(bufferLength);
-        
+
         let silenceStart = null;
         const SILENCE_DURATION = 3500; // 3.5 seconds
 
@@ -75,10 +75,10 @@ const PartnerSession = ({
               silenceStart = null;
             }
           }
-          
+
           animationFrame = requestAnimationFrame(checkVolume);
         };
-        
+
         setIsListening(true);
         checkVolume();
       } catch (err) {
@@ -175,65 +175,65 @@ const PartnerSession = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <div className="section-label">Session Mode</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <button 
-                  onClick={() => handleParamChange('autoNext', !autoNext)} 
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', borderRadius: 'var(--radius-lg)', background: autoNext ? 'var(--accent-gold-soft)' : 'var(--bg-accent)', border: '1px solid', borderColor: autoNext ? 'var(--accent-gold)' : 'var(--glass-border)', transition: 'var(--transition-fast)', cursor: 'pointer' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: autoNext ? 'var(--accent-gold)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: autoNext ? '#000' : 'var(--text-muted)' }}>
-                      {autoNext ? <Mic size={18} /> : <MicOff size={18} />}
-                    </div>
-                    <div style={{ textAlign: 'left' }}>
-                      <p style={{ fontWeight: '800', fontSize: '0.8rem', color: autoNext ? 'var(--accent-gold)' : 'var(--text-primary)' }}>Hands-Free Mode</p>
-                      <p style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>Auto-switch turns using microphone.</p>
-                    </div>
+              <button
+                onClick={() => handleParamChange('autoNext', !autoNext)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', borderRadius: 'var(--radius-lg)', background: autoNext ? 'var(--accent-gold-soft)' : 'var(--bg-accent)', border: '1px solid', borderColor: autoNext ? 'var(--accent-gold)' : 'var(--glass-border)', transition: 'var(--transition-fast)', cursor: 'pointer' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: autoNext ? 'var(--accent-gold)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: autoNext ? '#000' : 'var(--text-muted)' }}>
+                    {autoNext ? <Mic size={18} /> : <MicOff size={18} />}
                   </div>
-                  <div style={{ width: '40px', height: '20px', borderRadius: '10px', background: autoNext ? 'var(--accent-gold)' : 'rgba(255,255,255,0.1)', position: 'relative' }}>
-                     <motion.div animate={{ x: autoNext ? 22 : 2 }} style={{ width: '16px', height: '16px', borderRadius: '50%', background: autoNext ? '#000' : 'var(--text-muted)', position: 'absolute', top: '2px' }} />
+                  <div style={{ textAlign: 'left' }}>
+                    <p style={{ fontWeight: '800', fontSize: '0.8rem', color: autoNext ? 'var(--accent-gold)' : 'var(--text-primary)' }}>Hands-Free Mode</p>
+                    <p style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>Auto-switch turns using microphone.</p>
                   </div>
-                </button>
+                </div>
+                <div style={{ width: '40px', height: '20px', borderRadius: '10px', background: autoNext ? 'var(--accent-gold)' : 'rgba(255,255,255,0.1)', position: 'relative' }}>
+                  <motion.div animate={{ x: autoNext ? 22 : 2 }} style={{ width: '16px', height: '16px', borderRadius: '50%', background: autoNext ? '#000' : 'var(--text-muted)', position: 'absolute', top: '2px' }} />
+                </div>
+              </button>
 
-                {autoNext && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={{ background: 'var(--bg-accent)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Settings2 size={14} style={{ color: 'var(--accent-gold)' }} />
-                      <span style={{ fontSize: '0.65rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Mic Sensitivity</span>
+              {autoNext && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={{ background: 'var(--bg-accent)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Settings2 size={14} style={{ color: 'var(--accent-gold)' }} />
+                    <span style={{ fontSize: '0.65rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Mic Sensitivity</span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', fontWeight: '600', color: 'var(--text-muted)' }}>
+                      <span>Less Sensitive (Loud Voice)</span>
+                      <span>Very Sensitive (Whisper)</span>
                     </div>
+                    <input
+                      type="range"
+                      min="5" max="80"
+                      value={90 - micSensitivity} // Reverse so slider feels natural (more to the right = more sensitive)
+                      onChange={(e) => handleParamChange('micSensitivity', 90 - Number(e.target.value))}
+                      style={{ width: '100%', accentColor: 'var(--accent-gold)', height: '4px' }}
+                    />
+                  </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', fontWeight: '600', color: 'var(--text-muted)' }}>
-                        <span>Less Sensitive (Loud Voice)</span>
-                        <span>Very Sensitive (Whisper)</span>
-                      </div>
-                      <input 
-                        type="range" 
-                        min="5" max="80" 
-                        value={90 - micSensitivity} // Reverse so slider feels natural (more to the right = more sensitive)
-                        onChange={(e) => handleParamChange('micSensitivity', 90 - Number(e.target.value))}
-                        style={{ width: '100%', accentColor: 'var(--accent-gold)', height: '4px' }}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end' }}>
+                      <span style={{ fontSize: '0.6rem', fontWeight: '700', color: 'var(--text-muted)' }}>LIVE LEVEL METER</span>
+                      <span style={{ fontSize: '0.6rem', fontWeight: '700', color: currentVolume > micSensitivity ? 'var(--accent-emerald)' : 'var(--text-muted)' }}>
+                        {currentVolume > micSensitivity ? "SPEECH DETECTED" : "SILENCE"}
+                      </span>
+                    </div>
+                    <div style={{ height: '8px', width: '100%', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
+                      <motion.div
+                        style={{ height: '100%', background: currentVolume > micSensitivity ? 'var(--accent-emerald)' : 'var(--text-muted)', opacity: 0.5 }}
+                        animate={{ width: `${(currentVolume / 100) * 100}%` }}
                       />
+                      <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${(micSensitivity / 100) * 100}%`, width: '2px', background: 'var(--accent-gold)', boxShadow: '0 0 10px var(--accent-gold-glow)' }} />
                     </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end' }}>
-                         <span style={{ fontSize: '0.6rem', fontWeight: '700', color: 'var(--text-muted)' }}>LIVE LEVEL METER</span>
-                         <span style={{ fontSize: '0.6rem', fontWeight: '700', color: currentVolume > micSensitivity ? 'var(--accent-emerald)' : 'var(--text-muted)' }}>
-                            {currentVolume > micSensitivity ? "SPEECH DETECTED" : "SILENCE"}
-                         </span>
-                       </div>
-                       <div style={{ height: '8px', width: '100%', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
-                          <motion.div 
-                            style={{ height: '100%', background: currentVolume > micSensitivity ? 'var(--accent-emerald)' : 'var(--text-muted)', opacity: 0.5 }} 
-                            animate={{ width: `${(currentVolume / 100) * 100}%` }} 
-                          />
-                          <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${(micSensitivity / 100) * 100}%`, width: '2px', background: 'var(--accent-gold)', boxShadow: '0 0 10px var(--accent-gold-glow)' }} />
-                       </div>
-                       <p style={{ fontSize: '0.55rem', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '0.25rem' }}>
-                         Tip: Adjust the slider so your normal recitation goes PAST the gold line, but background noise stays BEFORE it.
-                       </p>
-                    </div>
-                  </motion.div>
-                )}
+                    <p style={{ fontSize: '0.55rem', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '0.25rem' }}>
+                      Tip: Adjust the slider so your normal recitation goes PAST the gold line, but background noise stays BEFORE it.
+                    </p>
+                  </div>
+                </motion.div>
+              )}
             </div>
           </div>
 
@@ -256,7 +256,7 @@ const PartnerSession = ({
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10 text-center pt-4 max-w-3xl mx-auto pb-40 px-2">
         <div className="glass-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', position: 'sticky', top: '1rem', zIndex: 100 }}>
           <button onClick={() => setPartnerSubView('config')} className="icon-btn"><ChevronLeft size={18} /></button>
-          
+
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               {isListening && mudarasaTurn === 'user' ? (
@@ -281,16 +281,39 @@ const PartnerSession = ({
         <div className="glass-card" style={{ padding: '3rem 1rem', minHeight: '400px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
             <div className="arabic-text" style={{ fontSize: 'clamp(1.75rem, 5vw, 2.5rem)', lineHeight: '2', textAlign: 'center', direction: 'rtl' }}>
-              {chunks[currentChunkIndex].map((ayah) => (
-                <span key={ayah.number} ref={currentAyahNumber === ayah.number ? activeAyahRef : null} style={{ transition: 'var(--transition-smooth)', color: currentAyahNumber === ayah.number ? 'var(--accent-gold)' : mudarasaTurn === 'app' ? 'var(--text-muted)' : 'var(--text-primary)', opacity: currentAyahNumber === ayah.number ? 1 : 0.2 }}>
-                  {ayah.text} <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', borderRadius: '50%', border: '1px solid currentColor', fontSize: '9px', margin: '0 0.4rem', opacity: 0.2 }}>{ayah.numberInSurah}</span>
-                </span>
-              ))}
+              {/* Unnumbered Bismillah for Musaffa */}
+              {chunks[currentChunkIndex][0].numberInSurah === 1 && startSurah !== 1 && startSurah !== 9 && (
+                <div style={{ marginBottom: '2rem', fontSize: '1.5rem', color: 'var(--accent-gold)', opacity: 0.6 }}>
+                  بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
+                </div>
+              )}
+
+              {chunks[currentChunkIndex].map((ayah) => {
+                let displayText = ayah.text;
+                // Clean Bismillah from Ayah 1
+                if (ayah.numberInSurah === 1 && startSurah !== 1 && startSurah !== 9) {
+                  const BISMILLAH = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ";
+                  if (displayText.includes(BISMILLAH)) {
+                    displayText = displayText.split(BISMILLAH).pop().trim();
+                  } else if (displayText.startsWith("\ufeff")) {
+                    displayText = displayText.replace(/^\ufeff/, "").trim();
+                    if (displayText.includes(BISMILLAH)) {
+                      displayText = displayText.split(BISMILLAH).pop().trim();
+                    }
+                  }
+                }
+
+                return (
+                  <span key={ayah.number} ref={currentAyahNumber === ayah.number ? activeAyahRef : null} style={{ transition: 'var(--transition-smooth)', color: currentAyahNumber === ayah.number ? 'var(--accent-gold)' : mudarasaTurn === 'app' ? 'var(--text-muted)' : 'var(--text-primary)', opacity: currentAyahNumber === ayah.number ? 1 : 0.2 }}>
+                    {displayText} <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', borderRadius: '50%', border: '1px solid currentColor', fontSize: '9px', margin: '0 0.4rem', opacity: 0.2 }}>{ayah.numberInSurah}</span>
+                  </span>
+                );
+              })}
             </div>
 
             <AnimatePresence>
-            {mudarasaTurn === 'user' && (
-              <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem', paddingTop: '1.5rem' }}>
+              {mudarasaTurn === 'user' && (
+                <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem', paddingTop: '1.5rem' }}>
                   <button onClick={handleNextTurnManual} className="btn-primary" style={{ width: '100%', maxWidth: '250px', padding: '1.25rem', borderRadius: '1.5rem', fontSize: '1.1rem', position: 'relative' }}>
                     I am Done
                     {isListening && (
@@ -298,15 +321,15 @@ const PartnerSession = ({
                     )}
                   </button>
                   <button onClick={() => logStumble(chunks[currentChunkIndex][0])} style={{ background: 'none', border: 'none', color: 'var(--accent-red)', opacity: 0.5, fontWeight: '700', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer' }}>Log Stumble</button>
-                  
+
                   {isListening && (
                     <p style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: '600', letterSpacing: '0.05em' }}>
-                      <Mic size={10} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> 
+                      <Mic size={10} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
                       HANDS-FREE ACTIVE: TURN WILL SWITCH AUTOMATICALLY AFTER SILENCE
                     </p>
                   )}
-              </motion.div>
-            )}
+                </motion.div>
+              )}
             </AnimatePresence>
           </div>
         </div>
