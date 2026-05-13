@@ -2,19 +2,43 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, Users } from 'lucide-react';
 
-const SurahDetail = ({ selectedSurah, quranAr, quranEn, setView, openMusaffaConfig }) => {
+const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranEn, setView, openMusaffaConfig }) => {
   if (!selectedSurah || !quranAr || !quranEn) return null;
 
   const surahIndex = selectedSurah.number - 1;
   const arabicAyahs = quranAr.surahs[surahIndex].ayahs;
   const englishAyahs = quranEn.surahs[surahIndex].ayahs;
 
+  const handleDragEnd = (event, info) => {
+    const threshold = 100; // Required swipe distance
+    const velocity = 500; // Required swipe speed
+    
+    if (info.offset.x > threshold || info.velocity.x > velocity) {
+      // Swipe Right -> Next Surah (RTL logic)
+      if (selectedSurah.number < 114) {
+        handleSelectSurah(surahs[selectedSurah.number]);
+        window.scrollTo(0, 0);
+      }
+    } else if (info.offset.x < -threshold || info.velocity.x < -velocity) {
+      // Swipe Left -> Previous Surah (RTL logic)
+      if (selectedSurah.number > 1) {
+        handleSelectSurah(surahs[selectedSurah.number - 2]);
+        window.scrollTo(0, 0);
+      }
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}
+      drag="x"
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.2}
+      onDragEnd={handleDragEnd}
+      style={{ display: 'flex', flexDirection: 'column', gap: '2rem', cursor: 'grab' }}
+      whileTap={{ cursor: 'grabbing' }}
     >
       {/* Detail Header */}
       <div className="glass-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', position: 'sticky', top: '0.5rem', zIndex: 90 }}>
@@ -62,6 +86,7 @@ const SurahDetail = ({ selectedSurah, quranAr, quranEn, setView, openMusaffaConf
           // Clean Ayah 1 text if it contains Bismillah
           let displayText = ayah.text;
           if (selectedSurah.number !== 1 && selectedSurah.number !== 9 && ayah.numberInSurah === 1) {
+            // Robust regex to match Bismillah with variations (including Tajweed marks like Shadda)
             const bismillahRegex = /^(\ufeff)?\s*ب[\u064b-\u065f]*سْمِ.*?ٱلرَّحِيمِ\s*/;
             displayText = displayText.replace(bismillahRegex, "").trim();
           }

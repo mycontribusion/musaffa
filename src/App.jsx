@@ -276,7 +276,7 @@ const App = () => {
       <main className="pb-24">
         <AnimatePresence mode="wait">
           {view === 'list' && <SurahList surahs={surahs} recentSurahs={recentSurahs} searchQuery={searchQuery} setSearchQuery={setSearchQuery} handleSelectSurah={handleSelectSurah} setView={setView} />}
-          {view === 'detail' && selectedSurah && <SurahDetail selectedSurah={selectedSurah} quranAr={quranAr} quranEn={quranEn} setView={setView} openMusaffaConfig={openMusaffaConfig} />}
+          {view === 'detail' && selectedSurah && <SurahDetail selectedSurah={selectedSurah} surahs={surahs} handleSelectSurah={handleSelectSurah} quranAr={quranAr} quranEn={quranEn} setView={setView} openMusaffaConfig={openMusaffaConfig} />}
           {view === 'partner' && partnerSubView === 'menu' && <PartnerMenu setView={setView} startQuiz={startQuiz} />}
           {view === 'partner' && (partnerSubView === 'config' || partnerSubView === 'mudarasa') && <PartnerSession subView={partnerSubView} surahs={surahs} musaffaParams={musaffaParams} setMusaffaParams={setMusaffaParams} startMusaffa={startMusaffa} chunks={chunks} currentChunkIndex={currentChunkIndex} mudarasaTurn={mudarasaTurn} currentAyahNumber={currentAyahNumber} handleNextTurnManual={handleNextTurnManual} logStumble={logStumble} setPartnerSubView={setPartnerSubView} />}
           {view === 'partner' && (partnerSubView === 'quiz' || partnerSubView === 'quiz-result') && <QuizEngine subView={partnerSubView} mutashabihat={mutashabihat} currentQuizIndex={currentQuizIndex} quizScore={quizScore} quizFeedback={quizFeedback} handleQuizAnswer={handleQuizAnswer} startQuiz={startQuiz} setPartnerSubView={setPartnerSubView} />}
