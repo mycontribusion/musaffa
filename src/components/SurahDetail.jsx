@@ -8,6 +8,8 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
   const surahIndex = selectedSurah.number - 1;
   const arabicAyahs = quranAr.surahs[surahIndex].ayahs;
   const englishAyahs = quranEn.surahs[surahIndex].ayahs;
+  // Exact Bismillah string from the dataset (Surah 1:1)
+  const BISMILLAH = quranAr.surahs[0].ayahs[0].text;
 
   // Scroll to top whenever the selected surah changes
   useEffect(() => {
@@ -93,8 +95,11 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
         {arabicAyahs.map((ayah, idx) => {
           let displayText = ayah.text;
           if (selectedSurah.number !== 1 && selectedSurah.number !== 9 && ayah.numberInSurah === 1) {
-            const bismillahRegex = /^(\ufeff)?\s*ب[\u064b-\u065f]*سْمِ.*?ٱلرَّحِيمِ\s*/;
-            displayText = displayText.replace(bismillahRegex, '').trim();
+            const cleanBismillah = BISMILLAH.replace(/\uFEFF/g, '');
+            const cleanText = displayText.replace(/\uFEFF/g, '');
+            if (cleanText.startsWith(cleanBismillah)) {
+              displayText = cleanText.slice(cleanBismillah.length).trim();
+            }
           }
 
           return (

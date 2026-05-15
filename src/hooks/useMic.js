@@ -5,6 +5,15 @@ export const useMic = (isActive, sensitivity, onSilence) => {
   const [isListening, setIsListening] = useState(false);
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
+  
+  // Use refs to avoid restarting the microphone stream when these change
+  const onSilenceRef = useRef(onSilence);
+  const sensitivityRef = useRef(sensitivity);
+
+  useEffect(() => {
+    onSilenceRef.current = onSilence;
+    sensitivityRef.current = sensitivity;
+  }, [onSilence, sensitivity]);
 
   useEffect(() => {
     let stream = null;
@@ -29,11 +38,11 @@ export const useMic = (isActive, sensitivity, onSilence) => {
           const average = dataArray.reduce((a, b) => a + b) / bufferLength;
           setCurrentVolume(average);
 
-          if (onSilence) {
-            if (average < sensitivity) {
+          if (onSilenceRef.current) {
+            if (average < sensitivityRef.current) {
               if (!silenceStart) silenceStart = Date.now();
               else if (Date.now() - silenceStart > SILENCE_DURATION) {
-                onSilence();
+                onSilenceRef.current();
                 silenceStart = null;
               }
             } else { silenceStart = null; }
@@ -54,7 +63,7 @@ export const useMic = (isActive, sensitivity, onSilence) => {
       if (audioContextRef.current) audioContextRef.current.close();
       if (animationFrame) cancelAnimationFrame(animationFrame);
     };
-  }, [isActive, sensitivity, onSilence]);
+  }, [isActive]); // Only restart if isActive changes
 
   return { currentVolume, isListening };
 };

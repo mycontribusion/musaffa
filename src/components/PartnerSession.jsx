@@ -29,12 +29,14 @@ const PartnerSession = ({
 }) => {
   const activeAyahRef = useRef(null);
 
-  // Auto-scroll logic
+  // Auto-scroll: fire whenever the active ayah changes (only set during app playback)
   useEffect(() => {
-    if (activeAyahRef.current && turn === 'app') {
-      activeAyahRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, [currentAyahNumber, turn]);
+    if (!currentAyahNumber || !activeAyahRef.current) return;
+    const el = activeAyahRef.current;
+    requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }, [currentAyahNumber]);
 
   // Mic logic for Hands-Free
   const { currentVolume, isListening } = useMic(

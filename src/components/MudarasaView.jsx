@@ -40,8 +40,12 @@ const MudarasaView = ({
           {chunks[currentChunkIndex].map((ayah) => {
             let displayText = ayah.text;
             if (ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9) {
-              const bismillahRegex = /^(\ufeff)?\s*ب[\u064b-\u065f]*سْمِ.*?ٱلرَّحِيمِ\s*/;
-              displayText = displayText.replace(bismillahRegex, "").trim();
+              const BISMILLAH = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ";
+              const cleanBismillah = BISMILLAH.replace(/\uFEFF/g, '');
+              const cleanText = displayText.replace(/\uFEFF/g, '');
+              if (cleanText.startsWith(cleanBismillah)) {
+                displayText = cleanText.slice(cleanBismillah.length).trim();
+              }
             }
 
             return (
