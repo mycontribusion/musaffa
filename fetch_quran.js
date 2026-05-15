@@ -15,11 +15,11 @@ async function fetchQuran() {
     fs.writeFileSync(path.join(DATA_DIR, 'surahs.json'), JSON.stringify(surahListData.data, null, 2));
     console.log('Surah list saved.');
 
-    // Fetch complete Quran (Arabic)
-    const quranArabicRes = await fetch('https://api.alquran.cloud/v1/quran/quran-uthmani');
+    // Fetch complete Quran (Arabic - Quran Academy edition for high-fidelity Unicode)
+    const quranArabicRes = await fetch('https://api.alquran.cloud/v1/quran/quran-uthmani-quran-academy');
     const quranArabicData = await quranArabicRes.json();
     fs.writeFileSync(path.join(DATA_DIR, 'quran-ar.json'), JSON.stringify(quranArabicData.data, null, 2));
-    console.log('Arabic Quran saved.');
+    console.log('High-fidelity Arabic Quran saved.');
 
     // Fetch complete Quran (English translation - Saheeh International)
     const quranEnglishRes = await fetch('https://api.alquran.cloud/v1/quran/en.sahih');

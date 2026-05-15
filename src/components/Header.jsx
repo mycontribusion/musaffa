@@ -6,10 +6,10 @@ const Header = ({ theme, setTheme, view, setView, setPartnerSubView }) => {
   
   return (
     <header className="flex items-center justify-between py-4 mb-6 sticky top-0 z-100" style={{ backgroundColor: 'var(--bg-primary)', borderBottom: '1px solid var(--glass-border)', paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>
-      <div className="flex items-center gap-2 cursor-pointer" onClick={() => { setView('list'); setPartnerSubView('menu'); }}>
+      <div className="flex items-center gap-2 cursor-pointer" onClick={() => { setView('list'); }}>
         <Book className="text-accent-gold" size={20} strokeWidth={2} style={{ color: 'var(--accent-gold)' }} />
         <h1 style={{ fontSize: 'clamp(1rem, 4vw, 1.25rem)', fontWeight: '800', letterSpacing: '-0.02em', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
-          Musaffa <span style={{ color: 'var(--accent-gold)', fontWeight: '500', opacity: 0.8 }}>Partner</span>
+          Musaffa
         </h1>
       </div>
 

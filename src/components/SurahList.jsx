@@ -5,11 +5,11 @@ import { Search, ChevronRight } from 'lucide-react';
 const SurahList = ({
   surahs,
   recentSurahs,
-  searchQuery,
-  setSearchQuery,
   handleSelectSurah,
   setView,
 }) => {
+  const [searchQuery, setSearchQuery] = React.useState('');
+  
   const filteredSurahs = surahs.filter((s) =>
     s.englishName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.name.includes(searchQuery)

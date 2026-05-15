@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Amiri:wght@400;700&family=Scheherazade+New:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Amiri:wght@400;700&family=Scheherazade+New:wght@400;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
 
 :root {
   --bg-primary: #0f172a;
@@ -73,7 +73,12 @@ body {
 }
 
 /* Typography */
-.arabic-text { font-family: 'Scheherazade New', serif; }
+.arabic-text { 
+  font-family: 'Scheherazade New', serif; 
+  direction: rtl;
+  word-spacing: 0.1em;
+  line-height: 2.2;
+}
 .arabic { font-family: 'Amiri', serif; }
 
 /* Layout Utilities */
