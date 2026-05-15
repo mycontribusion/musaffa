@@ -20,10 +20,10 @@ const OptionBtn = ({ opt, answered, selected, onClick }) => {
         borderRadius: '1.25rem',
         border: correct ? '1px solid #34d399'
           : wrong ? '1px solid rgba(239,68,68,0.4)'
-          : '1px solid rgba(255,255,255,0.07)',
+            : '1px solid rgba(255,255,255,0.07)',
         background: correct ? 'rgba(52,211,153,0.1)'
           : wrong ? 'rgba(239,68,68,0.06)'
-          : 'rgba(255,255,255,0.03)',
+            : 'rgba(255,255,255,0.03)',
         cursor: answered ? 'default' : 'pointer',
         textAlign: 'right',
         position: 'relative',
@@ -37,7 +37,7 @@ const OptionBtn = ({ opt, answered, selected, onClick }) => {
         color: correct ? '#34d399' : 'rgba(255,255,255,0.3)',
         marginBottom: '0.4rem',
       }}>
-        {opt.surahName} · {opt.surah}:{opt.ayah}
+        {/* {opt.surahName} · {opt.surah}:{opt.ayah} */}
       </span>
       <p className="arabic-text" style={{
         fontSize: 'clamp(1.3rem, 3.8vw, 1.9rem)',
@@ -69,7 +69,7 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose 
   const cards = useMemo(() => {
     if (!quranAr || !surahs || !allSurahEntries?.length) return [];
     return buildSessionCards(allSurahEntries, surah.number, quranAr, surahs);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allSurahEntries, surah.number, quranAr, surahs, sessionKey]);
 
   const card = cards[idx];
