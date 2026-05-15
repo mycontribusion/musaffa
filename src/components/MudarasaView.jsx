@@ -31,7 +31,16 @@ const MudarasaView = ({
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: mudarasaTurn === 'app' ? 'var(--accent-gold)' : 'var(--bg-accent)', boxShadow: mudarasaTurn === 'app' ? '0 0 10px var(--accent-gold)' : 'none' }} />
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: mudarasaTurn === 'user' ? 'var(--accent-emerald)' : 'var(--bg-accent)', boxShadow: mudarasaTurn === 'user' ? '0 0 10px var(--accent-emerald)' : 'none' }} />
+            <div style={{ 
+              width: '8px', height: '8px', borderRadius: '50%', 
+              background: mudarasaTurn === 'user' 
+                ? (isListening ? (currentVolume > sensitivity ? 'var(--accent-emerald)' : 'rgba(255,255,255,0.15)') : 'var(--accent-emerald)') 
+                : 'var(--bg-accent)', 
+              boxShadow: mudarasaTurn === 'user' 
+                ? (isListening ? (currentVolume > sensitivity ? '0 0 10px var(--accent-emerald)' : 'none') : '0 0 10px var(--accent-emerald)') 
+                : 'none',
+              transition: 'all 0.1s'
+            }} />
           </div>
         </div>
       </div>
@@ -54,8 +63,8 @@ const MudarasaView = ({
               <motion.div 
                 key={ayah.number} 
                 ref={ayah.number === currentAyahNumber ? activeAyahRef : null}
-                initial={{ opacity: 0.3 }}
-                animate={{ opacity: ayah.number === currentAyahNumber || mudarasaTurn === 'user' ? 1 : 0.3, scale: ayah.number === currentAyahNumber ? 1.02 : 1 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1, scale: ayah.number === currentAyahNumber ? 1.02 : 1 }}
                 style={{ textAlign: 'right', padding: '1.5rem', borderRadius: '1.5rem', background: ayah.number === currentAyahNumber ? 'var(--accent-gold-soft)' : 'transparent', border: ayah.number === currentAyahNumber ? '1px solid var(--accent-gold-soft)' : '1px solid transparent', transition: '0.4s' }}
               >
                 <p className="arabic-text" style={{ fontSize: '2.2rem', color: ayah.number === currentAyahNumber ? 'var(--accent-gold)' : 'var(--text-primary)' }}>
@@ -82,18 +91,10 @@ const MudarasaView = ({
               <button onClick={() => onLogStumble(chunks[currentChunkIndex][0])} style={{ background: 'none', border: 'none', color: 'var(--accent-red)', opacity: 0.5, fontWeight: '700', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer' }}>Log Stumble</button>
               
               {isListening && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.5rem' }}>
-                  <div style={{
-                    width: '8px', height: '8px', borderRadius: '50%',
-                    background: currentVolume > sensitivity ? 'var(--accent-emerald)' : 'rgba(255,255,255,0.15)',
-                    boxShadow: currentVolume > sensitivity ? '0 0 10px var(--accent-emerald)' : 'none',
-                    transition: 'all 0.1s'
-                  }} />
-                  <p style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: '600', letterSpacing: '0.05em', margin: 0 }}>
-                    <Mic size={10} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-                    LISTENING: TURN SWITCHES AFTER SILENCE
-                  </p>
-                </div>
+                <p style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: '600', letterSpacing: '0.05em', margin: 0 }}>
+                  <Mic size={10} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                  LISTENING: TURN SWITCHES AFTER SILENCE
+                </p>
               )}
             </motion.div>
           )}
