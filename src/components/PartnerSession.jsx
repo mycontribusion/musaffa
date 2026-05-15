@@ -74,6 +74,8 @@ const PartnerSession = ({
       onBack={() => setSubView('config')} 
       onLogStumble={logStumble}
       isListening={isListening}
+      currentVolume={currentVolume}
+      sensitivity={params.micSensitivity}
       activeAyahRef={activeAyahRef}
     />
   );

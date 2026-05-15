@@ -172,6 +172,13 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView) => {
   const handleNextTurnManual = () => {
     if (chunks.length === 0) return;
     if (window.navigator.vibrate) window.navigator.vibrate([40, 150]);
+    
+    // The user just finished their turn on the current chunk. 
+    // Advance to the NEXT chunk before the app plays!
+    const nextIdx = (currentIndexRef.current + 1) % chunks.length;
+    currentIndexRef.current = nextIdx;
+    setCurrentChunkIndex(nextIdx);
+
     // Pass chunks explicitly to avoid stale closure
     playCurrentIndex(chunks);
   };

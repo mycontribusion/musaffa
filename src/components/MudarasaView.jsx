@@ -11,6 +11,8 @@ const MudarasaView = ({
   onBack,
   onLogStumble,
   isListening,
+  currentVolume,
+  sensitivity,
   activeAyahRef
 }) => {
   return (
@@ -80,10 +82,18 @@ const MudarasaView = ({
               <button onClick={() => onLogStumble(chunks[currentChunkIndex][0])} style={{ background: 'none', border: 'none', color: 'var(--accent-red)', opacity: 0.5, fontWeight: '700', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer' }}>Log Stumble</button>
               
               {isListening && (
-                <p style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: '600', letterSpacing: '0.05em' }}>
-                  <Mic size={10} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-                  HANDS-FREE ACTIVE: TURN WILL SWITCH AUTOMATICALLY AFTER SILENCE
-                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.5rem' }}>
+                  <div style={{
+                    width: '8px', height: '8px', borderRadius: '50%',
+                    background: currentVolume > sensitivity ? 'var(--accent-emerald)' : 'rgba(255,255,255,0.15)',
+                    boxShadow: currentVolume > sensitivity ? '0 0 10px var(--accent-emerald)' : 'none',
+                    transition: 'all 0.1s'
+                  }} />
+                  <p style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: '600', letterSpacing: '0.05em', margin: 0 }}>
+                    <Mic size={10} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                    LISTENING: TURN SWITCHES AFTER SILENCE
+                  </p>
+                </div>
               )}
             </motion.div>
           )}
