@@ -27,15 +27,15 @@ const PartnerSession = ({
   currentQuizIndex,
   activeQuizType
 }) => {
-  const activeAyahRef = useRef(null);
-
   // Auto-scroll: fire whenever the active ayah changes (only set during app playback)
   useEffect(() => {
-    if (!currentAyahNumber || !activeAyahRef.current) return;
-    const el = activeAyahRef.current;
-    requestAnimationFrame(() => {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
+    if (!currentAyahNumber) return;
+    const el = document.getElementById(`mudarasa-ayah-${currentAyahNumber}`);
+    if (el) {
+      setTimeout(() => {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 50);
+    }
   }, [currentAyahNumber]);
 
   // Mic logic for Hands-Free
@@ -76,7 +76,6 @@ const PartnerSession = ({
       isListening={isListening}
       currentVolume={currentVolume}
       sensitivity={params.micSensitivity}
-      activeAyahRef={activeAyahRef}
     />
   );
 

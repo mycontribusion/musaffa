@@ -46,6 +46,8 @@ export const useMic = (isActive, sensitivity, onSilence) => {
                 silenceStart = null;
               }
             } else { silenceStart = null; }
+          } else {
+            silenceStart = null;
           }
           animationFrame = requestAnimationFrame(checkVolume);
         };

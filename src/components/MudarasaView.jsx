@@ -12,8 +12,7 @@ const MudarasaView = ({
   onLogStumble,
   isListening,
   currentVolume,
-  sensitivity,
-  activeAyahRef
+  sensitivity
 }) => {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', minHeight: '80vh' }}>
@@ -62,7 +61,7 @@ const MudarasaView = ({
             return (
               <motion.div 
                 key={ayah.number} 
-                ref={ayah.number === currentAyahNumber ? activeAyahRef : null}
+                id={`mudarasa-ayah-${ayah.number}`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1, scale: ayah.number === currentAyahNumber ? 1.02 : 1 }}
                 style={{ textAlign: 'right', padding: '1.5rem', borderRadius: '1.5rem', background: ayah.number === currentAyahNumber ? 'var(--accent-gold-soft)' : 'transparent', border: ayah.number === currentAyahNumber ? '1px solid var(--accent-gold-soft)' : '1px solid transparent', transition: '0.4s' }}
