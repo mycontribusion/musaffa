@@ -142,6 +142,21 @@ body {
   background: rgba(30, 41, 59, 0.8);
 }
 
+/* Chrome on Android breaks backdrop-filter when it contains native <select> elements.
+   Use .solid-card for any card that contains <select> inputs. */
+.solid-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-shadow);
+  transition: var(--transition-smooth);
+  isolation: isolate;
+}
+
+[data-theme='light'] .solid-card {
+  background: #ffffff;
+}
+
 @media (max-width: 640px) {
   .glass-card { border-radius: var(--radius-md); }
 }

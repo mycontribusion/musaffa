@@ -1,6 +1,92 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { ChevronLeft, Layers, FileText, LayoutGrid, Mic, MicOff, Settings2, AlertCircle } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronDown, Layers, FileText, LayoutGrid, Mic, MicOff, Settings2, AlertCircle } from 'lucide-react';
+
+// Custom dropdown to replace native <select> — avoids Chrome's backdrop-filter compositing bug
+const CustomSelect = ({ value, options, onChange, flex = '1', textAlign = 'left' }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const listRef = useRef(null);
+  const selected = options.find(o => o.value === value);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    document.addEventListener('touchstart', handler);
+    return () => { document.removeEventListener('mousedown', handler); document.removeEventListener('touchstart', handler); };
+  }, []);
+
+  // Scroll to selected option when opened
+  useEffect(() => {
+    if (open && listRef.current) {
+      const activeEl = listRef.current.querySelector('[data-active="true"]');
+      if (activeEl) setTimeout(() => activeEl.scrollIntoView({ block: 'nearest' }), 50);
+    }
+  }, [open]);
+
+  return (
+    <div ref={ref} style={{ flex, minWidth: 0, position: 'relative' }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: '100%',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.25rem',
+          background: 'var(--bg-accent)', color: 'var(--text-primary)',
+          border: '1px solid var(--glass-border)',
+          padding: '0.8rem', borderRadius: 'var(--radius-md)',
+          fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer',
+          outline: 'none', textAlign, whiteSpace: 'nowrap', overflow: 'hidden',
+        }}
+      >
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+          {selected?.label ?? '—'}
+        </span>
+        <ChevronDown size={14} style={{ flexShrink: 0, color: 'var(--text-muted)', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.2s ease' }} />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.ul
+            ref={listRef}
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.15 }}
+            style={{
+              position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 9999,
+              background: 'var(--bg-secondary)', border: '1px solid var(--glass-border)',
+              borderRadius: 'var(--radius-md)', listStyle: 'none', margin: 0, padding: '0.25rem',
+              maxHeight: '220px', overflowY: 'auto',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            }}
+          >
+            {options.map(opt => (
+              <li
+                key={opt.value}
+                data-active={opt.value === value ? 'true' : 'false'}
+                onClick={() => { onChange(opt.value); setOpen(false); }}
+                style={{
+                  padding: '0.6rem 0.75rem', borderRadius: 'var(--radius-sm)', fontSize: '0.82rem',
+                  fontWeight: opt.value === value ? '700' : '500',
+                  color: opt.value === value ? 'var(--accent-gold)' : 'var(--text-primary)',
+                  background: opt.value === value ? 'var(--accent-gold-soft, rgba(251,191,36,0.1))' : 'transparent',
+                  cursor: 'pointer', transition: '0.15s ease',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                }}
+                onMouseEnter={e => { if (opt.value !== value) e.currentTarget.style.background = 'var(--bg-accent)'; }}
+                onMouseLeave={e => { if (opt.value !== value) e.currentTarget.style.background = 'transparent'; }}
+              >
+                {opt.label}
+              </li>
+            ))}
+          </motion.ul>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
 
 const PartnerConfig = ({
   surahs,
@@ -19,6 +105,10 @@ const PartnerConfig = ({
   const startAyahCount = getAyahCount(params.startSurah);
   const endAyahCount = getAyahCount(params.endSurah);
 
+  const surahOptions = surahs.map(s => ({ value: s.number, label: `${s.number}. ${s.englishName}` }));
+  const startAyahOptions = Array.from({ length: startAyahCount }, (_, i) => ({ value: i + 1, label: `Ayah ${i + 1}` }));
+  const endAyahOptions = Array.from({ length: endAyahCount }, (_, i) => ({ value: i + 1, label: `Ayah ${i + 1}` }));
+
   const isRangeValid = () => {
     if (params.startSurah < params.endSurah) return true;
     if (params.startSurah === params.endSurah && params.startAyah <= params.endAyah) return true;
@@ -32,30 +122,44 @@ const PartnerConfig = ({
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Configure your range and turn size.</p>
       </div>
 
-      <div className="glass-card" style={{ padding: 'clamp(1.5rem, 5vw, 2.5rem)', display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%', maxWidth: '100%' }}>
+      <div className="solid-card" style={{ padding: 'clamp(1.5rem, 5vw, 2.5rem)', display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%', maxWidth: '100%' }}>
         {/* Range Selection */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <div className="section-label">Start From</div>
             <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
-              <select value={params.startSurah} onChange={(e) => onChange('startSurah', Number(e.target.value))} style={{ flex: '1.5', minWidth: '0', background: 'var(--bg-accent)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)', padding: '0.8rem', borderRadius: 'var(--radius-md)', outline: 'none', fontSize: '0.85rem' }}>
-                {surahs.map(s => <option key={s.number} value={s.number}>{s.number}. {s.englishName}</option>)}
-              </select>
-              <select value={params.startAyah} onChange={(e) => onChange('startAyah', Number(e.target.value))} style={{ flex: '1', minWidth: '0', background: 'var(--bg-accent)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)', padding: '0.8rem', borderRadius: 'var(--radius-md)', textAlign: 'center', outline: 'none', fontSize: '0.85rem' }}>
-                {Array.from({ length: startAyahCount }, (_, i) => i + 1).map(num => <option key={num} value={num}>Ayah {num}</option>)}
-              </select>
+              <CustomSelect
+                value={params.startSurah}
+                options={surahOptions}
+                onChange={(v) => onChange('startSurah', v)}
+                flex="1.5"
+              />
+              <CustomSelect
+                value={params.startAyah}
+                options={startAyahOptions}
+                onChange={(v) => onChange('startAyah', v)}
+                flex="1"
+                textAlign="center"
+              />
             </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <div className="section-label">End At</div>
             <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
-              <select value={params.endSurah} onChange={(e) => onChange('endSurah', Number(e.target.value))} style={{ flex: '1.5', minWidth: '0', background: 'var(--bg-accent)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)', padding: '0.8rem', borderRadius: 'var(--radius-md)', outline: 'none', fontSize: '0.85rem' }}>
-                {surahs.map(s => <option key={s.number} value={s.number}>{s.number}. {s.englishName}</option>)}
-              </select>
-              <select value={params.endAyah} onChange={(e) => onChange('endAyah', Number(e.target.value))} style={{ flex: '1', minWidth: '0', background: 'var(--bg-accent)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)', padding: '0.8rem', borderRadius: 'var(--radius-md)', textAlign: 'center', outline: 'none', fontSize: '0.85rem' }}>
-                {Array.from({ length: endAyahCount }, (_, i) => i + 1).map(num => <option key={num} value={num}>Ayah {num}</option>)}
-              </select>
+              <CustomSelect
+                value={params.endSurah}
+                options={surahOptions}
+                onChange={(v) => onChange('endSurah', v)}
+                flex="1.5"
+              />
+              <CustomSelect
+                value={params.endAyah}
+                options={endAyahOptions}
+                onChange={(v) => onChange('endAyah', v)}
+                flex="1"
+                textAlign="center"
+              />
             </div>
           </div>
         </div>
@@ -71,18 +175,18 @@ const PartnerConfig = ({
               { id: 'third', label: '1/3 Page', icon: <Layers size={14} /> },
               { id: 'half', label: '1/2 Page', icon: <Layers size={14} /> },
               { id: 'page', label: 'Full Page', icon: <Layers size={14} /> },
-              { id: 'rubu', label: 'Rub\'u', icon: <LayoutGrid size={14} /> },
+              { id: 'rubu', label: "Rub'u", icon: <LayoutGrid size={14} /> },
               { id: 'hizb', label: 'Hizb', icon: <LayoutGrid size={14} /> },
             ].map(p => (
-              <button 
-                key={p.id} 
-                onClick={() => onChange('portion', p.id)} 
-                style={{ 
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.75rem', borderRadius: 'var(--radius-md)', 
-                  border: '1px solid', borderColor: params.portion === p.id ? 'var(--accent-gold)' : 'var(--glass-border)', 
-                  background: params.portion === p.id ? 'var(--accent-gold-soft)' : 'var(--bg-accent)', 
-                  color: params.portion === p.id ? 'var(--accent-gold)' : 'var(--text-secondary)', 
-                  fontSize: '0.7rem', fontWeight: '700', cursor: 'pointer', transition: 'var(--transition-fast)' 
+              <button
+                key={p.id}
+                onClick={() => onChange('portion', p.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.75rem', borderRadius: 'var(--radius-md)',
+                  border: '1px solid', borderColor: params.portion === p.id ? 'var(--accent-gold)' : 'var(--glass-border)',
+                  background: params.portion === p.id ? 'var(--accent-gold-soft, rgba(251,191,36,0.1))' : 'var(--bg-accent)',
+                  color: params.portion === p.id ? 'var(--accent-gold)' : 'var(--text-secondary)',
+                  fontSize: '0.7rem', fontWeight: '700', cursor: 'pointer', transition: 'var(--transition-fast)'
                 }}
               >
                 {p.icon} {p.label}
@@ -97,7 +201,7 @@ const PartnerConfig = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <button
               onClick={() => onChange('autoNext', !params.autoNext)}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', borderRadius: 'var(--radius-lg)', background: params.autoNext ? 'var(--accent-gold-soft)' : 'var(--bg-accent)', border: '1px solid', borderColor: params.autoNext ? 'var(--accent-gold)' : 'var(--glass-border)', transition: 'var(--transition-fast)', cursor: 'pointer' }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', borderRadius: 'var(--radius-lg)', background: params.autoNext ? 'var(--accent-gold-soft, rgba(251,191,36,0.1))' : 'var(--bg-accent)', border: '1px solid', borderColor: params.autoNext ? 'var(--accent-gold)' : 'var(--glass-border)', transition: 'var(--transition-fast)', cursor: 'pointer' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: params.autoNext ? 'var(--accent-gold)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: params.autoNext ? '#000' : 'var(--text-muted)' }}>
@@ -154,7 +258,7 @@ const PartnerConfig = ({
           </div>
         </div>
 
-        {/* Start Button */}
+        {/* Who Starts */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div className="section-label">Who Starts?</div>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -163,10 +267,10 @@ const PartnerConfig = ({
           </div>
         </div>
 
-        <button 
-          onClick={onStart} 
-          disabled={!isRangeValid()} 
-          className="btn-primary" 
+        <button
+          onClick={onStart}
+          disabled={!isRangeValid()}
+          className="btn-primary"
           style={{ width: '100%', padding: '1.25rem', fontSize: '0.9rem', marginTop: '0.5rem', opacity: isRangeValid() ? 1 : 0.3, cursor: isRangeValid() ? 'pointer' : 'not-allowed' }}
         >
           Start Musaffa Session
