@@ -11,7 +11,7 @@ import { useQuiz } from './hooks/useQuiz';
 
 const App = () => {
   const [view, setView] = useState('list');
-  const [theme, setTheme] = useState('dark');
+  const [theme, setTheme] = useState(() => window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   const [selectedSurah, setSelectedSurah] = useState(null);
   const [partnerSubView, setPartnerSubView] = useState('config');
   const [activeQuizType, setActiveQuizType] = useState('all');

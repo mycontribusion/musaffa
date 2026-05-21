@@ -8,16 +8,21 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icon.png'],
+      includeAssets: ['favicon.png', 'pwa-192x192.png', 'pwa-512x512.png', 'icon.png'],
       manifest: {
-        name: 'Musaffa Partner',
-        short_name: 'Musaffa',
+        name: 'MusaffaPro',
+        short_name: 'MusaffaPro',
         description: 'Your Interactive Quran Memorization Companion',
         theme_color: '#020617',
         icons: [
           {
-            src: 'icon.png',
+            src: 'pwa-192x192.png',
             sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
             type: 'image/png'
           },
           {
