@@ -9,7 +9,7 @@ const Header = ({ theme, setTheme }) => {
   const isPartner = location.pathname.startsWith('/partner');
 
   return (
-    <header className="flex items-center justify-between py-4 mb-6 sticky top-0 z-100" style={{ backgroundColor: 'var(--bg-primary)', borderBottom: '1px solid var(--glass-border)', paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>
+    <header className="flex items-center justify-between py-4 mb-6" style={{ position: 'relative', backgroundColor: 'var(--bg-primary)', borderBottom: '1px solid var(--glass-border)', paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>
       <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
         <img src="/pwa-192x192.png" alt="MusaffaPro Icon" style={{ width: '28px', height: '28px', borderRadius: '6px' }} />
         <h1 style={{ fontSize: 'clamp(1rem, 4vw, 1.25rem)', fontWeight: '800', letterSpacing: '-0.02em', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
