@@ -40,7 +40,7 @@ const PartnerSession = ({
 
   // Mic logic for Hands-Free
   const { currentVolume, isListening } = useMic(
-    params.autoNext && (subView === 'mudarasa' || subView === 'config'),
+    params.autoNext && (subView === 'config' || (subView === 'mudarasa' && turn === 'user')),
     params.micSensitivity,
     subView === 'mudarasa' && turn === 'user' ? handleNextTurn : null
   );

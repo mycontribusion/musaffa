@@ -40,12 +40,18 @@ export const useMic = (isActive, sensitivity, onSilence) => {
         const SILENCE_DURATION = 3500;
 
         const checkVolume = () => {
-          analyserRef.current.getByteFrequencyData(dataArray);
-          const average = dataArray.reduce((a, b) => a + b) / bufferLength;
-          setCurrentVolume(average);
+          analyserRef.current.getByteTimeDomainData(dataArray);
+          let peak = 0;
+          for (let i = 0; i < bufferLength; i++) {
+            const val = Math.abs(dataArray[i] - 128);
+            if (val > peak) peak = val;
+          }
+          // peak maxes at 128. Convert to 0-100 scale.
+          const volume = (peak / 128) * 100;
+          setCurrentVolume(volume);
 
           if (onSilenceRef.current) {
-            if (average < sensitivityRef.current) {
+            if (volume < sensitivityRef.current) {
               if (!silenceStart) silenceStart = Date.now();
               else if (Date.now() - silenceStart > SILENCE_DURATION) {
                 onSilenceRef.current();
