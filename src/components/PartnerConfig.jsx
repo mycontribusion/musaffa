@@ -127,9 +127,9 @@ const PartnerConfig = ({
                   </div>
                   <input
                     type="range"
-                    min="5" max="80"
-                    value={90 - params.micSensitivity}
-                    onChange={(e) => onChange('micSensitivity', 90 - Number(e.target.value))}
+                    min="5" max="40"
+                    value={45 - params.micSensitivity}
+                    onChange={(e) => onChange('micSensitivity', 45 - Number(e.target.value))}
                     style={{ width: '100%', accentColor: 'var(--accent-gold)', height: '4px' }}
                   />
                 </div>

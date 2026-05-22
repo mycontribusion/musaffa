@@ -32,22 +32,24 @@ export const useMic = (isActive, sensitivity, onSilence) => {
         analyserRef.current = audioContextRef.current.createAnalyser();
         const source = audioContextRef.current.createMediaStreamSource(stream);
         source.connect(analyserRef.current);
-        analyserRef.current.fftSize = 256;
+        analyserRef.current.fftSize = 2048;
 
-        const bufferLength = analyserRef.current.frequencyBinCount;
-        const dataArray = new Uint8Array(bufferLength);
+        const bufferLength = analyserRef.current.fftSize;
+        const dataArray = new Float32Array(bufferLength);
         let silenceStart = null;
         const SILENCE_DURATION = 3500;
 
         const checkVolume = () => {
-          analyserRef.current.getByteTimeDomainData(dataArray);
+          // Float32 time-domain data: values range from -1.0 to 1.0
+          analyserRef.current.getFloatTimeDomainData(dataArray);
           let peak = 0;
           for (let i = 0; i < bufferLength; i++) {
-            const val = Math.abs(dataArray[i] - 128);
+            const val = Math.abs(dataArray[i]);
             if (val > peak) peak = val;
           }
-          // peak maxes at 128. Convert to 0-100 scale.
-          const volume = (peak / 128) * 100;
+          // Apply software gain so normal speech (peak ~0.05-0.2) maps to 30-100
+          const GAIN = 6;
+          const volume = Math.min(100, peak * GAIN * 100);
           setCurrentVolume(volume);
 
           if (onSilenceRef.current) {
