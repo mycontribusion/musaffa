@@ -43,14 +43,16 @@ export const getAyahTextByGlobal = (globalIndex, quranAr) => {
 export const removeTashkeel = (text) => text.replace(/[\u064B-\u065F]/g, "");
 
 export const RECITERS = [
-  { id: 'ar.alafasy',           name: 'Mishary Alafasy',         style: 'Melodic · Clear' },
-  { id: 'ar.husary',            name: 'Mahmoud Al-Husary',        style: 'Tajweed · Learning' },
-  { id: 'ar.minshawi',          name: 'Mohamed Al-Minshawi',      style: 'Slow · Traditional' },
-  { id: 'ar.abdulbasitmurattal',name: 'Abdul Basit (Murattal)',   style: 'Classic · Measured' },
-  { id: 'ar.hudhaify',          name: 'Ali Al-Huthaify',          style: 'Clear · Steady' },
-  { id: 'ar.saoodshuraym',      name: "Sa'ud Ash-Shuraim",        style: 'Fast · Revision' },
-  { id: 'ar.ghamadi',           name: 'Saad Al-Ghamidi',          style: 'Warm · Flowing' },
+  { id: 'ar.alafasy',           name: 'Mishary Alafasy',         style: 'Melodic · Clear',      bitrate: 128 },
+  { id: 'ar.husary',            name: 'Mahmoud Al-Husary',       style: 'Tajweed · Learning',   bitrate: 128 },
+  { id: 'ar.minshawi',          name: 'Mohamed Al-Minshawi',     style: 'Slow · Traditional',   bitrate: 128 },
+  { id: 'ar.abdulbasitmurattal',name: 'Abdul Basit (Murattal)',  style: 'Classic · Measured',   bitrate: 64 },
+  { id: 'ar.hudhaify',          name: 'Ali Al-Huthaify',         style: 'Clear · Steady',       bitrate: 128 },
+  { id: 'ar.saoodshuraym',      name: "Sa'ud Ash-Shuraim",       style: 'Fast · Revision',      bitrate: 64 },
+  { id: 'ar.mahermuaiqly',      name: 'Maher Al-Muaiqly',        style: 'Warm · Flowing',       bitrate: 128 },
 ];
 
-export const getAudioUrl = (number, reciter = 'ar.alafasy') =>
-  `https://cdn.islamic.network/quran/audio/128/${reciter}/${number}.mp3`;
+export const getAudioUrl = (number, reciterId = 'ar.alafasy') => {
+  const reciter = RECITERS.find(r => r.id === reciterId) || RECITERS[0];
+  return `https://cdn.islamic.network/quran/audio/${reciter.bitrate}/${reciter.id}/${number}.mp3`;
+};
