@@ -1,27 +1,25 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Search, ChevronRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
-const SurahList = ({ surahs, recentSurahs, handleSelectSurah }) => {
+const SurahList = ({
+  surahs,
+  recentSurahs,
+  handleSelectSurah,
+  setView,
+}) => {
   const [searchQuery, setSearchQuery] = React.useState('');
-  const navigate = useNavigate();
-
+  
   const filteredSurahs = surahs.filter((s) =>
     s.englishName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.name.includes(searchQuery)
   );
 
-  const goToSurah = (s) => {
-    handleSelectSurah(s);
-    navigate(`/surah/${s.number}`);
-  };
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }} 
+      animate={{ opacity: 1, y: 0 }} 
+      exit={{ opacity: 0 }} 
       style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', paddingBottom: '3rem' }}
     >
       {/* Search Section */}
@@ -45,7 +43,7 @@ const SurahList = ({ surahs, recentSurahs, handleSelectSurah }) => {
               <motion.button
                 key={s.number}
                 whileHover={{ y: -2 }}
-                onClick={() => goToSurah(s)}
+                onClick={() => { handleSelectSurah(s); setView('detail'); }}
                 className="glass-card"
                 style={{ flexShrink: 0, width: '150px', padding: '1rem', textAlign: 'left', cursor: 'pointer', border: '1px solid var(--glass-border)' }}
               >
@@ -76,7 +74,7 @@ const SurahList = ({ surahs, recentSurahs, handleSelectSurah }) => {
               layout
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              onClick={() => goToSurah(surah)}
+              onClick={() => { handleSelectSurah(surah); setView('detail'); }}
               className="glass-card"
               style={{ padding: '1.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
             >
