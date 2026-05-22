@@ -49,10 +49,18 @@ export const RECITERS = [
   { id: 'ar.abdulbasitmurattal',name: 'Abdul Basit (Murattal)',  style: 'Classic · Measured',   bitrate: 64 },
   { id: 'ar.hudhaify',          name: 'Ali Al-Huthaify',         style: 'Clear · Steady',       bitrate: 128 },
   { id: 'ar.saoodshuraym',      name: "Sa'ud Ash-Shuraim",       style: 'Fast · Revision',      bitrate: 64 },
-  { id: 'ar.mahermuaiqly',      name: 'Maher Al-Muaiqly',        style: 'Warm · Flowing',       bitrate: 128 },
+  { id: 'ar.mahermuaiqly',      name: 'Maher Al-Muaiqly',        style: 'Modern · Flowing',     bitrate: 128 },
+  { id: 'Ghamadi_40kbps',       name: 'Saad Al-Ghamidi',         style: 'Warm · Flowing',       provider: 'everyayah' },
 ];
 
-export const getAudioUrl = (number, reciterId = 'ar.alafasy') => {
+export const getAudioUrl = (number, reciterId = 'ar.alafasy', surahNum = null, ayahNum = null) => {
   const reciter = RECITERS.find(r => r.id === reciterId) || RECITERS[0];
+  
+  if (reciter.provider === 'everyayah' && surahNum && ayahNum) {
+    const s = String(surahNum).padStart(3, '0');
+    const a = String(ayahNum).padStart(3, '0');
+    return `https://everyayah.com/data/${reciter.id}/${s}${a}.mp3`;
+  }
+  
   return `https://cdn.islamic.network/quran/audio/${reciter.bitrate}/${reciter.id}/${number}.mp3`;
 };

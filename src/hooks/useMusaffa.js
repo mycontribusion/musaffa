@@ -98,11 +98,11 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     return finalChunks;
   };
 
-  const playAyahAudioAsync = (number) => {
+  const playAyahAudioAsync = (ayah) => {
     return new Promise((resolve) => {
       const audio = getAudio(audioRef);
       const nextAudio = getAudio(nextAudioRef);
-      const url = getAudioUrl(number, reciter);
+      const url = getAudioUrl(ayah.number, reciter, ayah.surahNumber, ayah.numberInSurah);
 
       // Use preloaded audio ONLY if it perfectly matches the requested URL (including reciter)
       if (nextAudio.src === url) {
@@ -140,11 +140,11 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
       const nextAyah = chunk[i + 1];
       if (nextAyah) {
         const na = getAudio(nextAudioRef);
-        na.src = getAudioUrl(nextAyah.number, reciter);
+        na.src = getAudioUrl(nextAyah.number, reciter, nextAyah.surahNumber, nextAyah.numberInSurah);
         na.load();
       }
 
-      await playAyahAudioAsync(ayah.number);
+      await playAyahAudioAsync(ayah);
     }
 
     setCurrentAyahNumber(null);
