@@ -104,8 +104,8 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
       const nextAudio = getAudio(nextAudioRef);
       const url = getAudioUrl(number, reciter);
 
-      // Use preloaded audio if available
-      if (nextAudio.src.endsWith(`/${number}.mp3`)) {
+      // Use preloaded audio ONLY if it perfectly matches the requested URL (including reciter)
+      if (nextAudio.src === url) {
         const temp = audioRef.current;
         audioRef.current = nextAudioRef.current;
         nextAudioRef.current = temp;
@@ -125,7 +125,8 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     if (currentChunks.length === 0) return;
     isPlayingRef.current = true;
     // Keep screen on for the full session (both app-reading and user-reciting)
-    await acquireWakeLock();
+    // DO NOT await this, otherwise the user-gesture token expires and Safari blocks the first audio!
+    acquireWakeLock();
 
     let idx = currentIndexRef.current % currentChunks.length;
     setMudarasaTurn('app');
@@ -139,7 +140,7 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
       const nextAyah = chunk[i + 1];
       if (nextAyah) {
         const na = getAudio(nextAudioRef);
-        na.src = getAudioUrl(nextAyah.number);
+        na.src = getAudioUrl(nextAyah.number, reciter);
         na.load();
       }
 
