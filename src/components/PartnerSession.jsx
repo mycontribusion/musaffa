@@ -25,7 +25,9 @@ const PartnerSession = ({
   quizFeedback,
   handleQuizAnswer,
   currentQuizIndex,
-  activeQuizType
+  activeQuizType,
+  reciter,
+  setReciter,
 }) => {
   // Auto-scroll: fire whenever the active ayah changes (only set during app playback)
   useEffect(() => {
@@ -60,6 +62,8 @@ const PartnerSession = ({
       onBack={() => setView('list')}
       currentVolume={currentVolume}
       isListening={isListening}
+      reciter={reciter}
+      setReciter={setReciter}
     />
   );
 

@@ -42,4 +42,15 @@ export const getAyahTextByGlobal = (globalIndex, quranAr) => {
 
 export const removeTashkeel = (text) => text.replace(/[\u064B-\u065F]/g, "");
 
-export const getAudioUrl = (number) => `https://cdn.islamic.network/quran/audio/128/ar.alafasy/${number}.mp3`;
+export const RECITERS = [
+  { id: 'ar.alafasy',           name: 'Mishary Alafasy',         style: 'Melodic · Clear' },
+  { id: 'ar.husary',            name: 'Mahmoud Al-Husary',        style: 'Tajweed · Learning' },
+  { id: 'ar.minshawi',          name: 'Mohamed Al-Minshawi',      style: 'Slow · Traditional' },
+  { id: 'ar.abdulbasitmurattal',name: 'Abdul Basit (Murattal)',   style: 'Classic · Measured' },
+  { id: 'ar.hudhaify',          name: 'Ali Al-Huthaify',          style: 'Clear · Steady' },
+  { id: 'ar.saoodshuraym',      name: "Sa'ud Ash-Shuraim",        style: 'Fast · Revision' },
+  { id: 'ar.ghamadi',           name: 'Saad Al-Ghamidi',          style: 'Warm · Flowing' },
+];
+
+export const getAudioUrl = (number, reciter = 'ar.alafasy') =>
+  `https://cdn.islamic.network/quran/audio/128/${reciter}/${number}.mp3`;

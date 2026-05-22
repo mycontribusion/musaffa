@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getAudioUrl } from '../utils/quranUtils';
 
-export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView) => {
+export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 'ar.alafasy') => {
   const [chunks, setChunks] = useState([]);
   const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
   const [currentAyahNumber, setCurrentAyahNumber] = useState(null);
@@ -102,7 +102,7 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView) => {
     return new Promise((resolve) => {
       const audio = getAudio(audioRef);
       const nextAudio = getAudio(nextAudioRef);
-      const url = getAudioUrl(number);
+      const url = getAudioUrl(number, reciter);
 
       // Use preloaded audio if available
       if (nextAudio.src.endsWith(`/${number}.mp3`)) {
