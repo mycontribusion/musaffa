@@ -1,26 +1,25 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, Mic } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useMic } from '../hooks/useMic';
 
-const MudarasaView = ({
-  chunks,
-  currentChunkIndex,
-  currentAyahNumber,
-  mudarasaTurn,
-  onNext,
-  onBack,
-  onLogStumble,
-  isListening,
-  currentVolume,
-  sensitivity
-}) => {
+const MudarasaView = ({ chunks, currentChunkIndex, currentAyahNumber, mudarasaTurn, onNext, onLogStumble, autoNext, micSensitivity }) => {
+  const navigate = useNavigate();
+  const { currentVolume, isListening } = useMic(autoNext, micSensitivity, mudarasaTurn === 'user' && autoNext ? onNext : null);
+
+  useEffect(() => {
+    if (!currentAyahNumber) return;
+    const el = document.getElementById(`mudarasa-ayah-${currentAyahNumber}`);
+    if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+  }, [currentAyahNumber]);
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', minHeight: '80vh' }}>
-      {/* Dynamic Header */}
       <div style={{ position: 'sticky', top: '70px', zIndex: 90, padding: '1rem 0' }}>
         <div className="glass-card" style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--glass-bg)', backdropFilter: 'blur(20px)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <button onClick={onBack} className="icon-btn" style={{ width: '32px', height: '32px' }}><ChevronLeft size={16} /></button>
+            <button onClick={() => navigate('/partner')} className="icon-btn" style={{ width: '32px', height: '32px' }}><ChevronLeft size={16} /></button>
             <div>
               <span style={{ fontSize: '0.55rem', fontWeight: '900', color: mudarasaTurn === 'app' ? 'var(--accent-gold)' : 'var(--accent-emerald)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                 {mudarasaTurn === 'app' ? 'Listening to Partner' : 'Your Turn to Recite'}
@@ -30,42 +29,22 @@ const MudarasaView = ({
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: mudarasaTurn === 'app' ? 'var(--accent-gold)' : 'var(--bg-accent)', boxShadow: mudarasaTurn === 'app' ? '0 0 10px var(--accent-gold)' : 'none' }} />
-            <div style={{ 
-              width: '8px', height: '8px', borderRadius: '50%', 
-              background: mudarasaTurn === 'user' 
-                ? (isListening ? (currentVolume > sensitivity ? 'var(--accent-emerald)' : 'rgba(255,255,255,0.15)') : 'var(--accent-emerald)') 
-                : 'var(--bg-accent)', 
-              boxShadow: mudarasaTurn === 'user' 
-                ? (isListening ? (currentVolume > sensitivity ? '0 0 10px var(--accent-emerald)' : 'none') : '0 0 10px var(--accent-emerald)') 
-                : 'none',
-              transition: 'all 0.1s'
-            }} />
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: mudarasaTurn === 'user' ? (isListening ? (currentVolume > micSensitivity ? 'var(--accent-emerald)' : 'rgba(255,255,255,0.15)') : 'var(--accent-emerald)') : 'var(--bg-accent)', boxShadow: mudarasaTurn === 'user' ? (isListening ? (currentVolume > micSensitivity ? '0 0 10px var(--accent-emerald)' : 'none') : '0 0 10px var(--accent-emerald)') : 'none', transition: 'all 0.1s' }} />
           </div>
         </div>
       </div>
 
-      {/* Recitation Content */}
       <div style={{ flex: 1, padding: '2rem 0' }}>
         <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '3rem' }}>
           {chunks[currentChunkIndex].map((ayah) => {
             let displayText = ayah.text;
             if (ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9) {
-              const BISMILLAH = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ";
-              const cleanBismillah = BISMILLAH.replace(/\uFEFF/g, '');
-              const cleanText = displayText.replace(/\uFEFF/g, '');
-              if (cleanText.startsWith(cleanBismillah)) {
-                displayText = cleanText.slice(cleanBismillah.length).trim();
-              }
+              const B = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ".replace(/\uFEFF/g, '');
+              const t = displayText.replace(/\uFEFF/g, '');
+              if (t.startsWith(B)) displayText = t.slice(B.length).trim();
             }
-
             return (
-              <motion.div 
-                key={ayah.number} 
-                id={`mudarasa-ayah-${ayah.number}`}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1, scale: ayah.number === currentAyahNumber ? 1.02 : 1 }}
-                style={{ textAlign: 'right', padding: '1.5rem', borderRadius: '1.5rem', background: ayah.number === currentAyahNumber ? 'var(--accent-gold-soft)' : 'transparent', border: ayah.number === currentAyahNumber ? '1px solid var(--accent-gold-soft)' : '1px solid transparent', transition: '0.4s' }}
-              >
+              <motion.div key={ayah.number} id={`mudarasa-ayah-${ayah.number}`} initial={{ opacity: 0 }} animate={{ opacity: 1, scale: ayah.number === currentAyahNumber ? 1.02 : 1 }} style={{ textAlign: 'right', padding: '1.5rem', borderRadius: '1.5rem', background: ayah.number === currentAyahNumber ? 'var(--accent-gold-soft)' : 'transparent', border: ayah.number === currentAyahNumber ? '1px solid var(--accent-gold-soft)' : '1px solid transparent', transition: '0.4s' }}>
                 <p className="arabic-text" style={{ fontSize: '2.2rem', color: ayah.number === currentAyahNumber ? 'var(--accent-gold)' : 'var(--text-primary)' }}>
                   {displayText} <span style={{ fontSize: '1.2rem', color: 'var(--accent-gold)', opacity: 0.5, marginRight: '0.5rem' }}>﴿{ayah.numberInSurah}﴾</span>
                 </p>
@@ -75,26 +54,15 @@ const MudarasaView = ({
         </div>
       </div>
 
-      {/* Control Bar */}
       <div style={{ position: 'fixed', bottom: '2rem', left: '0', right: '0', zIndex: 100, display: 'flex', justifyContent: 'center' }}>
         <AnimatePresence mode="wait">
           {mudarasaTurn === 'user' && (
             <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-              <button 
-                onClick={onNext}
-                className="btn-primary"
-                style={{ background: 'var(--accent-emerald)', padding: '1.25rem 2.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#fff', fontSize: '0.8rem', letterSpacing: '0.1em' }}
-              >
+              <button onClick={onNext} className="btn-primary" style={{ background: 'var(--accent-emerald)', padding: '1.25rem 2.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#fff', fontSize: '0.8rem', letterSpacing: '0.1em' }}>
                 <span>Finished Portion</span>
               </button>
               <button onClick={() => onLogStumble(chunks[currentChunkIndex][0])} style={{ background: 'none', border: 'none', color: 'var(--accent-red)', opacity: 0.5, fontWeight: '700', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer' }}>Log Stumble</button>
-              
-              {isListening && (
-                <p style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: '600', letterSpacing: '0.05em', margin: 0 }}>
-                  <Mic size={10} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-                  LISTENING: TURN SWITCHES AFTER SILENCE
-                </p>
-              )}
+              {isListening && <p style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: '600', letterSpacing: '0.05em', margin: 0 }}><Mic size={10} style={{ verticalAlign: 'middle', marginRight: '4px' }} />LISTENING: TURN SWITCHES AFTER SILENCE</p>}
             </motion.div>
           )}
         </AnimatePresence>

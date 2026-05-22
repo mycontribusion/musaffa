@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { groupMutashabihatBySurah } from '../utils/mutashabihatParser';
 
-export const useQuranData = (syncStateWithURL) => {
+export const useQuranData = () => {
   const [surahs, setSurahs] = useState([]);
   const [quranAr, setQuranAr] = useState(null);
   const [quranEn, setQuranEn] = useState(null);
@@ -23,12 +23,10 @@ export const useQuranData = (syncStateWithURL) => {
           sRes.json(), arRes.json(), enRes.json(), mutRes.json(),
         ]);
 
-        const surahList = Array.isArray(sData) ? sData : sData.data;
-        setSurahs(surahList);
+        setSurahs(Array.isArray(sData) ? sData : sData.data);
         setQuranAr(arData.data || arData);
         setQuranEn(enData.data || enData);
         setMutashabihatData(mutData);
-        syncStateWithURL(surahList);
       } catch (err) {
         console.error('Core data load error', err);
       } finally {

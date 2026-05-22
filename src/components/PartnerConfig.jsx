@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Layers, FileText, LayoutGrid, Mic, MicOff, Settings2, AlertCircle } from 'lucide-react';
+import { ChevronDown, Layers, FileText, LayoutGrid, Mic, MicOff, Settings2, AlertCircle, ChevronLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 // Custom dropdown to replace native <select> — avoids Chrome's backdrop-filter compositing bug
 const CustomSelect = ({ value, options, onChange, flex = '1', textAlign = 'left' }) => {
@@ -13,77 +13,76 @@ const CustomSelect = ({ value, options, onChange, flex = '1', textAlign = 'left'
   useEffect(() => {
     const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
     document.addEventListener('mousedown', handler);
-    document.addEventListener('touchstart', handler);
-    return () => { document.removeEventListener('mousedown', handler); document.removeEventListener('touchstart', handler); };
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Scroll to selected option when opened
+  // Scroll active item into view when opened
   useEffect(() => {
     if (open && listRef.current) {
       const activeEl = listRef.current.querySelector('[data-active="true"]');
-      if (activeEl) setTimeout(() => activeEl.scrollIntoView({ block: 'nearest' }), 50);
+      if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
     }
   }, [open]);
 
   return (
-    <div ref={ref} style={{ flex, minWidth: 0, position: 'relative' }}>
+    <div ref={ref} style={{ position: 'relative', flex }}>
       <button
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={() => setOpen(!open)}
         style={{
           width: '100%',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.25rem',
-          background: 'var(--bg-accent)', color: 'var(--text-primary)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0.8rem 1rem',
+          background: 'rgba(255, 255, 255, 0.05)',
           border: '1px solid var(--glass-border)',
-          padding: '0.8rem', borderRadius: 'var(--radius-md)',
-          fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer',
-          outline: 'none', textAlign, whiteSpace: 'nowrap', overflow: 'hidden',
+          borderRadius: 'var(--radius-md)',
+          color: 'var(--text-primary)',
+          fontSize: '0.9rem', fontWeight: '500',
+          cursor: 'pointer', textAlign
         }}
       >
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-          {selected?.label ?? '—'}
-        </span>
-        <ChevronDown size={14} style={{ flexShrink: 0, color: 'var(--text-muted)', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.2s ease' }} />
+        <span>{selected ? selected.label : 'Select...'}</span>
+        <ChevronDown size={14} style={{ opacity: 0.5, transform: open ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />
       </button>
 
-      <AnimatePresence>
-        {open && (
-          <motion.ul
-            ref={listRef}
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.15 }}
-            style={{
-              position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 9999,
-              background: 'var(--bg-secondary)', border: '1px solid var(--glass-border)',
-              borderRadius: 'var(--radius-md)', listStyle: 'none', margin: 0, padding: '0.25rem',
-              maxHeight: '220px', overflowY: 'auto',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-            }}
-          >
-            {options.map(opt => (
-              <li
-                key={opt.value}
-                data-active={opt.value === value ? 'true' : 'false'}
+      {open && (
+        <ul
+          ref={listRef}
+          style={{
+            position: 'absolute', top: '100%', left: 0, right: 0,
+            marginTop: '4px', padding: '0.25rem', margin: 0, listStyle: 'none',
+            background: 'var(--bg-card, #1e293b)',
+            border: '1px solid var(--glass-border)',
+            borderRadius: 'var(--radius-md)',
+            maxHeight: '200px', overflowY: 'auto',
+            zIndex: 1000,
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)'
+          }}
+          className="no-scrollbar config-fade-in"
+        >
+          {options.map((opt) => (
+            <li key={opt.value}>
+              <button
+                type="button"
+                data-active={opt.value === value}
                 onClick={() => { onChange(opt.value); setOpen(false); }}
                 style={{
-                  padding: '0.6rem 0.75rem', borderRadius: 'var(--radius-sm)', fontSize: '0.82rem',
-                  fontWeight: opt.value === value ? '700' : '500',
-                  color: opt.value === value ? 'var(--accent-gold)' : 'var(--text-primary)',
-                  background: opt.value === value ? 'var(--accent-gold-soft, rgba(251,191,36,0.1))' : 'transparent',
-                  cursor: 'pointer', transition: '0.15s ease',
-                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  width: '100%', padding: '0.6rem 0.75rem', textAlign: 'left',
+                  background: opt.value === value ? 'var(--accent-gold-soft, rgba(251, 191, 36, 0.1))' : 'transparent',
+                  color: opt.value === value ? 'var(--accent-gold)' : 'var(--text-secondary)',
+                  border: 'none', borderRadius: '4px',
+                  fontSize: '0.85rem', fontWeight: opt.value === value ? '700' : '400',
+                  cursor: 'pointer'
                 }}
-                onMouseEnter={e => { if (opt.value !== value) e.currentTarget.style.background = 'var(--bg-accent)'; }}
-                onMouseLeave={e => { if (opt.value !== value) e.currentTarget.style.background = 'transparent'; }}
+                onMouseEnter={(e) => e.target.style.background = opt.value === value ? 'var(--accent-gold-soft, rgba(251, 191, 36, 0.1))' : 'rgba(255,255,255,0.03)'}
+                onMouseLeave={(e) => e.target.style.background = opt.value === value ? 'var(--accent-gold-soft, rgba(251, 191, 36, 0.1))' : 'transparent'}
               >
                 {opt.label}
-              </li>
-            ))}
-          </motion.ul>
-        )}
-      </AnimatePresence>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 };
@@ -93,10 +92,11 @@ const PartnerConfig = ({
   params,
   onChange,
   onStart,
-  onBack,
   currentVolume,
   isListening
 }) => {
+  const navigate = useNavigate();
+  
   const getAyahCount = (surahNum) => {
     const s = surahs.find(x => x.number === surahNum);
     return s ? s.numberOfAyahs : 0;
@@ -115,11 +115,37 @@ const PartnerConfig = ({
     return false;
   };
 
+  // We add a simple global animation keyframe for the dropdown to avoid framer-motion compositing overhead
+  useEffect(() => {
+    if (!document.getElementById('dropdown-keyframes')) {
+      const style = document.createElement('style');
+      style.id = 'dropdown-keyframes';
+      style.innerHTML = `
+        @keyframes fadeInDown {
+          from { opacity: 0; transform: translateY(-5px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .config-fade-in {
+          animation: fadeInDown 0.15s ease-out forwards;
+        }
+        .page-fade-in {
+          animation: fadeInDown 0.3s ease-out forwards;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
+
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto space-y-8 pt-4 pb-24 px-2">
-      <div className="text-center space-y-3">
-        <h2 style={{ fontSize: 'clamp(1.75rem, 5vw, 2.5rem)', fontWeight: '900', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>Musaffa Session</h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Configure your range and turn size.</p>
+    <div className="page-fade-in max-w-2xl mx-auto space-y-8 pt-4 pb-24 px-2">
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+        <button onClick={() => navigate('/')} className="icon-btn" style={{ width: '36px', height: '36px' }}>
+          <ChevronLeft size={18} />
+        </button>
+        <div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '900', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>Musaffa Config</h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '0.2rem' }}>Configure your Mudarasa session</p>
+        </div>
       </div>
 
       <div className="solid-card" style={{ padding: 'clamp(1.5rem, 5vw, 2.5rem)', display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%', maxWidth: '100%' }}>
@@ -212,13 +238,13 @@ const PartnerConfig = ({
                   <p style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>Auto-switch turns using microphone.</p>
                 </div>
               </div>
-              <div style={{ width: '40px', height: '20px', borderRadius: '10px', background: params.autoNext ? 'var(--accent-gold)' : 'rgba(255,255,255,0.1)', position: 'relative' }}>
-                <motion.div animate={{ x: params.autoNext ? 22 : 2 }} style={{ width: '16px', height: '16px', borderRadius: '50%', background: params.autoNext ? '#000' : 'var(--text-muted)', position: 'absolute', top: '2px' }} />
+              <div style={{ width: '40px', height: '20px', borderRadius: '10px', background: params.autoNext ? 'var(--accent-gold)' : 'rgba(255,255,255,0.1)', position: 'relative', transition: '0.2s ease' }}>
+                <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: params.autoNext ? '#000' : 'var(--text-muted)', position: 'absolute', top: '2px', left: params.autoNext ? '22px' : '2px', transition: '0.2s ease' }} />
               </div>
             </button>
 
             {params.autoNext && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={{ background: 'var(--bg-accent)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div className="config-fade-in" style={{ background: 'var(--bg-accent)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Settings2 size={14} style={{ color: 'var(--accent-gold)' }} />
                   <span style={{ fontSize: '0.65rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Mic Sensitivity</span>
@@ -227,7 +253,7 @@ const PartnerConfig = ({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', fontWeight: '600', color: 'var(--text-muted)' }}>
                     <span>Less Sensitive</span>
-                    <span>Very Sensitive</span>
+                    <span style={{marginLeft: 'auto'}}>Very Sensitive</span>
                   </div>
                   <input
                     type="range"
@@ -246,14 +272,13 @@ const PartnerConfig = ({
                     </span>
                   </div>
                   <div style={{ height: '8px', width: '100%', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
-                    <motion.div
-                      style={{ height: '100%', background: currentVolume > params.micSensitivity ? 'var(--accent-emerald)' : 'var(--text-muted)', opacity: 0.5 }}
-                      animate={{ width: `${(currentVolume / 100) * 100}%` }}
+                    <div
+                      style={{ height: '100%', background: currentVolume > params.micSensitivity ? 'var(--accent-emerald)' : 'var(--text-muted)', opacity: 0.5, width: `${(currentVolume / 100) * 100}%`, transition: '0.1s linear' }}
                     />
                     <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${(params.micSensitivity / 100) * 100}%`, width: '2px', background: 'var(--accent-gold)', boxShadow: '0 0 10px var(--accent-gold-glow)' }} />
                   </div>
                 </div>
-              </motion.div>
+              </div>
             )}
           </div>
         </div>
@@ -276,7 +301,7 @@ const PartnerConfig = ({
           Start Musaffa Session
         </button>
       </div>
-    </motion.div>
+    </div>
   );
 };
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle, RotateCcw, ArrowRight, Trophy, Target, Sparkles } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const QuizEngine = ({
   subView,
@@ -10,10 +11,10 @@ const QuizEngine = ({
   quizFeedback,
   handleQuizAnswer,
   startQuiz,
-  setView,
-  setPartnerSubView,
+  selectedSurah,
   activeQuizType
 }) => {
+  const navigate = useNavigate();
   const typeLabels = {
     all: 'Mastery Challenge',
     beginnings: 'Verse Openings',
@@ -248,7 +249,7 @@ const QuizEngine = ({
             </button>
 
             <button 
-              onClick={() => setView('detail')} 
+              onClick={() => navigate(selectedSurah ? `/surah/${selectedSurah.number}` : '/')} 
               className="h-20 bg-white/[0.03] border border-white/[0.1] text-white rounded-[2rem] font-black uppercase tracking-[0.2em] text-[11px] hover:bg-white/[0.08] transition-all flex items-center justify-center gap-3"
             >
               <ArrowRight size={18} />

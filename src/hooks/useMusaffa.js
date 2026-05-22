@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getAudioUrl } from '../utils/quranUtils';
 
-export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView) => {
+export const useMusaffa = (quranAr, musaffaParams, navigate) => {
   const [chunks, setChunks] = useState([]);
   const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
   const [currentAyahNumber, setCurrentAyahNumber] = useState(null);
@@ -104,13 +104,12 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView) => {
       const nextAudio = getAudio(nextAudioRef);
       const url = getAudioUrl(number);
 
-      // Use preloaded audio if available
       if (nextAudio.src.endsWith(`/${number}.mp3`)) {
         const temp = audioRef.current;
         audioRef.current = nextAudioRef.current;
         nextAudioRef.current = temp;
         audioRef.current.onended = resolve;
-        audioRef.current.onerror = resolve; // Don't hang on error
+        audioRef.current.onerror = resolve;
         audioRef.current.play().catch(() => resolve());
       } else {
         audio.src = url;
@@ -124,7 +123,6 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView) => {
   const playCurrentIndex = async (currentChunks = chunks) => {
     if (currentChunks.length === 0) return;
     isPlayingRef.current = true;
-    // Keep screen on for the full session (both app-reading and user-reciting)
     await acquireWakeLock();
 
     let idx = currentIndexRef.current % currentChunks.length;
@@ -135,7 +133,6 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView) => {
       const ayah = chunk[i];
       setCurrentAyahNumber(ayah.number);
 
-      // Preload next ayah
       const nextAyah = chunk[i + 1];
       if (nextAyah) {
         const na = getAudio(nextAudioRef);
@@ -148,7 +145,6 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView) => {
 
     setCurrentAyahNumber(null);
     isPlayingRef.current = false;
-    // Do NOT release wake lock here — keep screen on during user's recitation turn
 
     const nextIdx = (idx + 1) % currentChunks.length;
     currentIndexRef.current = nextIdx;
@@ -161,10 +157,11 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView) => {
     if (finalChunks.length === 0) return;
     currentIndexRef.current = 0;
     setCurrentChunkIndex(0);
-    setPartnerSubView('mudarasa');
+    // Navigate to the session route instead of calling setPartnerSubView
+    navigate('/partner/session');
     if (musaffaParams.whoStarts === 'app') playCurrentIndex(finalChunks);
     else {
-      acquireWakeLock(); // Keep screen on even when user starts
+      acquireWakeLock();
       setMudarasaTurn('user');
     }
   };
@@ -172,18 +169,15 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView) => {
   const handleNextTurnManual = () => {
     if (chunks.length === 0) return;
     if (window.navigator.vibrate) window.navigator.vibrate([40, 150]);
-    
-    // The user just finished their turn on the current chunk. 
-    // Advance to the NEXT chunk before the app plays!
+
     const nextIdx = (currentIndexRef.current + 1) % chunks.length;
     currentIndexRef.current = nextIdx;
     setCurrentChunkIndex(nextIdx);
 
-    // Pass chunks explicitly to avoid stale closure
     playCurrentIndex(chunks);
   };
 
-  // Cleanup on unmount — stop audio and release screen lock
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
