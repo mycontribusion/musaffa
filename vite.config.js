@@ -32,7 +32,57 @@ export default defineConfig({
             purpose: 'any maskable'
           }
         ]
-      }
+      },
+      workbox: {
+        // Pre-cache the full app shell (JS, CSS, HTML, icons)
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,woff,ttf}'],
+
+        // Also pre-cache the static Quran data files at install time
+        // so the app works offline from the very first revisit after install
+        additionalManifestEntries: [
+          { url: '/data/surahs.json', revision: null },
+          { url: '/data/quran-ar.json', revision: null },
+          { url: '/data/quran-en.json', revision: null },
+          { url: '/data/mutashabihat.json', revision: null },
+          { url: '/data/waqar114', revision: null },
+        ],
+
+        runtimeCaching: [
+          // ── Recitation audio CDNs ──────────────────────────────────────────
+          // INTENTIONALLY NOT CACHED — Musaffa audio always requires internet.
+          {
+            urlPattern: /everyayah\.com|verses\.quran\.com|cdn\.islamic\.network/,
+            handler: 'NetworkOnly',
+          },
+
+          // ── Quran data files ───────────────────────────────────────────────
+          // CacheFirst: these are large static blobs; serve from cache, update
+          // in the background only when a new SW is installed.
+          {
+            urlPattern: /\/data\/.*/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'quran-data-v1',
+              expiration: { maxEntries: 20 },
+            },
+          },
+
+          // ── Google Fonts & other CDN assets ───────────────────────────────
+          {
+            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com/,
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'fonts-cache-v1' },
+          },
+
+          // ── Everything else ────────────────────────────────────────────────
+          {
+            urlPattern: /^https?.*/,
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'general-cache-v1' },
+          },
+        ],
+      },
     })
   ]
 })
+

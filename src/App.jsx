@@ -53,7 +53,7 @@ const App = () => {
     if (pv) setPartnerSubView(pv);
   };
 
-  const { surahs, quranAr, quranEn, mutashabihatData, waqarData, loading } = useQuranData(syncStateWithURL);
+  const { surahs, quranAr, quranEn, mutashabihatData, waqarData, loading, error } = useQuranData(syncStateWithURL);
   const { chunks, currentChunkIndex, currentAyahNumber, mudarasaTurn, startMusaffa, handleNextTurnManual } = useMusaffa(quranAr, musaffaParams, setPartnerSubView, reciter);
   const { dynamicMutashabihat, setDynamicMutashabihat, currentQuizIndex, setCurrentQuizIndex, quizScore, setQuizScore, quizFeedback, setQuizFeedback, generateDynamicQuiz, handleQuizAnswer } = useQuiz(mutashabihatData, quranAr, surahs, selectedSurah);
 
@@ -69,7 +69,7 @@ const App = () => {
 
   // Sync state to URL paths
   useEffect(() => {
-    if (loading) return; // Wait until initial data is loaded
+    if (loading || error) return; // Wait until initial data is loaded
 
     let newPath = '/';
     if (view === 'detail' && selectedSurah) {
@@ -88,7 +88,7 @@ const App = () => {
         window.history.pushState({}, '', newPath);
       }
     }
-  }, [view, selectedSurah, partnerSubView, loading]);
+  }, [view, selectedSurah, partnerSubView, loading, error]);
 
   useEffect(() => { localStorage.setItem('quran_stumbles', JSON.stringify(stumbles)); }, [stumbles]);
   useEffect(() => { localStorage.setItem('quran_recent', JSON.stringify(recentSurahs)); }, [recentSurahs]);
@@ -119,6 +119,24 @@ const App = () => {
   };
 
   if (loading) return <div className="loading-screen"><div className="loader" /></div>;
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-950 p-4 text-center text-slate-200">
+        <div className="max-w-md space-y-6">
+          <div className="text-6xl text-slate-700">📶</div>
+          <h1 className="text-2xl font-bold text-slate-100">You're Offline</h1>
+          <p className="text-slate-400 leading-relaxed">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app-container">

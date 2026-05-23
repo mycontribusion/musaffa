@@ -179,7 +179,17 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     const nextIdx = (currentIndexRef.current + 1) % chunks.length;
     currentIndexRef.current = nextIdx;
     setCurrentChunkIndex(nextIdx);
-
+    
+    // ---- NEW: Preload first ayah of the upcoming chunk ----
+    const nextChunk = chunks[nextIdx];
+    if (nextChunk && nextChunk.length > 0) {
+      const firstAyah = nextChunk[0];
+      const preAudio = getAudio(nextAudioRef);
+      preAudio.src = getAudioUrl(firstAyah.number, reciter, firstAyah.surahNumber, firstAyah.numberInSurah);
+      preAudio.load(); // start downloading immediately
+    }
+    // -----------------------------------------------------
+    
     // Pass chunks explicitly to avoid stale closure
     playCurrentIndex(chunks);
   };
