@@ -5,16 +5,16 @@ const Header = ({ theme, setTheme, view, setView, setPartnerSubView }) => {
   const isDark = theme === 'dark';
 
   return (
-    <header 
-      className="sticky top-0 z-100 mb-6" 
-      style={{ 
-        backgroundColor: 'var(--bg-primary)', 
-        borderBottom: '1px solid var(--glass-border)' 
+    <header
+      className="sticky top-0 z-100 mb-6"
+      style={{
+        backgroundColor: 'var(--bg-primary)',
+        borderBottom: '1px solid var(--glass-border)'
       }}
     >
       <div className="app-container">
-        <div 
-          className="flex items-center justify-between py-4" 
+        <div
+          className="flex items-center justify-between py-4"
           style={{ paddingLeft: '0.25rem', paddingRight: '0.25rem' }}
         >
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => { setView('list'); }}>
@@ -45,7 +45,7 @@ const Header = ({ theme, setTheme, view, setView, setPartnerSubView }) => {
               }}
             >
               <PlayCircle size={14} />
-              <span>Musaffa</span>
+              <span>Start Musaffa</span>
             </button>
 
             <button
