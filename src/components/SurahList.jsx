@@ -20,7 +20,7 @@ const SurahList = ({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
-      style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', paddingBottom: '3rem' }}
+      style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', paddingBottom: '3rem', paddingTop: '1.5rem' }}
     >
       {/* Search Section */}
       <div className="search-input-wrapper" style={{ maxWidth: '600px', margin: '0 auto' }}>

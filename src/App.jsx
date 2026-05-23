@@ -24,7 +24,7 @@ const App = () => {
     const path = window.location.pathname;
     const parts = path.split('/').filter(Boolean);
     const p = new URLSearchParams(window.location.search);
-    
+
     // Support legacy query params and new path structure
     let s = sList.find(x => x.number === Number(p.get('surah')));
     let v = p.get('view') || 'list';
@@ -58,7 +58,7 @@ const App = () => {
   const { dynamicMutashabihat, setDynamicMutashabihat, currentQuizIndex, setCurrentQuizIndex, quizScore, setQuizScore, quizFeedback, setQuizFeedback, generateDynamicQuiz, handleQuizAnswer } = useQuiz(mutashabihatData, quranAr, surahs, selectedSurah);
 
   useEffect(() => { document.documentElement.setAttribute('data-theme', theme); }, [theme]);
-  
+
   // Handle browser back/forward buttons
   useEffect(() => {
     if (!surahs || surahs.length === 0) return;
@@ -127,7 +127,7 @@ const App = () => {
           <div className="text-6xl text-slate-700">📶</div>
           <h1 className="text-2xl font-bold text-slate-100">You're Offline</h1>
           <p className="text-slate-400 leading-relaxed">{error}</p>
-          <button 
+          <button
             onClick={() => window.location.reload()}
             className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium transition-colors"
           >
@@ -139,29 +139,30 @@ const App = () => {
   }
 
   return (
-    <div className="app-container">
+    <>
       <Header theme={theme} setTheme={setTheme} view={view} setView={setView} setPartnerSubView={setPartnerSubView} />
-      <main className="pb-24">
+      <div className="app-container">
+        <main className="pb-24">
         <AnimatePresence mode="wait">
           {view === 'list' && <SurahList surahs={surahs} recentSurahs={recentSurahs} handleSelectSurah={handleSelectSurah} setView={setView} />}
           {view === 'detail' && selectedSurah && <SurahDetail selectedSurah={selectedSurah} surahs={surahs} handleSelectSurah={handleSelectSurah} quranAr={quranAr} quranEn={quranEn} setView={setView} openMusaffaConfig={(s) => { handleSelectSurah(s); setPartnerSubView('config'); setView('partner'); }} startQuiz={startQuiz} waqarData={waqarData} />}
           {view === 'partner' && (
-            <PartnerSession 
+            <PartnerSession
               key="partner-view"
-              subView={partnerSubView} 
-              setSubView={setPartnerSubView} 
-              params={musaffaParams} 
-              setParams={setMusaffaParams} 
-              surahs={surahs} 
-              startMusaffa={startMusaffa} 
-              startQuiz={startQuiz} 
-              chunks={chunks} 
-              currentChunkIndex={currentChunkIndex} 
-              currentAyahNumber={currentAyahNumber} 
-              turn={mudarasaTurn} 
-              handleNextTurn={handleNextTurnManual} 
-              logStumble={logStumble} 
-              setView={setView} 
+              subView={partnerSubView}
+              setSubView={setPartnerSubView}
+              params={musaffaParams}
+              setParams={setMusaffaParams}
+              surahs={surahs}
+              startMusaffa={startMusaffa}
+              startQuiz={startQuiz}
+              chunks={chunks}
+              currentChunkIndex={currentChunkIndex}
+              currentAyahNumber={currentAyahNumber}
+              turn={mudarasaTurn}
+              handleNextTurn={handleNextTurnManual}
+              logStumble={logStumble}
+              setView={setView}
               questions={dynamicMutashabihat}
               quizScore={quizScore}
               quizFeedback={quizFeedback}
@@ -173,18 +174,19 @@ const App = () => {
             />
           )}
           {view === 'mutashabihat-session' && selectedSurah && waqarData && waqarData[selectedSurah.number] && (
-            <MutashabihatSession 
+            <MutashabihatSession
               key={`waqar-${selectedSurah.number}`}
-              surah={selectedSurah} 
-              allSurahEntries={waqarData[selectedSurah.number]} 
-              quranAr={quranAr} 
+              surah={selectedSurah}
+              allSurahEntries={waqarData[selectedSurah.number]}
+              quranAr={quranAr}
               surahs={surahs}
-              onClose={() => setView('detail')} 
+              onClose={() => setView('detail')}
             />
           )}
         </AnimatePresence>
-      </main>
-    </div>
+        </main>
+      </div>
+    </>
   );
 };
 
