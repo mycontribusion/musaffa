@@ -9,17 +9,17 @@ const SurahList = ({
   setView,
 }) => {
   const [searchQuery, setSearchQuery] = React.useState('');
-  
+
   const filteredSurahs = surahs.filter((s) =>
     s.englishName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.name.includes(searchQuery)
   );
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 10 }} 
-      animate={{ opacity: 1, y: 0 }} 
-      exit={{ opacity: 0 }} 
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
       style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', paddingBottom: '3rem' }}
     >
       {/* Search Section */}

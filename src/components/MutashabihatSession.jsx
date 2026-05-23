@@ -132,6 +132,21 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose 
             Back to Surah
           </button>
         </div>
+        
+        {/* Attribution Footer */}
+        <div style={{ marginTop: '2.5rem', opacity: 0.6 }}>
+          <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+            Mutashabihat dataset courtesy of{' '}
+            <a 
+              href="https://github.com/Waqar144/Quran_Mutashabihat_Data" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              style={{ color: 'var(--accent-gold)', textDecoration: 'none', fontWeight: '700' }}
+            >
+              Waqar144
+            </a>
+          </p>
+        </div>
       </div>
     </motion.div>
   );
@@ -262,6 +277,21 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose 
             </AnimatePresence>
           </motion.div>
         </AnimatePresence>
+
+        {/* Attribution Footer */}
+        <div style={{ textAlign: 'center', marginTop: '4rem', opacity: 0.5 }}>
+          <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+            Mutashabihat dataset courtesy of{' '}
+            <a 
+              href="https://github.com/Waqar144/Quran_Mutashabihat_Data" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              style={{ color: 'var(--accent-gold)', textDecoration: 'none', fontWeight: '700' }}
+            >
+              Waqar144
+            </a>
+          </p>
+        </div>
       </main>
     </motion.div>
   );
