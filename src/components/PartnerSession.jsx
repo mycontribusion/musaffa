@@ -32,6 +32,11 @@ const PartnerSession = ({
   savedMusaffaSession,
   saveMusaffaSession,
   clearMusaffaSession,
+  resumeMusaffaSession,
+  pauseMusaffa,
+  resumeMusaffa,
+  stopMusaffa,
+  isPaused,
 }) => {
   // Auto-scroll: fire whenever the active ayah changes (only set during app playback)
   useEffect(() => {
@@ -76,12 +81,7 @@ const PartnerSession = ({
               background: 'var(--bg-accent)', color: 'var(--text-secondary)', fontSize: '0.65rem',
               fontWeight: '700', cursor: 'pointer',
             }}>Dismiss</button>
-            <button onClick={() => {
-              if (savedMusaffaSession) {
-                setParams(savedMusaffaSession.params);
-                setPartnerSubView('mudarasa');
-              }
-            }} style={{
+            <button onClick={resumeMusaffaSession} style={{
               padding: '0.4rem 0.7rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-gold)',
               background: 'var(--accent-gold)', color: '#000', fontSize: '0.65rem',
               fontWeight: '800', cursor: 'pointer',
@@ -115,12 +115,14 @@ const PartnerSession = ({
       currentAyahNumber={currentAyahNumber}
       mudarasaTurn={turn}
       onNext={handleNextTurn}
-      onBack={() => { saveMusaffaSession(); setSubView('config'); }}
+      onBack={() => { stopMusaffa(); clearMusaffaSession(); setSubView('config'); }}
       onLogStumble={logStumble}
-      onPause={saveMusaffaSession}
       isListening={isListening}
       currentVolume={currentVolume}
       sensitivity={params.micSensitivity}
+      isPaused={isPaused}
+      onPause={pauseMusaffa}
+      onResume={resumeMusaffa}
     />
   );
 

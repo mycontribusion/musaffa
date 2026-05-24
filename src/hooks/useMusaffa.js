@@ -1,17 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getAudioUrl } from '../utils/quranUtils';
 
-export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 'ar.alafasy') => {
+export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 'ar.alafasy', initialChunkIndex, initialTurn) => {
   const [chunks, setChunks] = useState([]);
-  const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
+  const [currentChunkIndex, setCurrentChunkIndex] = useState(initialChunkIndex || 0);
   const [currentAyahNumber, setCurrentAyahNumber] = useState(null);
-  const [mudarasaTurn, setMudarasaTurn] = useState('app');
+  const [mudarasaTurn, setMudarasaTurn] = useState(initialTurn || 'app');
+  const [isPaused, setIsPaused] = useState(false);
 
   const audioRef = useRef(null);
   const nextAudioRef = useRef(null);
   const currentIndexRef = useRef(0);
   const wakeLockRef = useRef(null);
   const isPlayingRef = useRef(false);
+  const shouldStopRef = useRef(false);
 
   // Initialise audio objects lazily so they aren't created during SSR
   const getAudio = (ref) => {
@@ -124,6 +126,7 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
   const playCurrentIndex = async (currentChunks = chunks) => {
     if (currentChunks.length === 0) return;
     isPlayingRef.current = true;
+    shouldStopRef.current = false;
     // Keep screen on for the full session (both app-reading and user-reciting)
     // DO NOT await this, otherwise the user-gesture token expires and Safari blocks the first audio!
     acquireWakeLock();
@@ -133,6 +136,13 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     const chunk = currentChunks[idx];
 
     for (let i = 0; i < chunk.length; i++) {
+      // Check if we should stop
+      if (shouldStopRef.current) {
+        setCurrentAyahNumber(null);
+        isPlayingRef.current = false;
+        return;
+      }
+      
       const ayah = chunk[i];
       setCurrentAyahNumber(ayah.number);
 
@@ -157,11 +167,11 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     setMudarasaTurn('user');
   };
 
-  const startMusaffa = (overrideChunks) => {
+  const startMusaffa = (overrideChunks, startChunkIndex = 0) => {
     const finalChunks = Array.isArray(overrideChunks) ? overrideChunks : createChunks();
     if (finalChunks.length === 0) return;
-    currentIndexRef.current = 0;
-    setCurrentChunkIndex(0);
+    currentIndexRef.current = startChunkIndex;
+    setCurrentChunkIndex(startChunkIndex);
     setPartnerSubView('mudarasa');
     if (musaffaParams.whoStarts === 'app') playCurrentIndex(finalChunks);
     else {
@@ -194,6 +204,46 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     playCurrentIndex(chunks);
   };
 
+  // Pause musaffa - stop audio and release wake lock
+  const pauseMusaffa = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    if (nextAudioRef.current) {
+      nextAudioRef.current.pause();
+    }
+    releaseWakeLock();
+    setIsPaused(true);
+  }, []);
+
+  // Resume musaffa - re-acquire wake lock and continue
+  const resumeMusaffa = useCallback(() => {
+    acquireWakeLock();
+    setIsPaused(false);
+  }, []);
+
+  // Stop musaffa - stop audio, release wake lock, and reset paused state
+  const stopMusaffa = useCallback(() => {
+    // Signal to stop the playback loop
+    shouldStopRef.current = true;
+    
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = '';
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
+    }
+    if (nextAudioRef.current) {
+      nextAudioRef.current.pause();
+      nextAudioRef.current.src = '';
+      nextAudioRef.current.onended = null;
+      nextAudioRef.current.onerror = null;
+    }
+    releaseWakeLock();
+    isPlayingRef.current = false;
+    setIsPaused(false);
+  }, []);
+
   // Cleanup on unmount — stop audio and release screen lock
   useEffect(() => {
     return () => {
@@ -204,7 +254,7 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
   }, []);
 
   return {
-    chunks, currentChunkIndex, currentAyahNumber, mudarasaTurn,
-    startMusaffa, handleNextTurnManual
+    chunks, currentChunkIndex, currentAyahNumber, mudarasaTurn, isPaused,
+    startMusaffa, handleNextTurnManual, pauseMusaffa, resumeMusaffa, stopMusaffa
   };
 };

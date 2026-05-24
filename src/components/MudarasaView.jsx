@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Mic, Pause } from 'lucide-react';
+import { ChevronLeft, Mic, Pause, PlayCircle } from 'lucide-react';
 
 const MudarasaView = ({
   chunks,
@@ -10,10 +10,12 @@ const MudarasaView = ({
   onNext,
   onBack,
   onLogStumble,
-  onPause,
   isListening,
   currentVolume,
-  sensitivity
+  sensitivity,
+  isPaused,
+  onPause,
+  onResume
 }) => {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', minHeight: '80vh' }}>
@@ -22,11 +24,6 @@ const MudarasaView = ({
         <div className="glass-card" style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--glass-bg)', backdropFilter: 'blur(20px)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <button onClick={onBack} className="icon-btn" style={{ width: '32px', height: '32px' }}><ChevronLeft size={16} /></button>
-            {onPause && (
-              <button onClick={onPause} title="Pause Session" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'var(--bg-accent)', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                <Pause size={14} />
-              </button>
-            )}
             <div>
               <span style={{ fontSize: '0.55rem', fontWeight: '900', color: mudarasaTurn === 'app' ? 'var(--accent-gold)' : 'var(--accent-emerald)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                 {mudarasaTurn === 'app' ? 'Listening to Partner' : 'Your Turn to Recite'}
@@ -34,7 +31,52 @@ const MudarasaView = ({
               <p style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-primary)' }}>Portion {currentChunkIndex + 1} of {chunks.length}</p>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            {isPaused ? (
+              <button
+                onClick={onResume}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  background: 'var(--accent-emerald)',
+                  color: '#fff',
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--glass-border)',
+                  fontSize: '0.6rem',
+                  fontWeight: '800',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  cursor: 'pointer'
+                }}
+              >
+                <PlayCircle size={12} />
+                <span>Resume</span>
+              </button>
+            ) : (
+              <button
+                onClick={onPause}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  background: 'var(--accent-red)',
+                  color: '#fff',
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--glass-border)',
+                  fontSize: '0.6rem',
+                  fontWeight: '800',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  cursor: 'pointer'
+                }}
+              >
+                <Pause size={12} />
+                <span>Pause</span>
+              </button>
+            )}
             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: mudarasaTurn === 'app' ? 'var(--accent-gold)' : 'var(--bg-accent)', boxShadow: mudarasaTurn === 'app' ? '0 0 10px var(--accent-gold)' : 'none' }} />
             <div style={{ 
               width: '8px', height: '8px', borderRadius: '50%', 

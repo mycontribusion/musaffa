@@ -62,7 +62,7 @@ const App = () => {
   };
 
   const { surahs, quranAr, quranEn, mutashabihatData, waqarData, loading, error } = useQuranData(syncStateWithURL);
-  const { chunks, currentChunkIndex, currentAyahNumber, mudarasaTurn, startMusaffa, handleNextTurnManual } = useMusaffa(quranAr, musaffaParams, setPartnerSubView, reciter);
+  const { chunks, currentChunkIndex, currentAyahNumber, mudarasaTurn, isPaused, startMusaffa, handleNextTurnManual, pauseMusaffa, resumeMusaffa, stopMusaffa } = useMusaffa(quranAr, musaffaParams, setPartnerSubView, reciter, savedMusaffaSession?.chunkIndex, savedMusaffaSession?.turn);
   const { dynamicMutashabihat, setDynamicMutashabihat, currentQuizIndex, setCurrentQuizIndex, quizScore, setQuizScore, quizFeedback, setQuizFeedback, generateDynamicQuiz, handleQuizAnswer } = useQuiz(mutashabihatData, quranAr, surahs, selectedSurah);
 
   useEffect(() => { document.documentElement.setAttribute('data-theme', theme); }, [theme]);
@@ -122,6 +122,24 @@ const App = () => {
     }));
   }, [currentChunkIndex, mudarasaTurn, partnerSubView, chunks.length, musaffaParams, selectedSurah]);
 
+  // Clear musaffa session when leaving the mudarasa page (exiting the session)
+  const prevPartnerSubViewRef = useRef(partnerSubView);
+  const prevViewRef = useRef(view);
+  useEffect(() => {
+    // Detect when leaving mudarasa page (either by changing subView or changing view)
+    const wasInMudarasa = prevPartnerSubViewRef.current === 'mudarasa' && prevViewRef.current === 'partner';
+    const isInMudarasa = partnerSubView === 'mudarasa' && view === 'partner';
+    
+    if (wasInMudarasa && !isInMudarasa) {
+      // Stop audio and clear session when leaving mudarasa
+      stopMusaffa();
+      clearMusaffaSession();
+    }
+    
+    prevPartnerSubViewRef.current = partnerSubView;
+    prevViewRef.current = view;
+  }, [view, partnerSubView, stopMusaffa]);
+
   const handleSelectSurah = (s) => {
     setSelectedSurah(s);
     setRecentSurahs(p => {
@@ -160,6 +178,24 @@ const App = () => {
     setSavedMusaffaSession(null);
   };
 
+  // Feature 2: Resume Musaffa session from saved state
+  const resumeMusaffaSession = () => {
+    if (!savedMusaffaSession) return;
+    setMusaffaParams(savedMusaffaSession.params);
+    setPartnerSubView('mudarasa');
+    // Start the session after a short delay to allow state to update
+    setTimeout(() => startMusaffa(null, savedMusaffaSession.chunkIndex || 0), 100);
+  };
+
+  // Restore session on page load if URL is /partner/mudarasa
+  useEffect(() => {
+    if (savedMusaffaSession && window.location.pathname.startsWith('/partner/mudarasa')) {
+      setView('partner');
+      setPartnerSubView('mudarasa');
+      setMusaffaParams(savedMusaffaSession.params);
+    }
+  }, [savedMusaffaSession]);
+
   const startQuiz = (type) => {
     setActiveQuizType(type);
     const q = generateDynamicQuiz(type);
@@ -197,7 +233,17 @@ const App = () => {
 
   return (
     <>
-      <Header theme={theme} setTheme={setTheme} view={view} setView={setView} setPartnerSubView={setPartnerSubView} />
+      <Header 
+        theme={theme} 
+        setTheme={setTheme} 
+        view={view} 
+        setView={setView} 
+        setPartnerSubView={setPartnerSubView}
+        isInMusaffaSession={view === 'partner' && partnerSubView === 'mudarasa'}
+        isPaused={isPaused}
+        onPauseMusaffa={pauseMusaffa}
+        onResumeMusaffa={resumeMusaffa}
+      />
       <div className="app-container">
         <main className="pb-24">
           <AnimatePresence mode="wait">
@@ -232,6 +278,11 @@ const App = () => {
                 savedMusaffaSession={savedMusaffaSession}
                 saveMusaffaSession={saveMusaffaSession}
                 clearMusaffaSession={clearMusaffaSession}
+                resumeMusaffaSession={resumeMusaffaSession}
+                pauseMusaffa={pauseMusaffa}
+                resumeMusaffa={resumeMusaffa}
+                stopMusaffa={stopMusaffa}
+                isPaused={isPaused}
               />
             )}
             {view === 'mutashabihat-session' && selectedSurah && waqarData && waqarData[selectedSurah.number] && (

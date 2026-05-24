@@ -1,7 +1,7 @@
 import React from 'react';
-import { Moon, Sun, PlayCircle } from 'lucide-react';
+import { Moon, Sun, PlayCircle, Pause } from 'lucide-react';
 
-const Header = ({ theme, setTheme, view, setView, setPartnerSubView }) => {
+const Header = ({ theme, setTheme, view, setView, setPartnerSubView, isInMusaffaSession, isPaused, onPauseMusaffa, onResumeMusaffa }) => {
   const isDark = theme === 'dark';
 
   return (
@@ -25,28 +25,78 @@ const Header = ({ theme, setTheme, view, setView, setPartnerSubView }) => {
           </div>
 
           <div className="flex items-center gap-2 md:gap-4">
-            <button
-              onClick={() => { setView('partner'); setPartnerSubView('config'); }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                background: view === 'partner' ? 'var(--accent-gold)' : 'var(--glass-bg)',
-                color: view === 'partner' ? '#000' : 'var(--text-primary)',
-                padding: '0.4rem 0.75rem',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--glass-border)',
-                fontSize: '0.65rem',
-                fontWeight: '900',
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em',
-                cursor: 'pointer',
-                transition: 'var(--transition-fast)'
-              }}
-            >
-              <PlayCircle size={14} />
-              <span>Start Musaffa</span>
-            </button>
+            {isInMusaffaSession ? (
+              isPaused ? (
+                <button
+                  onClick={onResumeMusaffa}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    background: 'var(--accent-emerald)',
+                    color: '#fff',
+                    padding: '0.4rem 0.75rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--glass-border)',
+                    fontSize: '0.65rem',
+                    fontWeight: '900',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                    cursor: 'pointer',
+                    transition: 'var(--transition-fast)'
+                  }}
+                >
+                  <PlayCircle size={14} />
+                  <span>Resume Musaffa</span>
+                </button>
+              ) : (
+                <button
+                  onClick={onPauseMusaffa}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    background: 'var(--accent-red)',
+                    color: '#fff',
+                    padding: '0.4rem 0.75rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--glass-border)',
+                    fontSize: '0.65rem',
+                    fontWeight: '900',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                    cursor: 'pointer',
+                    transition: 'var(--transition-fast)'
+                  }}
+                >
+                  <Pause size={14} />
+                  <span>Pause Musaffa</span>
+                </button>
+              )
+            ) : (
+              <button
+                onClick={() => { setView('partner'); setPartnerSubView('config'); }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  background: view === 'partner' ? 'var(--accent-gold)' : 'var(--glass-bg)',
+                  color: view === 'partner' ? '#000' : 'var(--text-primary)',
+                  padding: '0.4rem 0.75rem',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--glass-border)',
+                  fontSize: '0.65rem',
+                  fontWeight: '900',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                  cursor: 'pointer',
+                  transition: 'var(--transition-fast)'
+                }}
+              >
+                <PlayCircle size={14} />
+                <span>Start Musaffa</span>
+              </button>
+            )}
 
             <button
               onClick={() => setTheme(isDark ? 'light' : 'dark')}
