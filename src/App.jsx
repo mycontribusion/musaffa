@@ -15,7 +15,7 @@ const App = () => {
   const [selectedSurah, setSelectedSurah] = useState(null);
   const [partnerSubView, setPartnerSubView] = useState('config');
   const [activeQuizType, setActiveQuizType] = useState('all');
-  const [musaffaParams, setMusaffaParams] = useState({ startSurah: 1, startAyah: 1, endSurah: 1, endAyah: 7, portion: 'page', whoStarts: 'app', autoNext: false, micSensitivity: 40 });
+  const [musaffaParams, setMusaffaParams] = useState({ startSurah: 1, startAyah: 1, endSurah: 1, endAyah: 7, portion: 'page', whoStarts: 'app', autoNext: false, micSensitivity: 15 });
   const [reciter, setReciter] = useState(() => localStorage.getItem('quran_reciter') || 'ar.alafasy');
   const [stumbles, setStumbles] = useState(() => JSON.parse(localStorage.getItem('quran_stumbles') || '[]'));
   const [recentSurahs, setRecentSurahs] = useState(() => JSON.parse(localStorage.getItem('quran_recent') || '[]'));
@@ -143,47 +143,47 @@ const App = () => {
       <Header theme={theme} setTheme={setTheme} view={view} setView={setView} setPartnerSubView={setPartnerSubView} />
       <div className="app-container">
         <main className="pb-24">
-        <AnimatePresence mode="wait">
-          {view === 'list' && <SurahList surahs={surahs} recentSurahs={recentSurahs} handleSelectSurah={handleSelectSurah} setView={setView} />}
-          {view === 'detail' && selectedSurah && <SurahDetail selectedSurah={selectedSurah} surahs={surahs} handleSelectSurah={handleSelectSurah} quranAr={quranAr} quranEn={quranEn} setView={setView} openMusaffaConfig={(s) => { handleSelectSurah(s); setPartnerSubView('config'); setView('partner'); }} startQuiz={startQuiz} waqarData={waqarData} />}
-          {view === 'partner' && (
-            <PartnerSession
-              key="partner-view"
-              subView={partnerSubView}
-              setSubView={setPartnerSubView}
-              params={musaffaParams}
-              setParams={setMusaffaParams}
-              surahs={surahs}
-              startMusaffa={startMusaffa}
-              startQuiz={startQuiz}
-              chunks={chunks}
-              currentChunkIndex={currentChunkIndex}
-              currentAyahNumber={currentAyahNumber}
-              turn={mudarasaTurn}
-              handleNextTurn={handleNextTurnManual}
-              logStumble={logStumble}
-              setView={setView}
-              questions={dynamicMutashabihat}
-              quizScore={quizScore}
-              quizFeedback={quizFeedback}
-              handleQuizAnswer={(a) => handleQuizAnswer(a, () => setPartnerSubView('quiz-result'))}
-              currentQuizIndex={currentQuizIndex}
-              reciter={reciter}
-              setReciter={setReciter}
-              activeQuizType={activeQuizType}
-            />
-          )}
-          {view === 'mutashabihat-session' && selectedSurah && waqarData && waqarData[selectedSurah.number] && (
-            <MutashabihatSession
-              key={`waqar-${selectedSurah.number}`}
-              surah={selectedSurah}
-              allSurahEntries={waqarData[selectedSurah.number]}
-              quranAr={quranAr}
-              surahs={surahs}
-              onClose={() => setView('detail')}
-            />
-          )}
-        </AnimatePresence>
+          <AnimatePresence mode="wait">
+            {view === 'list' && <SurahList surahs={surahs} recentSurahs={recentSurahs} handleSelectSurah={handleSelectSurah} setView={setView} />}
+            {view === 'detail' && selectedSurah && <SurahDetail selectedSurah={selectedSurah} surahs={surahs} handleSelectSurah={handleSelectSurah} quranAr={quranAr} quranEn={quranEn} setView={setView} openMusaffaConfig={(s) => { handleSelectSurah(s); setPartnerSubView('config'); setView('partner'); }} startQuiz={startQuiz} waqarData={waqarData} />}
+            {view === 'partner' && (
+              <PartnerSession
+                key="partner-view"
+                subView={partnerSubView}
+                setSubView={setPartnerSubView}
+                params={musaffaParams}
+                setParams={setMusaffaParams}
+                surahs={surahs}
+                startMusaffa={startMusaffa}
+                startQuiz={startQuiz}
+                chunks={chunks}
+                currentChunkIndex={currentChunkIndex}
+                currentAyahNumber={currentAyahNumber}
+                turn={mudarasaTurn}
+                handleNextTurn={handleNextTurnManual}
+                logStumble={logStumble}
+                setView={setView}
+                questions={dynamicMutashabihat}
+                quizScore={quizScore}
+                quizFeedback={quizFeedback}
+                handleQuizAnswer={(a) => handleQuizAnswer(a, () => setPartnerSubView('quiz-result'))}
+                currentQuizIndex={currentQuizIndex}
+                reciter={reciter}
+                setReciter={setReciter}
+                activeQuizType={activeQuizType}
+              />
+            )}
+            {view === 'mutashabihat-session' && selectedSurah && waqarData && waqarData[selectedSurah.number] && (
+              <MutashabihatSession
+                key={`waqar-${selectedSurah.number}`}
+                surah={selectedSurah}
+                allSurahEntries={waqarData[selectedSurah.number]}
+                quranAr={quranAr}
+                surahs={surahs}
+                onClose={() => setView('detail')}
+              />
+            )}
+          </AnimatePresence>
         </main>
       </div>
     </>
