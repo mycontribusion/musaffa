@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Mic } from 'lucide-react';
+import { ChevronLeft, Mic, Pause } from 'lucide-react';
 
 const MudarasaView = ({
   chunks,
@@ -10,6 +10,7 @@ const MudarasaView = ({
   onNext,
   onBack,
   onLogStumble,
+  onPause,
   isListening,
   currentVolume,
   sensitivity
@@ -21,6 +22,11 @@ const MudarasaView = ({
         <div className="glass-card" style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--glass-bg)', backdropFilter: 'blur(20px)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <button onClick={onBack} className="icon-btn" style={{ width: '32px', height: '32px' }}><ChevronLeft size={16} /></button>
+            {onPause && (
+              <button onClick={onPause} title="Pause Session" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'var(--bg-accent)', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <Pause size={14} />
+              </button>
+            )}
             <div>
               <span style={{ fontSize: '0.55rem', fontWeight: '900', color: mudarasaTurn === 'app' ? 'var(--accent-gold)' : 'var(--accent-emerald)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                 {mudarasaTurn === 'app' ? 'Listening to Partner' : 'Your Turn to Recite'}

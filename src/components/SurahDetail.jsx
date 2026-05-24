@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, Zap } from 'lucide-react';
 
-const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranEn, setView, openMusaffaConfig, waqarData }) => {
+const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranEn, setView, openMusaffaConfig, waqarData, lastRead, setLastRead }) => {
   if (!selectedSurah || !quranAr || !quranEn) return null;
 
   const surahIndex = selectedSurah.number - 1;
@@ -10,11 +10,55 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
   const englishAyahs = quranEn.surahs[surahIndex].ayahs;
   // Exact Bismillah string from the dataset (Surah 1:1)
   const BISMILLAH = quranAr.surahs[0].ayahs[0].text;
+  const scrollTrackerRef = useRef(null);
 
   // Scroll to top whenever the selected surah changes
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [selectedSurah.number]);
+
+  // Feature 3: Auto-scroll to last-read ayah when returning to a surah
+  useEffect(() => {
+    if (!lastRead || lastRead.surahNumber !== selectedSurah.number) return;
+    const el = document.getElementById(`surah-ayah-${lastRead.ayahNumber}`);
+    if (el) {
+      setTimeout(() => {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+    }
+  }, [selectedSurah.number, lastRead]);
+
+  // Feature 3: Track scroll position and save last-read ayah
+  const trackScroll = useCallback(() => {
+    if (scrollTrackerRef.current) return; // throttle
+    scrollTrackerRef.current = setTimeout(() => {
+      scrollTrackerRef.current = null;
+      // Find the ayah element closest to the top of the viewport
+      const ayahEls = document.querySelectorAll('[data-ayah-num]');
+      let closest = null;
+      let closestDist = Infinity;
+      ayahEls.forEach(el => {
+        const rect = el.getBoundingClientRect();
+        const dist = Math.abs(rect.top);
+        if (dist < closestDist) {
+          closestDist = dist;
+          closest = el;
+        }
+      });
+      if (closest) {
+        const ayahNum = Number(closest.getAttribute('data-ayah-num'));
+        setLastRead({ surahNumber: selectedSurah.number, ayahNumber: ayahNum });
+      }
+    }, 500);
+  }, [selectedSurah.number, setLastRead]);
+
+  useEffect(() => {
+    window.addEventListener('scroll', trackScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', trackScroll);
+      if (scrollTrackerRef.current) clearTimeout(scrollTrackerRef.current);
+    };
+  }, [trackScroll]);
 
   const handleDragEnd = (event, info) => {
     const threshold = 100;
@@ -108,6 +152,7 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-100px' }}
               key={ayah.number}
+              data-ayah-num={ayah.numberInSurah}
               style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '0 0.5rem' }}
             >
               {/* Ayah number indicator */}

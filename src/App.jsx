@@ -19,6 +19,14 @@ const App = () => {
   const [reciter, setReciter] = useState(() => localStorage.getItem('quran_reciter') || 'ar.alafasy');
   const [stumbles, setStumbles] = useState(() => JSON.parse(localStorage.getItem('quran_stumbles') || '[]'));
   const [recentSurahs, setRecentSurahs] = useState(() => JSON.parse(localStorage.getItem('quran_recent') || '[]'));
+  // Feature 3: Last-read ayah persistence for Quran reader
+  const [lastRead, setLastRead] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('quran_last_read') || 'null'); } catch { return null; }
+  });
+  // Feature 2: Musaffa session persistence
+  const [savedMusaffaSession, setSavedMusaffaSession] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('quran_musaffa_session') || 'null'); } catch { return null; }
+  });
 
   const syncStateWithURL = (sList) => {
     const path = window.location.pathname;
@@ -93,6 +101,26 @@ const App = () => {
   useEffect(() => { localStorage.setItem('quran_stumbles', JSON.stringify(stumbles)); }, [stumbles]);
   useEffect(() => { localStorage.setItem('quran_recent', JSON.stringify(recentSurahs)); }, [recentSurahs]);
   useEffect(() => { localStorage.setItem('quran_reciter', reciter); }, [reciter]);
+  // Feature 3: Persist last-read ayah
+  useEffect(() => {
+    if (lastRead) localStorage.setItem('quran_last_read', JSON.stringify(lastRead));
+  }, [lastRead]);
+  // Feature 2: Persist Musaffa session state
+  useEffect(() => {
+    if (savedMusaffaSession) localStorage.setItem('quran_musaffa_session', JSON.stringify(savedMusaffaSession));
+  }, [savedMusaffaSession]);
+  // Auto-save Musaffa session on every chunk/turn change during an active session
+  useEffect(() => {
+    if (partnerSubView !== 'mudarasa' || chunks.length === 0) return;
+    setSavedMusaffaSession(prev => ({
+      ...(prev || {}),
+      params: musaffaParams,
+      chunkIndex: currentChunkIndex,
+      turn: mudarasaTurn,
+      surahNumber: selectedSurah?.number || prev?.surahNumber,
+      savedAt: new Date().toISOString(),
+    }));
+  }, [currentChunkIndex, mudarasaTurn, partnerSubView, chunks.length, musaffaParams, selectedSurah]);
 
   const handleSelectSurah = (s) => {
     setSelectedSurah(s);
@@ -101,6 +129,35 @@ const App = () => {
       return updated;
     });
     setMusaffaParams(p => ({ ...p, startSurah: s.number, startAyah: 1, endSurah: s.number, endAyah: s.numberOfAyahs }));
+  };
+
+  // Auto-update endSurah/endAyah when startSurah changes in Musaffa config
+  const handleMusaffaParamChange = (key, value) => {
+    if (key === 'startSurah') {
+      const surah = surahs.find(x => x.number === value);
+      if (surah) {
+        setMusaffaParams(p => ({ ...p, startSurah: value, startAyah: 1, endSurah: value, endAyah: surah.numberOfAyahs }));
+        return;
+      }
+    }
+    setMusaffaParams(p => ({ ...p, [key]: value }));
+  };
+
+  // Feature 2: Save/clear Musaffa session for pause & resume
+  const saveMusaffaSession = () => {
+    if (!selectedSurah) return;
+    setSavedMusaffaSession({
+      params: musaffaParams,
+      chunkIndex: chunks.length > 0 ? currentChunkIndex : 0,
+      turn: mudarasaTurn,
+      surahNumber: selectedSurah.number,
+      savedAt: new Date().toISOString(),
+    });
+  };
+
+  const clearMusaffaSession = () => {
+    localStorage.removeItem('quran_musaffa_session');
+    setSavedMusaffaSession(null);
   };
 
   const startQuiz = (type) => {
@@ -145,7 +202,7 @@ const App = () => {
         <main className="pb-24">
           <AnimatePresence mode="wait">
             {view === 'list' && <SurahList surahs={surahs} recentSurahs={recentSurahs} handleSelectSurah={handleSelectSurah} setView={setView} />}
-            {view === 'detail' && selectedSurah && <SurahDetail selectedSurah={selectedSurah} surahs={surahs} handleSelectSurah={handleSelectSurah} quranAr={quranAr} quranEn={quranEn} setView={setView} openMusaffaConfig={(s) => { handleSelectSurah(s); setPartnerSubView('config'); setView('partner'); }} startQuiz={startQuiz} waqarData={waqarData} />}
+            {view === 'detail' && selectedSurah && <SurahDetail selectedSurah={selectedSurah} surahs={surahs} handleSelectSurah={handleSelectSurah} quranAr={quranAr} quranEn={quranEn} setView={setView} openMusaffaConfig={(s) => { handleSelectSurah(s); setPartnerSubView('config'); setView('partner'); }} startQuiz={startQuiz} waqarData={waqarData} lastRead={lastRead} setLastRead={setLastRead} />}
             {view === 'partner' && (
               <PartnerSession
                 key="partner-view"
@@ -171,6 +228,10 @@ const App = () => {
                 reciter={reciter}
                 setReciter={setReciter}
                 activeQuizType={activeQuizType}
+                handleMusaffaParamChange={handleMusaffaParamChange}
+                savedMusaffaSession={savedMusaffaSession}
+                saveMusaffaSession={saveMusaffaSession}
+                clearMusaffaSession={clearMusaffaSession}
               />
             )}
             {view === 'mutashabihat-session' && selectedSurah && waqarData && waqarData[selectedSurah.number] && (
