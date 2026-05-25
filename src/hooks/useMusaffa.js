@@ -14,6 +14,7 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
   const wakeLockRef = useRef(null);
   const isPlayingRef = useRef(false);
   const shouldStopRef = useRef(false);
+  const pausedAyahIndexRef = useRef(0); // Track which ayah we paused at
 
   // Initialise audio objects lazily so they aren't created during SSR
   const getAudio = (ref) => {
@@ -123,7 +124,7 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     });
   };
 
-  const playCurrentIndex = async (currentChunks = chunks) => {
+  const playCurrentIndex = async (currentChunks = chunks, startFromAyahIndex = 0) => {
     if (currentChunks.length === 0) return;
     isPlayingRef.current = true;
     shouldStopRef.current = false;
@@ -135,9 +136,12 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     setMudarasaTurn('app');
     const chunk = currentChunks[idx];
 
-    for (let i = 0; i < chunk.length; i++) {
+    // Start from the specified ayah index (for resume)
+    for (let i = startFromAyahIndex; i < chunk.length; i++) {
       // Check if we should stop
       if (shouldStopRef.current) {
+        // Save the current ayah index for resume
+        pausedAyahIndexRef.current = i;
         setCurrentAyahNumber(null);
         isPlayingRef.current = false;
         return;
@@ -172,6 +176,7 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     if (finalChunks.length === 0) return;
     currentIndexRef.current = startChunkIndex;
     setCurrentChunkIndex(startChunkIndex);
+    pausedAyahIndexRef.current = 0; // Reset pause position for new session
     setPartnerSubView('mudarasa');
     if (musaffaParams.whoStarts === 'app') playCurrentIndex(finalChunks);
     else {
@@ -216,11 +221,15 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     setIsPaused(true);
   }, []);
 
-  // Resume musaffa - re-acquire wake lock and continue
+  // Resume musaffa - re-acquire wake lock and continue playback from where it was paused
   const resumeMusaffa = useCallback(() => {
     acquireWakeLock();
     setIsPaused(false);
-  }, []);
+    // Resume playback if we were in the middle of app playback
+    if (mudarasaTurn === 'app' && chunks.length > 0) {
+      playCurrentIndex(chunks, pausedAyahIndexRef.current);
+    }
+  }, [chunks, mudarasaTurn]);
 
   // Stop musaffa - stop audio, release wake lock, and reset paused state
   const stopMusaffa = useCallback(() => {
