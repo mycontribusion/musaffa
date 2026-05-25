@@ -32,7 +32,7 @@ const MudarasaView = ({
             </div>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            {isPaused ? (
+            {/*{isPaused ? (
               <button
                 onClick={onResume}
                 style={{
@@ -76,7 +76,7 @@ const MudarasaView = ({
                 <Pause size={12} />
                 <span>Pause</span>
               </button>
-            )}
+            )}*/}
             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: mudarasaTurn === 'app' ? 'var(--accent-gold)' : 'var(--bg-accent)', boxShadow: mudarasaTurn === 'app' ? '0 0 10px var(--accent-gold)' : 'none' }} />
             <div style={{ 
               width: '8px', height: '8px', borderRadius: '50%', 
