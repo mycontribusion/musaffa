@@ -47,13 +47,21 @@ export default defineConfig({
           { url: '/data/waqar114', revision: null },
         ],
 
-        runtimeCaching: [
-          // ── Recitation audio CDNs ──────────────────────────────────────────
-          // INTENTIONALLY NOT CACHED — Musaffa audio always requires internet.
-          {
-            urlPattern: /everyayah\.com|verses\.quran\.com|cdn\.islamic\.network/,
-            handler: 'NetworkOnly',
-          },
+       runtimeCaching: [
+           // ── Recitation audio CDNs ──────────────────────────────────────────
+           // Cache audio files for offline use
+           {
+             urlPattern: /everyayah\.com|verses\.quran\.com|cdn\.islamic\.network/,
+             handler: 'CacheFirst',
+             options: {
+               cacheName: 'quran-audio-v1',
+               expiration: {
+                 maxEntries: 50, // Limit total number of audio files cached
+                 maxAgeSeconds: 60 * 60 * 24 * 7, // 1 week
+               },
+               cacheableResponse: { statuses: [0, 200] }, // Cache opaque responses (status 0 from no-cors) and 200
+             },
+           },
 
           // ── Quran data files ───────────────────────────────────────────────
           // CacheFirst: these are large static blobs; serve from cache, update
