@@ -12,6 +12,7 @@ export const useQuranData = (syncStateWithURL) => {
 
   useEffect(() => {
     const fetchData = async () => {
+      let hasError = false;
       try {
         // Core data — must succeed
         const [sRes, arRes, enRes, mutRes] = await Promise.all([
@@ -33,21 +34,22 @@ export const useQuranData = (syncStateWithURL) => {
       } catch (err) {
         console.error('Core data load error', err);
         setError("You are offline and the data is not cached yet. Please connect to the internet to load Musaffa for the first time.");
+        hasError = true;
       } finally {
         setLoading(false);
       }
 
       // Waqar114 — optional, loaded separately so it never blocks the app
-      try {
-        if (!error) {
+      if (!hasError) {
+        try {
           const waqarRes = await fetch('/data/waqar114');
           if (!waqarRes.ok) throw new Error(`waqar114 fetch failed: ${waqarRes.status}`);
           const waqarTxt = await waqarRes.text();
           const parsed = groupMutashabihatBySurah(waqarTxt.split('\n').filter(l => l.trim()));
           setWaqarData(parsed);
+        } catch (err) {
+          console.warn('Waqar114 load error (Mastery Sessions unavailable):', err);
         }
-      } catch (err) {
-        console.warn('Waqar114 load error (Mastery Sessions unavailable):', err);
       }
     };
 

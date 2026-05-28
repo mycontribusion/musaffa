@@ -10,6 +10,15 @@ const SurahList = ({
 }) => {
   const [searchQuery, setSearchQuery] = React.useState('');
 
+  // Guard against empty surahs array
+  if (!surahs || surahs.length === 0) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: 'var(--text-muted)' }}>
+        Loading surahs...
+      </div>
+    );
+  }
+
   const filteredSurahs = surahs.filter((s) =>
     s.englishName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.name.includes(searchQuery)

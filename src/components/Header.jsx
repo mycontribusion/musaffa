@@ -1,4 +1,3 @@
-import React from 'react';
 import { Moon, Sun, PlayCircle, Pause } from 'lucide-react';
 
 const Header = ({ theme, setTheme, view, setView, setPartnerSubView, isInMusaffaSession, isPaused, onPauseMusaffa, onResumeMusaffa }) => {

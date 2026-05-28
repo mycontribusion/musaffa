@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle, RotateCcw, ArrowRight, Trophy, Target, Sparkles } from 'lucide-react';
 
@@ -11,7 +10,6 @@ const QuizEngine = ({
   handleQuizAnswer,
   startQuiz,
   setView,
-  setPartnerSubView,
   activeQuizType
 }) => {
   const typeLabels = {
@@ -33,33 +31,33 @@ const QuizEngine = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="min-h-screen pt-12 pb-40 px-4 flex flex-col items-center"
+        style={{ minHeight: '100vh', paddingTop: '3rem', paddingBottom: '10rem', padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
       >
         {/* Immersive Progress Header */}
-        <div className="w-full max-w-3xl mb-12 space-y-6">
-          <div className="flex items-center justify-between px-2">
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-accent-gold/80 mb-1 flex items-center gap-2">
-                <Target size={12} className="text-accent-gold" />
+        <div style={{ width: '100%', maxWidth: '48rem', marginBottom: '3rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: '0.5rem', paddingRight: '0.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.4em', color: 'var(--accent-gold)', opacity: 0.8, marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Target size={12} style={{ color: 'var(--accent-gold)' }} />
                 {typeLabels[activeQuizType] || 'Mutashabihat Quiz'}
               </span>
-              <h3 className="text-white font-bold text-lg">Question {currentQuizIndex + 1} of {questions.length}</h3>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Question {currentQuizIndex + 1} of {questions.length}</h3>
             </div>
             
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400/60 block">Current Score</span>
-                <span className="text-xl font-black text-emerald-400 tabular-nums">{quizScore}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.2em', color: 'var(--accent-emerald)', opacity: 0.6, display: 'block' }}>Current Score</span>
+                <span style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--accent-emerald)' }}>{quizScore}</span>
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center">
-                <Trophy size={20} className="text-emerald-400" />
+              <div style={{ width: '3rem', height: '3rem', borderRadius: '1rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Trophy size={20} style={{ color: 'var(--accent-emerald)' }} />
               </div>
             </div>
           </div>
 
-          <div className="h-2 w-full bg-white/[0.03] rounded-full overflow-hidden border border-white/[0.05] p-[2px]">
+          <div style={{ height: '0.5rem', width: '100%', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '9999px', overflow: 'hidden', border: '1px solid rgba(255, 255, 255, 0.05)', padding: '2px' }}>
             <motion.div 
-              className="h-full bg-gradient-to-r from-accent-gold to-emerald-400 rounded-full shadow-[0_0_15px_rgba(212,175,55,0.3)]" 
+              style={{ height: '100%', background: `linear-gradient(to right, var(--accent-gold), var(--accent-emerald))`, borderRadius: '9999px', boxShadow: '0 0 15px rgba(212, 175, 55, 0.3)' }}
               initial={{ width: 0 }} 
               animate={{ width: `${progress}%` }} 
               transition={{ type: 'spring', stiffness: 50, damping: 20 }}
@@ -68,12 +66,12 @@ const QuizEngine = ({
         </div>
 
         {/* Question Area */}
-        <div className="w-full max-w-4xl space-y-12">
-          <div className="text-center space-y-6">
+        <div style={{ width: '100%', maxWidth: '56rem', display: 'flex', flexDirection: 'column', gap: '3rem' }}>
+          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <motion.h2 
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              className="text-2xl md:text-4xl font-black text-white leading-tight px-4"
+              style={{ fontSize: 'clamp(1.5rem, 5vw, 2rem)', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.3, padding: '0 1rem' }}
             >
               {currentQuestion.question}
             </motion.h2>
@@ -83,14 +81,14 @@ const QuizEngine = ({
                 <motion.div 
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  className="inline-block relative"
+                  style={{ position: 'relative', display: 'inline-block' }}
                 >
-                  <div className="absolute inset-0 bg-accent-gold/10 blur-3xl rounded-full" />
-                  <div className="glass-card relative p-8 md:p-12 border-accent-gold/20 bg-accent-gold/5 max-w-2xl mx-auto rounded-[2.5rem]">
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-accent-gold text-slate-950 text-[10px] font-black uppercase tracking-widest rounded-full">
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(251, 191, 36, 0.1)', filter: 'blur(48px)', borderRadius: '9999px' }} />
+                  <div className="glass-card" style={{ position: 'relative', padding: 'clamp(2rem, 6vw, 3rem)', border: '1px solid rgba(251, 191, 36, 0.2)', maxWidth: '42rem', margin: '0 auto', borderRadius: '2.5rem', background: 'rgba(251, 191, 36, 0.05)' }}>
+                    <span style={{ position: 'absolute', top: '-0.75rem', left: '50%', transform: 'translateX(-50%)', padding: '0 1rem', background: 'var(--accent-gold)', color: '#0a0a0f', fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.2em', borderRadius: '9999px' }}>
                       The Context Verse
                     </span>
-                    <p className="arabic-text text-3xl md:text-4xl text-white/90 leading-[2]">
+                    <p className="arabic-text" style={{ fontSize: 'clamp(1.75rem, 5vw, 2.25rem)', lineHeight: 2, textAlign: 'right', color: 'var(--text-primary)' }}>
                       {currentQuestion.contextVerse}
                     </p>
                   </div>
@@ -100,11 +98,10 @@ const QuizEngine = ({
           </div>
 
           {/* Options Grid */}
-          <div className="grid grid-cols-1 gap-6 md:gap-8">
+          <div style={{ display: 'grid', gap: '1.5rem' }}>
             {currentQuestion.options.map((opt, i) => {
               const isSelected = quizFeedback !== null;
               const isCorrect = opt.isCorrect;
-              const isWrongSelection = isSelected && !isCorrect && quizFeedback === 'wrong';
               
               return (
                 <motion.button 
@@ -114,16 +111,27 @@ const QuizEngine = ({
                   transition={{ delay: i * 0.1 }}
                   disabled={isSelected}
                   onClick={() => handleQuizAnswer(opt)} 
-                  className={`
-                    group relative p-8 md:p-12 rounded-[2.5rem] border transition-all duration-500
-                    flex flex-col items-center justify-center gap-8 overflow-hidden
-                    ${!isSelected ? 'bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.06] hover:border-white/[0.15] hover:scale-[1.01]' : ''}
-                    ${isSelected && isCorrect ? 'bg-emerald-500/20 border-emerald-500/50 shadow-[0_0_40px_rgba(16,185,129,0.1)]' : ''}
-                    ${isSelected && !isCorrect ? 'opacity-40 grayscale-[0.5] border-white/[0.05]' : ''}
-                  `}
+                  style={{
+                    position: 'relative',
+                    width: '100%',
+                    padding: 'clamp(2rem, 6vw, 3rem)',
+                    borderRadius: '2.5rem',
+                    border: isSelected && isCorrect ? '1px solid #34d399' : isSelected && !isCorrect ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(255, 255, 255, 0.07)',
+                    background: isSelected && isCorrect ? 'rgba(62, 211, 153, 0.2)' : isSelected && !isCorrect ? 'rgba(239, 68, 68, 0.06)' : 'rgba(255, 255, 255, 0.03)',
+                    cursor: isSelected ? 'default' : 'pointer',
+                    textAlign: 'right',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '2rem',
+                    overflow: 'hidden',
+                    transition: 'all 0.5s',
+                    opacity: isSelected && !isCorrect ? 0.4 : 1,
+                  }}
                 >
                   {/* Subtle Background Particle */}
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 blur-3xl rounded-full translate-x-16 -translate-y-16 group-hover:bg-accent-gold/10 transition-colors" />
+                  <div style={{ position: 'absolute', top: 0, right: 0, width: '8rem', height: '8rem', background: 'rgba(255, 255, 255, 0.05)', filter: 'blur(24px)', borderRadius: '9999px', transform: 'translateX(4rem) translateY(-4rem)' }} />
 
                   {/* Identification Label (Revealed on selection) */}
                   <AnimatePresence>
@@ -131,26 +139,26 @@ const QuizEngine = ({
                       <motion.div 
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className={`absolute top-6 left-8 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${isCorrect ? 'bg-emerald-400 text-slate-950' : 'bg-red-500/20 text-red-400'}`}
+                        style={{ position: 'absolute', top: '1.5rem', left: '2rem', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.2em', background: isCorrect ? 'var(--accent-emerald)' : 'rgba(239, 68, 68, 0.2)', color: isCorrect ? '#0a0a0f' : 'rgba(239, 68, 68, 0.6)' }}
                       >
                         Surah {opt.surahName}
                       </motion.div>
                     )}
                   </AnimatePresence>
 
-                  <p className="arabic-text text-2xl md:text-3xl text-center leading-[2] text-white/90 group-hover:text-white transition-colors">
+                  <p className="arabic-text" style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', lineHeight: 2, textAlign: 'center', color: isCorrect || !isSelected ? 'var(--text-primary)' : 'rgba(255, 255, 255, 0.35)' }}>
                     {opt.text}
                   </p>
 
                   {/* Status Icon */}
-                  <div className="absolute right-8 top-1/2 -translate-y-1/2">
+                  <div style={{ position: 'absolute', right: '2rem', top: '50%', transform: 'translateY(-50%)' }}>
                     {isSelected && isCorrect && (
-                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]">
+                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} style={{ color: 'var(--accent-emerald)', filter: 'drop-shadow(0 0 10px rgba(52, 211, 153, 0.5))' }}>
                         <CheckCircle2 size={48} />
                       </motion.div>
                     )}
                     {isSelected && !isCorrect && (
-                      <XCircle size={32} className="text-white/20" />
+                      <XCircle size={32} style={{ color: 'rgba(255, 255, 255, 0.2)' }} />
                     )}
                   </div>
                 </motion.button>
@@ -166,18 +174,18 @@ const QuizEngine = ({
               initial={{ opacity: 0, y: 100 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 100 }}
-              className="fixed bottom-12 left-4 right-4 md:left-auto md:right-12 md:w-96 z-[200]"
+              style={{ position: 'fixed', bottom: '3rem', left: '1rem', right: '1rem', zIndex: 200, maxWidth: '24rem', margin: '0 auto' }}
             >
-              <div className={`p-8 rounded-[2.5rem] border backdrop-blur-2xl shadow-2xl ${quizFeedback === 'correct' ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
-                <div className="flex gap-5">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${quizFeedback === 'correct' ? 'bg-emerald-400 text-slate-950' : 'bg-red-400 text-slate-950'}`}>
+              <div style={{ padding: '2rem', borderRadius: '2.5rem', border: '1px solid', background: quizFeedback === 'correct' ? 'rgba(62, 211, 153, 0.1)' : 'rgba(239, 68, 68, 0.1)', backdropFilter: 'blur(24px)', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)' }}>
+                <div style={{ display: 'flex', gap: '1.25rem' }}>
+                  <div style={{ width: '3.5rem', height: '3.5rem', borderRadius: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: quizFeedback === 'correct' ? 'var(--accent-emerald)' : 'var(--accent-red)', color: '#0a0a0f' }}>
                     {quizFeedback === 'correct' ? <CheckCircle2 size={28} /> : <XCircle size={28} />}
                   </div>
-                  <div className="space-y-2">
-                    <p className={`text-xs font-black uppercase tracking-[0.2em] ${quizFeedback === 'correct' ? 'text-emerald-400' : 'text-red-400'}`}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <p style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.2em', color: quizFeedback === 'correct' ? 'var(--accent-emerald)' : 'var(--accent-red)' }}>
                       {quizFeedback === 'correct' ? 'Brilliant Discovery' : 'Subtle Difference'}
                     </p>
-                    <p className="text-white font-bold leading-relaxed text-sm">
+                    <p style={{ color: 'var(--text-primary)', fontWeight: 700, lineHeight: 1.5, fontSize: '0.875rem' }}>
                       {currentQuestion.explanation}
                     </p>
                   </div>
@@ -198,50 +206,50 @@ const QuizEngine = ({
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }} 
         animate={{ opacity: 1, scale: 1 }} 
-        className="min-h-screen flex items-center justify-center p-6"
+        style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}
       >
-        <div className="w-full max-w-lg space-y-12 text-center">
-          <div className="relative inline-block">
+        <div style={{ width: '100%', maxWidth: '32rem', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '3rem' }}>
+          <div style={{ position: 'relative', display: 'inline-block' }}>
             {/* Animated Glow Background */}
             <motion.div 
               animate={{ scale: [1, 1.2, 1], rotate: [0, 90, 0] }}
               transition={{ repeat: Infinity, duration: 10 }}
-              className={`absolute inset-0 blur-[100px] opacity-30 ${isPassing ? 'bg-emerald-400' : 'bg-accent-gold'}`} 
+              style={{ position: 'absolute', inset: 0, filter: 'blur(100px)', opacity: 0.3, background: isPassing ? 'var(--accent-emerald)' : 'var(--accent-gold)' }}
             />
             
-            <div className="relative z-10 w-48 h-48 rounded-[4rem] bg-white/[0.03] border border-white/10 flex flex-col items-center justify-center backdrop-blur-xl shadow-2xl">
-              <span className="text-5xl font-black text-white tabular-nums">{quizScore}</span>
-              <div className="h-[2px] w-12 bg-white/20 my-2" />
-              <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Perfect Marks</span>
+            <div style={{ position: 'relative', zIndex: 10, width: '12rem', height: '12rem', borderRadius: '4rem', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(24px)', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)' }}>
+              <span style={{ fontSize: '3rem', fontWeight: 900, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{quizScore}</span>
+              <div style={{ height: '2px', width: '3rem', background: 'rgba(255, 255, 255, 0.2)', margin: '0.5rem 0' }} />
+              <span style={{ fontSize: '0.625rem', fontWeight: 900, color: 'var(--text-primary)', opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.3em' }}>Perfect Marks</span>
             </div>
 
             {isPassing && (
               <motion.div 
                 initial={{ opacity: 0, scale: 0 }} 
                 animate={{ opacity: 1, scale: 1 }}
-                className="absolute -top-4 -right-4 w-12 h-12 bg-emerald-400 rounded-2xl flex items-center justify-center text-slate-950 shadow-xl"
+                style={{ position: 'absolute', top: '-1rem', right: '-1rem', width: '3rem', height: '3rem', background: 'var(--accent-emerald)', borderRadius: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0a0a0f', boxShadow: '0 8px 24px -4px rgba(0, 0, 0, 0.37)' }}
               >
                 <Sparkles size={24} />
               </motion.div>
             )}
           </div>
 
-          <div className="space-y-4">
-            <h2 className="text-4xl font-black text-white leading-tight">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <h2 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.2 }}>
               {isPassing ? 'Scholarship Attained' : 'Diligent Revision Needed'}
             </h2>
-            <p className="text-slate-400 font-medium px-8">
-              You correctly identified <span className="text-white font-black">{percentage}%</span> of the complex similarities in this session.
+            <p style={{ color: 'var(--text-muted)', fontWeight: 500, padding: '0 2rem' }}>
+              You correctly identified <span style={{ color: 'var(--text-primary)', fontWeight: 900 }}>{percentage}%</span> of the complex similarities in this session.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 px-4">
+          <div style={{ display: 'grid', gap: '1rem', padding: '0 1rem' }}>
             <button 
               onClick={() => startQuiz(activeQuizType)} 
-              className="group relative h-20 bg-emerald-400 text-slate-950 rounded-[2rem] font-black uppercase tracking-[0.2em] text-[11px] overflow-hidden transition-all hover:scale-[1.02] active:scale-[0.98]"
+              style={{ position: 'relative', height: '5rem', background: 'var(--accent-emerald)', color: '#0a0a0f', borderRadius: '2rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.2em', fontSize: '0.6875rem', border: 'none', cursor: 'pointer', overflow: 'hidden', transition: 'all 0.2s' }}
             >
-              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
-              <span className="relative z-10 flex items-center justify-center gap-3">
+              <div style={{ position: 'absolute', inset: 0, background: 'rgba(255, 255, 255, 0.2)', transform: 'translateY(100%)', transition: 'transform 0.5s' }} />
+              <span style={{ position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
                 <RotateCcw size={18} />
                 Try Mastery Again
               </span>
@@ -249,7 +257,7 @@ const QuizEngine = ({
 
             <button 
               onClick={() => setView('detail')} 
-              className="h-20 bg-white/[0.03] border border-white/[0.1] text-white rounded-[2rem] font-black uppercase tracking-[0.2em] text-[11px] hover:bg-white/[0.08] transition-all flex items-center justify-center gap-3"
+              style={{ height: '5rem', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.1)', color: 'var(--text-primary)', borderRadius: '2rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.2em', fontSize: '0.6875rem', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}
             >
               <ArrowRight size={18} />
               Return to Surah

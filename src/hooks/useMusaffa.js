@@ -8,6 +8,19 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
   const [mudarasaTurn, setMudarasaTurn] = useState(initialTurn || 'app');
   const [isPaused, setIsPaused] = useState(false);
 
+  // Reset state when initialChunkIndex or initialTurn changes (for session restore)
+  useEffect(() => {
+    setCurrentChunkIndex(initialChunkIndex || 0);
+    setMudarasaTurn(initialTurn || 'app');
+  }, [initialChunkIndex, initialTurn]);
+
+  // Create chunks when musaffaParams or quranAr change
+  useEffect(() => {
+    if (quranAr) {
+      createChunks();
+    }
+  }, [musaffaParams, quranAr]);
+
   const audioRef = useRef(null);
   const nextAudioRef = useRef(null);
   const currentIndexRef = useRef(0);
@@ -47,8 +60,8 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [mudarasaTurn]);
 
-  const createChunks = () => {
-    const { startSurah, startAyah, endSurah, endAyah, portion } = musaffaParams;
+  const createChunks = (params = musaffaParams) => {
+    const { startSurah, startAyah, endSurah, endAyah, portion } = params;
     let allAyahsInRange = [];
     for (let s = startSurah; s <= endSurah; s++) {
       const surahAyahs = quranAr.surahs[s - 1].ayahs;
@@ -171,15 +184,30 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     setMudarasaTurn('user');
   };
 
-  const startMusaffa = (overrideChunks, startChunkIndex = 0) => {
-    const finalChunks = Array.isArray(overrideChunks) ? overrideChunks : createChunks();
+  const startMusaffa = (overrideChunks, startChunkIndex = 0, initialTurn, overrideParams) => {
+    // If overrideParams is provided, use it to create chunks; otherwise use overrideChunks or createChunks()
+    let finalChunks;
+    if (overrideParams) {
+      finalChunks = createChunks(overrideParams);
+    } else {
+      finalChunks = Array.isArray(overrideChunks) ? overrideChunks : createChunks();
+    }
     if (finalChunks.length === 0) return;
     currentIndexRef.current = startChunkIndex;
     setCurrentChunkIndex(startChunkIndex);
     pausedAyahIndexRef.current = 0; // Reset pause position for new session
     setPartnerSubView('mudarasa');
-    if (musaffaParams.whoStarts === 'app') playCurrentIndex(finalChunks);
-    else {
+    // If initialTurn is provided (for resume), use it; otherwise check whoStarts
+    if (initialTurn) {
+      setMudarasaTurn(initialTurn);
+      if (initialTurn === 'app') {
+        playCurrentIndex(finalChunks);
+      } else {
+        acquireWakeLock(); // Keep screen on even when user starts
+      }
+    } else if (musaffaParams.whoStarts === 'app') {
+      playCurrentIndex(finalChunks);
+    } else {
       acquireWakeLock(); // Keep screen on even when user starts
       setMudarasaTurn('user');
     }

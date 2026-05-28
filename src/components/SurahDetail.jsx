@@ -3,22 +3,17 @@ import { motion } from 'framer-motion';
 import { ChevronLeft, Zap } from 'lucide-react';
 
 const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranEn, setView, openMusaffaConfig, waqarData, lastRead, setLastRead }) => {
-  if (!selectedSurah || !quranAr || !quranEn) return null;
-
-  const surahIndex = selectedSurah.number - 1;
-  const arabicAyahs = quranAr.surahs[surahIndex].ayahs;
-  const englishAyahs = quranEn.surahs[surahIndex].ayahs;
-  // Exact Bismillah string from the dataset (Surah 1:1)
-  const BISMILLAH = quranAr.surahs[0].ayahs[0].text;
   const scrollTrackerRef = useRef(null);
 
   // Scroll to top whenever the selected surah changes
   useEffect(() => {
+    if (!selectedSurah || !quranAr || !quranEn) return;
     window.scrollTo({ top: 0, behavior: 'instant' });
-  }, [selectedSurah.number]);
+  }, [selectedSurah ? selectedSurah.number : null]);
 
   // Feature 3: Auto-scroll to last-read ayah when returning to a surah
   useEffect(() => {
+    if (!selectedSurah || !quranAr || !quranEn) return;
     if (!lastRead || lastRead.surahNumber !== selectedSurah.number) return;
     const el = document.getElementById(`surah-ayah-${lastRead.ayahNumber}`);
     if (el) {
@@ -26,10 +21,11 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 300);
     }
-  }, [selectedSurah.number, lastRead]);
+  }, [selectedSurah ? selectedSurah.number : null, lastRead]);
 
   // Feature 3: Track scroll position and save last-read ayah
   const trackScroll = useCallback(() => {
+    if (!selectedSurah || !quranAr || !quranEn) return;
     if (scrollTrackerRef.current) return; // throttle
     scrollTrackerRef.current = setTimeout(() => {
       scrollTrackerRef.current = null;
@@ -50,15 +46,24 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
         setLastRead({ surahNumber: selectedSurah.number, ayahNumber: ayahNum });
       }
     }, 500);
-  }, [selectedSurah.number, setLastRead]);
+  }, [selectedSurah ? selectedSurah.number : null, setLastRead]);
 
   useEffect(() => {
+    if (!selectedSurah || !quranAr || !quranEn) return;
     window.addEventListener('scroll', trackScroll, { passive: true });
     return () => {
       window.removeEventListener('scroll', trackScroll);
       if (scrollTrackerRef.current) clearTimeout(scrollTrackerRef.current);
     };
   }, [trackScroll]);
+
+  if (!selectedSurah || !quranAr || !quranEn) return null;
+
+  const surahIndex = selectedSurah.number - 1;
+  const arabicAyahs = quranAr.surahs[surahIndex].ayahs;
+  const englishAyahs = quranEn.surahs[surahIndex].ayahs;
+  // Exact Bismillah string from the dataset (Surah 1:1)
+  const BISMILLAH = quranAr.surahs[0].ayahs[0].text;
 
   const handleDragEnd = (event, info) => {
     const threshold = 100;

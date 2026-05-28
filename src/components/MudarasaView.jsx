@@ -1,6 +1,5 @@
-import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Mic, Pause, PlayCircle } from 'lucide-react';
+import { ChevronLeft, Mic } from 'lucide-react';
 
 const MudarasaView = ({
   chunks,
@@ -12,10 +11,7 @@ const MudarasaView = ({
   onLogStumble,
   isListening,
   currentVolume,
-  sensitivity,
-  isPaused,
-  onPause,
-  onResume
+  sensitivity
 }) => {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', minHeight: '80vh' }}>
@@ -31,64 +27,19 @@ const MudarasaView = ({
               <p style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-primary)' }}>Portion {currentChunkIndex + 1} of {chunks.length}</p>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            {/*{isPaused ? (
-              <button
-                onClick={onResume}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                  background: 'var(--accent-emerald)',
-                  color: '#fff',
-                  padding: '0.25rem 0.5rem',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--glass-border)',
-                  fontSize: '0.6rem',
-                  fontWeight: '800',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  cursor: 'pointer'
-                }}
-              >
-                <PlayCircle size={12} />
-                <span>Resume</span>
-              </button>
-            ) : (
-              <button
-                onClick={onPause}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                  background: 'var(--accent-red)',
-                  color: '#fff',
-                  padding: '0.25rem 0.5rem',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--glass-border)',
-                  fontSize: '0.6rem',
-                  fontWeight: '800',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  cursor: 'pointer'
-                }}
-              >
-                <Pause size={12} />
-                <span>Pause</span>
-              </button>
-            )}*/}
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: mudarasaTurn === 'app' ? 'var(--accent-gold)' : 'var(--bg-accent)', boxShadow: mudarasaTurn === 'app' ? '0 0 10px var(--accent-gold)' : 'none' }} />
-            <div style={{ 
-              width: '8px', height: '8px', borderRadius: '50%', 
-              background: mudarasaTurn === 'user' 
-                ? (isListening ? (currentVolume > sensitivity ? 'var(--accent-emerald)' : 'rgba(255,255,255,0.15)') : 'var(--accent-emerald)') 
-                : 'var(--bg-accent)', 
-              boxShadow: mudarasaTurn === 'user' 
-                ? (isListening ? (currentVolume > sensitivity ? '0 0 10px var(--accent-emerald)' : 'none') : '0 0 10px var(--accent-emerald)') 
-                : 'none',
-              transition: 'all 0.1s'
-            }} />
-          </div>
+           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: mudarasaTurn === 'app' ? 'var(--accent-gold)' : 'var(--bg-accent)', boxShadow: mudarasaTurn === 'app' ? '0 0 10px var(--accent-gold)' : 'none' }} />
+             <div style={{ 
+               width: '8px', height: '8px', borderRadius: '50%', 
+               background: mudarasaTurn === 'user' 
+                 ? (isListening ? (currentVolume > sensitivity ? 'var(--accent-emerald)' : 'rgba(255,255,255,0.15)') : 'var(--accent-emerald)') 
+                 : 'var(--bg-accent)', 
+               boxShadow: mudarasaTurn === 'user' 
+                 ? (isListening ? (currentVolume > sensitivity ? '0 0 10px var(--accent-emerald)' : 'none') : '0 0 10px var(--accent-emerald)') 
+                 : 'none',
+               transition: 'all 0.1s'
+             }} />
+           </div>
         </div>
       </div>
 

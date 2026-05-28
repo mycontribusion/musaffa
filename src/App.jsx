@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import Header from './components/Header';
 import SurahList from './components/SurahList';
@@ -62,7 +62,7 @@ const App = () => {
   };
 
   const { surahs, quranAr, quranEn, mutashabihatData, waqarData, loading, error } = useQuranData(syncStateWithURL);
-  const { chunks, currentChunkIndex, currentAyahNumber, mudarasaTurn, isPaused, startMusaffa, handleNextTurnManual, pauseMusaffa, resumeMusaffa, stopMusaffa } = useMusaffa(quranAr, musaffaParams, setPartnerSubView, reciter, savedMusaffaSession?.chunkIndex, savedMusaffaSession?.turn);
+   const { chunks, currentChunkIndex, currentAyahNumber, mudarasaTurn, isPaused, startMusaffa, handleNextTurnManual, pauseMusaffa, resumeMusaffa, stopMusaffa } = useMusaffa(quranAr, musaffaParams, setPartnerSubView, reciter);
   const { dynamicMutashabihat, setDynamicMutashabihat, currentQuizIndex, setCurrentQuizIndex, quizScore, setQuizScore, quizFeedback, setQuizFeedback, generateDynamicQuiz, handleQuizAnswer } = useQuiz(mutashabihatData, quranAr, surahs, selectedSurah);
 
   useEffect(() => { document.documentElement.setAttribute('data-theme', theme); }, [theme]);
@@ -105,96 +105,97 @@ const App = () => {
   useEffect(() => {
     if (lastRead) localStorage.setItem('quran_last_read', JSON.stringify(lastRead));
   }, [lastRead]);
-  // Feature 2: Persist Musaffa session state
-  useEffect(() => {
-    if (savedMusaffaSession) localStorage.setItem('quran_musaffa_session', JSON.stringify(savedMusaffaSession));
-  }, [savedMusaffaSession]);
-  // Auto-save Musaffa session on every chunk/turn change during an active session
-  useEffect(() => {
-    if (partnerSubView !== 'mudarasa' || chunks.length === 0) return;
-    setSavedMusaffaSession(prev => ({
-      ...(prev || {}),
-      params: musaffaParams,
-      chunkIndex: currentChunkIndex,
-      turn: mudarasaTurn,
-      surahNumber: selectedSurah?.number || prev?.surahNumber,
-      savedAt: new Date().toISOString(),
-    }));
-  }, [currentChunkIndex, mudarasaTurn, partnerSubView, chunks.length, musaffaParams, selectedSurah]);
+    // Feature 2: Save/clear Musaffa session for pause & resume
+    const saveMusaffaSession = useCallback(() => {
+      if (!selectedSurah) return;
+      setSavedMusaffaSession({
+        params: musaffaParams,
+        chunkIndex: chunks.length > 0 ? currentChunkIndex : 0,
+        turn: mudarasaTurn,
+        surahNumber: selectedSurah.number,
+        savedAt: new Date().toISOString(),
+      });
+    }, [selectedSurah, musaffaParams, chunks.length, currentChunkIndex, mudarasaTurn]);
 
-  // Clear musaffa session when leaving the mudarasa page (exiting the session)
-  const prevPartnerSubViewRef = useRef(partnerSubView);
-  const prevViewRef = useRef(view);
-  useEffect(() => {
-    // Detect when leaving mudarasa page (either by changing subView or changing view)
-    const wasInMudarasa = prevPartnerSubViewRef.current === 'mudarasa' && prevViewRef.current === 'partner';
-    const isInMudarasa = partnerSubView === 'mudarasa' && view === 'partner';
+    const clearMusaffaSession = useCallback(() => {
+      localStorage.removeItem('quran_musaffa_session');
+      setSavedMusaffaSession(null);
+    }, []);
+
+    // Feature 2: Persist Musaffa session state
+    useEffect(() => {
+      if (savedMusaffaSession) localStorage.setItem('quran_musaffa_session', JSON.stringify(savedMusaffaSession));
+    }, [savedMusaffaSession]);
     
-    if (wasInMudarasa && !isInMudarasa) {
-      // Stop audio and clear session when leaving mudarasa
-      stopMusaffa();
-      clearMusaffaSession();
-    }
-    
-    prevPartnerSubViewRef.current = partnerSubView;
-    prevViewRef.current = view;
-  }, [view, partnerSubView, stopMusaffa]);
+    // Auto-save Musaffa session on every chunk/turn change during an active session
+    useEffect(() => {
+      if (partnerSubView !== 'mudarasa' || chunks.length === 0) return;
+      saveMusaffaSession();
+    }, [partnerSubView, chunks.length, saveMusaffaSession]);
 
-  const handleSelectSurah = (s) => {
-    setSelectedSurah(s);
-    setRecentSurahs(p => {
-      const updated = [s, ...p.filter(x => x.number !== s.number)].slice(0, 5);
-      return updated;
-    });
-    setMusaffaParams(p => ({ ...p, startSurah: s.number, startAyah: 1, endSurah: s.number, endAyah: s.numberOfAyahs }));
-  };
-
-  // Auto-update endSurah/endAyah when startSurah changes in Musaffa config
-  const handleMusaffaParamChange = (key, value) => {
-    if (key === 'startSurah') {
-      const surah = surahs.find(x => x.number === value);
-      if (surah) {
-        setMusaffaParams(p => ({ ...p, startSurah: value, startAyah: 1, endSurah: value, endAyah: surah.numberOfAyahs }));
-        return;
+    // Clear musaffa session when leaving the mudarasa page (exiting the session)
+    const prevPartnerSubViewRef = useRef(partnerSubView);
+    const prevViewRef = useRef(view);
+    useEffect(() => {
+      // Detect when leaving mudarasa page (either by changing subView or changing view)
+      const wasInMudarasa = prevPartnerSubViewRef.current === 'mudarasa' && prevViewRef.current === 'partner';
+      const isInMudarasa = partnerSubView === 'mudarasa' && view === 'partner';
+      
+      if (wasInMudarasa && !isInMudarasa) {
+        // Stop audio and clear session when leaving mudarasa
+        stopMusaffa();
+        clearMusaffaSession();
       }
-    }
-    setMusaffaParams(p => ({ ...p, [key]: value }));
-  };
+      
+      prevPartnerSubViewRef.current = partnerSubView;
+      prevViewRef.current = view;
+    }, [view, partnerSubView, stopMusaffa]);
 
-  // Feature 2: Save/clear Musaffa session for pause & resume
-  const saveMusaffaSession = () => {
-    if (!selectedSurah) return;
-    setSavedMusaffaSession({
-      params: musaffaParams,
-      chunkIndex: chunks.length > 0 ? currentChunkIndex : 0,
-      turn: mudarasaTurn,
-      surahNumber: selectedSurah.number,
-      savedAt: new Date().toISOString(),
-    });
-  };
+   const handleSelectSurah = (s) => {
+     setSelectedSurah(s);
+     setRecentSurahs(p => {
+       const updated = [s, ...p.filter(x => x.number !== s.number)].slice(0, 5);
+       return updated;
+     });
+     setMusaffaParams(p => ({ ...p, startSurah: s.number, startAyah: 1, endSurah: s.number, endAyah: s.numberOfAyahs }));
+   };
 
-  const clearMusaffaSession = () => {
-    localStorage.removeItem('quran_musaffa_session');
-    setSavedMusaffaSession(null);
-  };
+   // Auto-update endSurah/endAyah when startSurah changes in Musaffa config
+   const handleMusaffaParamChange = (key, value) => {
+     if (key === 'startSurah') {
+       const surah = surahs.find(x => x.number === value);
+       if (surah) {
+         setMusaffaParams(p => ({ ...p, startSurah: value, startAyah: 1, endSurah: value, endAyah: surah.numberOfAyahs }));
+         return;
+       }
+     }
+     setMusaffaParams(p => ({ ...p, [key]: value }));
+   };
 
-  // Feature 2: Resume Musaffa session from saved state
-  const resumeMusaffaSession = () => {
-    if (!savedMusaffaSession) return;
-    setMusaffaParams(savedMusaffaSession.params);
-    setPartnerSubView('mudarasa');
-    // Start the session after a short delay to allow state to update
-    setTimeout(() => startMusaffa(null, savedMusaffaSession.chunkIndex || 0), 100);
-  };
+    // Feature 2: Resume Musaffa session from saved state
+      const resumeMusaffaSession = useCallback(() => {
+        if (!savedMusaffaSession) return;
+        // Set selectedSurah to the saved surah for correct context
+        const savedSurah = surahs.find(s => s.number === savedMusaffaSession.surahNumber);
+        if (savedSurah) {
+          setSelectedSurah(savedSurah);
+        }
+        setMusaffaParams(savedMusaffaSession.params);
+        setView('partner');
+        setPartnerSubView('mudarasa');
+        // Start the session with saved params and chunk index
+        // Pass saved params directly to ensure correct session is restored
+        setTimeout(() => {
+          startMusaffa(null, savedMusaffaSession.chunkIndex || 0, savedMusaffaSession.turn || 'app', savedMusaffaSession.params);
+        }, 100);
+      }, [savedMusaffaSession, startMusaffa, setView, surahs]);
 
-  // Restore session on page load if URL is /partner/mudarasa
-  useEffect(() => {
-    if (savedMusaffaSession && window.location.pathname.startsWith('/partner/mudarasa')) {
-      setView('partner');
-      setPartnerSubView('mudarasa');
-      setMusaffaParams(savedMusaffaSession.params);
-    }
-  }, [savedMusaffaSession]);
+    // Restore session on page load if URL is /partner/mudarasa
+    useEffect(() => {
+      if (savedMusaffaSession && window.location.pathname.startsWith('/partner/mudarasa')) {
+        resumeMusaffaSession();
+      }
+    }, [savedMusaffaSession, resumeMusaffaSession]);
 
   const startQuiz = (type) => {
     setActiveQuizType(type);
@@ -215,14 +216,14 @@ const App = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-950 p-4 text-center text-slate-200">
-        <div className="max-w-md space-y-6">
-          <div className="text-6xl text-slate-700">📶</div>
-          <h1 className="text-2xl font-bold text-slate-100">You're Offline</h1>
-          <p className="text-slate-400 leading-relaxed">{error}</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '1rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+        <div style={{ maxWidth: '32rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ fontSize: '3rem', color: 'var(--text-muted)' }}>📶</div>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>You're Offline</h1>
+          <p style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}>{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium transition-colors"
+            style={{ padding: '0.75rem 1.5rem', background: 'var(--accent-gold)', color: '#000', borderRadius: '0.75rem', fontWeight: 500, border: 'none', cursor: 'pointer' }}
           >
             Try Again
           </button>

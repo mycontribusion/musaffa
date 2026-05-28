@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Amiri:wght@400;700&family=Scheherazade+New:wght@400;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Amiri:wght@400;700&family=Amiri+Quran&family=Scheherazade+New:wght@400;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
 
 :root {
   --bg-primary: #0f172a;
@@ -9,6 +9,7 @@
   --text-muted: #64748b;
   --accent-gold: #fbbf24;
   --accent-gold-glow: rgba(251, 191, 36, 0.3);
+  --accent-gold-soft: rgba(251, 191, 36, 0.15);
   --accent-emerald: #10b981;
   --accent-emerald-glow: rgba(16, 185, 129, 0.3);
   --accent-red: #ef4444;
@@ -32,6 +33,7 @@
   --text-secondary: #475569;
   --text-muted: #94a3b8;
   --accent-gold: #d97706;
+  --accent-gold-soft: rgba(217, 119, 6, 0.15);
   --glass-bg: rgba(255, 255, 255, 0.8);
   --glass-border: rgba(15, 23, 42, 0.08);
 }
@@ -78,7 +80,7 @@ body {
 
 /* Typography */
 .arabic-text {
-  font-family: 'Scheherazade New', serif;
+  font-family: 'Amiri Quran', 'Scheherazade New', serif;
   direction: rtl;
   word-spacing: 0.1em;
   line-height: 2.2;
@@ -364,6 +366,7 @@ body {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  background-color: var(--bg-primary);
 }
 
 .loader {
@@ -411,4 +414,12 @@ body {
   height: 2px;
   background: var(--accent-gold);
   border-radius: 2px;
+}
+
+.hover-scale {
+  transition: transform 0.2s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.02);
 }

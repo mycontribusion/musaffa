@@ -249,7 +249,7 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose 
 
             {/* Options */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {card.options.map((opt, i) => (
+              {card.options.map((opt) => (
                 <OptionBtn
                   key={`${opt.surah}-${opt.ayah}`}
                   opt={opt}
