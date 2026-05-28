@@ -1,25 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getAudioUrl } from '../utils/quranUtils';
 
-export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 'ar.alafasy', initialChunkIndex, initialTurn) => {
+export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 'ar.alafasy') => {
   const [chunks, setChunks] = useState([]);
-  const [currentChunkIndex, setCurrentChunkIndex] = useState(initialChunkIndex || 0);
+  const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
   const [currentAyahNumber, setCurrentAyahNumber] = useState(null);
-  const [mudarasaTurn, setMudarasaTurn] = useState(initialTurn || 'app');
+  const [mudarasaTurn, setMudarasaTurn] = useState('app');
   const [isPaused, setIsPaused] = useState(false);
-
-  // Reset state when initialChunkIndex or initialTurn changes (for session restore)
-  useEffect(() => {
-    setCurrentChunkIndex(initialChunkIndex || 0);
-    setMudarasaTurn(initialTurn || 'app');
-  }, [initialChunkIndex, initialTurn]);
-
-  // Create chunks when musaffaParams or quranAr change
-  useEffect(() => {
-    if (quranAr) {
-      createChunks();
-    }
-  }, [musaffaParams, quranAr]);
 
   const audioRef = useRef(null);
   const nextAudioRef = useRef(null);

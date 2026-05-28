@@ -63,7 +63,7 @@ const App = () => {
 
   const { surahs, quranAr, quranEn, mutashabihatData, waqarData, loading, error } = useQuranData(syncStateWithURL);
    const { chunks, currentChunkIndex, currentAyahNumber, mudarasaTurn, isPaused, startMusaffa, handleNextTurnManual, pauseMusaffa, resumeMusaffa, stopMusaffa } = useMusaffa(quranAr, musaffaParams, setPartnerSubView, reciter);
-  const { dynamicMutashabihat, setDynamicMutashabihat, currentQuizIndex, setCurrentQuizIndex, quizScore, setQuizScore, quizFeedback, setQuizFeedback, generateDynamicQuiz, handleQuizAnswer } = useQuiz(mutashabihatData, quranAr, surahs, selectedSurah);
+  const { dynamicMutashabihat, setDynamicMutashabihat, currentQuizIndex, setCurrentQuizIndex, quizScore, setQuizScore, generateDynamicQuiz, handleQuizAnswer } = useQuiz(mutashabihatData, quranAr, surahs, selectedSurah);
 
   useEffect(() => { document.documentElement.setAttribute('data-theme', theme); }, [theme]);
 
@@ -127,29 +127,30 @@ const App = () => {
       if (savedMusaffaSession) localStorage.setItem('quran_musaffa_session', JSON.stringify(savedMusaffaSession));
     }, [savedMusaffaSession]);
     
-    // Auto-save Musaffa session on every chunk/turn change during an active session
-    useEffect(() => {
-      if (partnerSubView !== 'mudarasa' || chunks.length === 0) return;
-      saveMusaffaSession();
-    }, [partnerSubView, chunks.length, saveMusaffaSession]);
+     // Auto-save Musaffa session on every chunk/turn change during an active session
+     useEffect(() => {
+       if (partnerSubView !== 'mudarasa' || chunks.length === 0) return;
+       setTimeout(() => {
+         saveMusaffaSession();
+       }, 0);
+     }, [partnerSubView, chunks.length, saveMusaffaSession]);
 
-    // Clear musaffa session when leaving the mudarasa page (exiting the session)
-    const prevPartnerSubViewRef = useRef(partnerSubView);
-    const prevViewRef = useRef(view);
-    useEffect(() => {
-      // Detect when leaving mudarasa page (either by changing subView or changing view)
-      const wasInMudarasa = prevPartnerSubViewRef.current === 'mudarasa' && prevViewRef.current === 'partner';
-      const isInMudarasa = partnerSubView === 'mudarasa' && view === 'partner';
-      
-      if (wasInMudarasa && !isInMudarasa) {
-        // Stop audio and clear session when leaving mudarasa
-        stopMusaffa();
-        clearMusaffaSession();
-      }
-      
-      prevPartnerSubViewRef.current = partnerSubView;
-      prevViewRef.current = view;
-    }, [view, partnerSubView, stopMusaffa]);
+     // Stop audio when leaving the mudarasa page, but KEEP the saved session so the resume banner shows
+     const prevPartnerSubViewRef = useRef(partnerSubView);
+     const prevViewRef = useRef(view);
+     useEffect(() => {
+       // Detect when leaving mudarasa page (either by changing subView or changing view)
+       const wasInMudarasa = prevPartnerSubViewRef.current === 'mudarasa' && prevViewRef.current === 'partner';
+       const isInMudarasa = partnerSubView === 'mudarasa' && view === 'partner';
+       
+       if (wasInMudarasa && !isInMudarasa) {
+         // Stop audio but PRESERVE the session for resume
+         stopMusaffa();
+       }
+       
+       prevPartnerSubViewRef.current = partnerSubView;
+       prevViewRef.current = view;
+     }, [view, partnerSubView, stopMusaffa]);
 
    const handleSelectSurah = (s) => {
      setSelectedSurah(s);
@@ -175,27 +176,31 @@ const App = () => {
     // Feature 2: Resume Musaffa session from saved state
       const resumeMusaffaSession = useCallback(() => {
         if (!savedMusaffaSession) return;
+        // Capture saved data in a local var so the setTimeout closure can't go stale
+        const saved = { ...savedMusaffaSession };
         // Set selectedSurah to the saved surah for correct context
-        const savedSurah = surahs.find(s => s.number === savedMusaffaSession.surahNumber);
+        const savedSurah = surahs.find(s => s.number === saved.surahNumber);
         if (savedSurah) {
           setSelectedSurah(savedSurah);
         }
-        setMusaffaParams(savedMusaffaSession.params);
+        // Update params to saved values
+        setMusaffaParams(saved.params);
         setView('partner');
-        setPartnerSubView('mudarasa');
-        // Start the session with saved params and chunk index
-        // Pass saved params directly to ensure correct session is restored
+        // Don't set subView to mudarasa yet — startMusaffa will do that
+        // Pass saved params directly so it creates chunks from the correct surah/range
         setTimeout(() => {
-          startMusaffa(null, savedMusaffaSession.chunkIndex || 0, savedMusaffaSession.turn || 'app', savedMusaffaSession.params);
-        }, 100);
+          startMusaffa(null, saved.chunkIndex || 0, saved.turn || 'app', saved.params);
+        }, 150);
       }, [savedMusaffaSession, startMusaffa, setView, surahs]);
 
-    // Restore session on page load if URL is /partner/mudarasa
-    useEffect(() => {
-      if (savedMusaffaSession && window.location.pathname.startsWith('/partner/mudarasa')) {
-        resumeMusaffaSession();
-      }
-    }, [savedMusaffaSession, resumeMusaffaSession]);
+     // Restore session on page load if URL is /partner/mudarasa
+     useEffect(() => {
+       if (savedMusaffaSession && window.location.pathname.startsWith('/partner/mudarasa')) {
+         setTimeout(() => {
+           resumeMusaffaSession();
+         }, 0);
+       }
+     }, [savedMusaffaSession, resumeMusaffaSession]);
 
   const startQuiz = (type) => {
     setActiveQuizType(type);
@@ -250,42 +255,41 @@ const App = () => {
           <AnimatePresence mode="wait">
             {view === 'list' && <SurahList surahs={surahs} recentSurahs={recentSurahs} handleSelectSurah={handleSelectSurah} setView={setView} />}
             {view === 'detail' && selectedSurah && <SurahDetail selectedSurah={selectedSurah} surahs={surahs} handleSelectSurah={handleSelectSurah} quranAr={quranAr} quranEn={quranEn} setView={setView} openMusaffaConfig={(s) => { handleSelectSurah(s); setPartnerSubView('config'); setView('partner'); }} startQuiz={startQuiz} waqarData={waqarData} lastRead={lastRead} setLastRead={setLastRead} />}
-            {view === 'partner' && (
-              <PartnerSession
-                key="partner-view"
-                subView={partnerSubView}
-                setSubView={setPartnerSubView}
-                params={musaffaParams}
-                setParams={setMusaffaParams}
-                surahs={surahs}
-                startMusaffa={startMusaffa}
-                startQuiz={startQuiz}
-                chunks={chunks}
-                currentChunkIndex={currentChunkIndex}
-                currentAyahNumber={currentAyahNumber}
-                turn={mudarasaTurn}
-                handleNextTurn={handleNextTurnManual}
-                logStumble={logStumble}
-                setView={setView}
-                questions={dynamicMutashabihat}
-                quizScore={quizScore}
-                quizFeedback={quizFeedback}
-                handleQuizAnswer={(a) => handleQuizAnswer(a, () => setPartnerSubView('quiz-result'))}
-                currentQuizIndex={currentQuizIndex}
-                reciter={reciter}
-                setReciter={setReciter}
-                activeQuizType={activeQuizType}
-                handleMusaffaParamChange={handleMusaffaParamChange}
-                savedMusaffaSession={savedMusaffaSession}
-                saveMusaffaSession={saveMusaffaSession}
-                clearMusaffaSession={clearMusaffaSession}
-                resumeMusaffaSession={resumeMusaffaSession}
-                pauseMusaffa={pauseMusaffa}
-                resumeMusaffa={resumeMusaffa}
-                stopMusaffa={stopMusaffa}
-                isPaused={isPaused}
-              />
-            )}
+             {view === 'partner' && (
+               <PartnerSession
+                 key="partner-view"
+                 subView={partnerSubView}
+                 setSubView={setPartnerSubView}
+                 params={musaffaParams}
+                 setParams={setMusaffaParams}
+                 surahs={surahs}
+                 startMusaffa={startMusaffa}
+                 startQuiz={startQuiz}
+                 chunks={chunks}
+                 currentChunkIndex={currentChunkIndex}
+                 currentAyahNumber={currentAyahNumber}
+                 turn={mudarasaTurn}
+                 handleNextTurn={handleNextTurnManual}
+                 logStumble={logStumble}
+                 setView={setView}
+                 questions={dynamicMutashabihat}
+                 quizScore={quizScore}
+                 handleQuizAnswer={(a) => handleQuizAnswer(a, () => setPartnerSubView('quiz-result'))}
+                 currentQuizIndex={currentQuizIndex}
+                 reciter={reciter}
+                 setReciter={setReciter}
+                 activeQuizType={activeQuizType}
+                 handleMusaffaParamChange={handleMusaffaParamChange}
+                 savedMusaffaSession={savedMusaffaSession}
+                 saveMusaffaSession={saveMusaffaSession}
+                 clearMusaffaSession={clearMusaffaSession}
+                 resumeMusaffaSession={resumeMusaffaSession}
+                 pauseMusaffa={pauseMusaffa}
+                 resumeMusaffa={resumeMusaffa}
+                 stopMusaffa={stopMusaffa}
+                 isPaused={isPaused}
+               />
+             )}
             {view === 'mutashabihat-session' && selectedSurah && waqarData && waqarData[selectedSurah.number] && (
               <MutashabihatSession
                 key={`waqar-${selectedSurah.number}`}

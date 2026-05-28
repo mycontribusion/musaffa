@@ -3,8 +3,8 @@ import { Layers, FileText, LayoutGrid, Mic, MicOff, Settings2, AlertCircle } fro
 import { RECITERS } from '../utils/quranUtils';
 
 const PartnerConfig = ({
-  surahs, params, onChange, onStart, onBack,
-  currentVolume, isListening, reciter, setReciter,
+  surahs, params, onChange, onStart,
+  currentVolume, reciter, setReciter,
 }) => {
   const getAyahCount = (n) => (surahs.find(x => x.number === n)?.numberOfAyahs || 0);
   const startAyahCount = getAyahCount(params.startSurah);

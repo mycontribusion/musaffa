@@ -8,7 +8,6 @@ const PartnerSession = ({
   subView,
   surahs,
   params,
-  setParams,
   startMusaffa,
   startQuiz,
   chunks,
@@ -115,7 +114,7 @@ const PartnerSession = ({
       currentAyahNumber={currentAyahNumber}
       mudarasaTurn={turn}
       onNext={handleNextTurn}
-      onBack={() => { stopMusaffa(); clearMusaffaSession(); setSubView('config'); }}
+      onBack={() => { saveMusaffaSession(); stopMusaffa(); setSubView('config'); }}
       onLogStumble={logStumble}
       isListening={isListening}
       currentVolume={currentVolume}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, CheckCircle2, XCircle, RotateCcw } from 'lucide-react';
 import { buildSessionCards } from '../utils/mutashabihatParser';
