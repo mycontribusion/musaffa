@@ -56,7 +56,7 @@ export default defineConfig({
              options: {
                cacheName: 'quran-audio-v1',
                expiration: {
-                 maxEntries: 50, // Limit total number of audio files cached
+                 maxEntries: 6500, // Limit total number of audio files cached (6236 ayahs in Quran)
                  maxAgeSeconds: 60 * 60 * 24 * 7, // 1 week
                },
                cacheableResponse: { statuses: [0, 200] }, // Cache opaque responses (status 0 from no-cors) and 200
