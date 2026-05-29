@@ -188,9 +188,7 @@ const App = () => {
         setView('partner');
         // Don't set subView to mudarasa yet — startMusaffa will do that
         // Pass saved params directly so it creates chunks from the correct surah/range
-        setTimeout(() => {
-          startMusaffa(null, saved.chunkIndex || 0, saved.turn || 'app', saved.params);
-        }, 150);
+        startMusaffa(null, saved.chunkIndex || 0, saved.turn || 'app', saved.params);
       }, [savedMusaffaSession, startMusaffa, setView, surahs]);
 
      // Restore session on page load if URL is /partner/mudarasa

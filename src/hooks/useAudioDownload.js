@@ -94,8 +94,9 @@ export const useAudioDownload = (quranData, reciterId = 'ar.alafasy') => {
       // Download each ayah audio file
       for (let i = 0; i < totalAyahs; i++) {
         const ayahNumber = i + 1;
+        const globalNumber = surah.ayahs[i].number;
         // Use the same URL format as the app's audio playback
-        const url = getAudioUrl(null, reciterId, surahNumber, ayahNumber);
+        const url = getAudioUrl(globalNumber, reciterId, surahNumber, ayahNumber);
 
         try {
           // Fetch with no-cors to trigger service worker caching
@@ -161,7 +162,8 @@ export const useAudioDownload = (quranData, reciterId = 'ar.alafasy') => {
     // Delete each ayah audio file from cache
     for (let i = 0; i < totalAyahs; i++) {
       const ayahNumber = i + 1;
-      const url = getAudioUrl(null, reciterId, surahNumber, ayahNumber);
+      const globalNumber = surah.ayahs[i].number;
+      const url = getAudioUrl(globalNumber, reciterId, surahNumber, ayahNumber);
       try {
         await cache.delete(url);
       } catch (err) {

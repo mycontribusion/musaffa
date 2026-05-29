@@ -172,6 +172,18 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
   };
 
   const startMusaffa = (overrideChunks, startChunkIndex = 0, initialTurn, overrideParams) => {
+    // Attempt to unlock audio elements for Safari/Chrome autoplay policy
+    try {
+      const a1 = getAudio(audioRef);
+      const a2 = getAudio(nextAudioRef);
+      // Small silent wav to safely unlock play
+      const silentWav = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+      if (!a1.src) a1.src = silentWav;
+      if (!a2.src) a2.src = silentWav;
+      a1.play().then(() => a1.pause()).catch(() => {});
+      a2.play().then(() => a2.pause()).catch(() => {});
+    } catch (e) {}
+
     // If overrideParams is provided, use it to create chunks; otherwise use overrideChunks or createChunks()
     let finalChunks;
     if (overrideParams) {
