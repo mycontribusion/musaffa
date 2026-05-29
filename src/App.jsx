@@ -247,6 +247,8 @@ const App = () => {
         isPaused={isPaused}
         onPauseMusaffa={pauseMusaffa}
         onResumeMusaffa={resumeMusaffa}
+        reciter={reciter}
+        setReciter={setReciter}
       />
       <div className="app-container">
         <main className="pb-24">

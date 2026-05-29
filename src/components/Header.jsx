@@ -1,7 +1,21 @@
-import { Moon, Sun, PlayCircle, Pause } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Moon, Sun, PlayCircle, Pause, User } from 'lucide-react';
+import { RECITERS } from '../utils/quranUtils';
 
-const Header = ({ theme, setTheme, view, setView, setPartnerSubView, isInMusaffaSession, isPaused, onPauseMusaffa, onResumeMusaffa }) => {
+const Header = ({ theme, setTheme, view, setView, setPartnerSubView, isInMusaffaSession, isPaused, onPauseMusaffa, onResumeMusaffa, reciter, setReciter }) => {
   const isDark = theme === 'dark';
+  const [showReciterDropdown, setShowReciterDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowReciterDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <header
@@ -18,7 +32,7 @@ const Header = ({ theme, setTheme, view, setView, setPartnerSubView, isInMusaffa
         >
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => { setView('list'); }}>
             <img src="/pwa-192x192.png" alt="MusaffaPro Icon" style={{ width: '28px', height: '28px', borderRadius: '6px' }} />
-            <h1 style={{ fontSize: 'clamp(1rem, 4vw, 1.25rem)', fontWeight: '800', letterSpacing: '-0.02em', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+            <h1 style={{ fontSize: 'clamp(1rem, 4vw, 1.0rem)', fontWeight: '800', letterSpacing: '-0.02em', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
               MusaffaPro
             </h1>
           </div>
@@ -96,6 +110,66 @@ const Header = ({ theme, setTheme, view, setView, setPartnerSubView, isInMusaffa
                 <span>Start Musaffa</span>
               </button>
             )}
+
+            {/* Reciter Dropdown */}
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setShowReciterDropdown(!showReciterDropdown)}
+                className="icon-btn"
+                title="Select Reciter"
+                style={{ position: 'relative' }}
+              >
+                <User size={16} strokeWidth={2} />
+              </button>
+
+              {showReciterDropdown && (
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 0.5rem)',
+                  right: 0,
+                  background: 'var(--bg-primary)',
+                  border: '1px solid var(--glass-border)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '0.5rem',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                  zIndex: 100,
+                  minWidth: '200px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.25rem'
+                }}>
+                  <div style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>
+                    Select Reciter
+                  </div>
+                  {RECITERS.map(r => (
+                    <button
+                      key={r.id}
+                      onClick={() => {
+                        if (setReciter) setReciter(r.id);
+                        setShowReciterDropdown(false);
+                      }}
+                      style={{
+                        textAlign: 'left',
+                        padding: '0.5rem 0.75rem',
+                        borderRadius: 'var(--radius-sm)',
+                        background: reciter === r.id ? 'var(--accent-gold)' : 'transparent',
+                        color: reciter === r.id ? '#000' : 'var(--text-primary)',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '0.85rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        transition: 'var(--transition-fast)'
+                      }}
+                      className="hover:bg-opacity-20"
+                    >
+                      <span style={{ fontWeight: reciter === r.id ? 'bold' : 'normal' }}>{r.name}</span>
+                      <span style={{ fontSize: '0.65rem', opacity: 0.8 }}>{r.style}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <button
               onClick={() => setTheme(isDark ? 'light' : 'dark')}
