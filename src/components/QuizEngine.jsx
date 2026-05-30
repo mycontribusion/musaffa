@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect } from 'react';
 import { CheckCircle2, XCircle, RotateCcw, ArrowRight, Trophy, Target, Sparkles } from 'lucide-react';
 
 const QuizEngine = ({
@@ -20,6 +21,17 @@ const QuizEngine = ({
     continue: 'Continuations',
     'which-surah': 'Surah Identification'
   };
+
+  // Scroll to top whenever a new question appears
+  useEffect(() => {
+    if (subView !== 'quiz') return;
+    // Small delay lets Framer Motion finish the exit animation before scrolling
+    const t = setTimeout(() => {
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }, 50);
+    return () => clearTimeout(t);
+  }, [currentQuizIndex, subView]);
 
   if (subView === 'quiz') {
     const currentQuestion = questions[currentQuizIndex];

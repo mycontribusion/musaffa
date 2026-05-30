@@ -118,7 +118,7 @@ const SurahList = ({
                       <Download size={14} />
                     </div>
                   )}
-                  <ChevronRight size={12} style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
+                  {/* <ChevronRight size={12} style={{ color: 'var(--text-muted)', opacity: 0.5 }} /> */}
                 </div>
               </div>
             </motion.div>

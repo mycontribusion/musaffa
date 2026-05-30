@@ -1,12 +1,155 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
-import { motion } from 'framer-motion';
-import { ChevronLeft, Zap, Download, Trash2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronLeft, Zap, Download, Trash2, Play, Pause, SkipBack, SkipForward, Volume2, X } from 'lucide-react';
 import { useAudioDownload } from '../hooks/useAudioDownload';
+import { getAudioUrl } from '../utils/quranUtils';
 
 const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranEn, setView, openMusaffaConfig, waqarData, lastRead, setLastRead, reciter, audioDownloadControls }) => {
   const scrollTrackerRef = useRef(null);
   const scrollEffectRef = useRef({ surahNumber: null, hasScrolled: false });
-  const { downloadStatus, downloadSurahAudio, deleteSurahAudio, isSurahAudioDownloaded, downloadedSurahs } = audioDownloadControls;
+  const { downloadStatus, downloadSurahAudio, deleteSurahAudio, isSurahAudioDownloaded } = audioDownloadControls;
+
+  // ── Smart Header (hide on scroll down, show on scroll up) ────────────────────
+  const [headerVisible, setHeaderVisible] = useState(true);
+  const lastScrollY = useRef(0);
+
+  // ── Recitation Player State ──────────────────────────────────────────────
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playingAyahIdx, setPlayingAyahIdx] = useState(null);
+  const [playerStarted, setPlayerStarted] = useState(false); // controls bar visibility
+  const playerAudioRef = useRef(null);
+  const shouldPlayRef = useRef(false);
+
+  const getPlayerAudio = () => {
+    if (!playerAudioRef.current) playerAudioRef.current = new Audio();
+    return playerAudioRef.current;
+  };
+
+  // Stop player when leaving the surah
+  useEffect(() => {
+    return () => {
+      if (playerAudioRef.current) {
+        playerAudioRef.current.pause();
+        playerAudioRef.current.src = '';
+      }
+      shouldPlayRef.current = false;
+      setPlayerStarted(false);
+      setIsPlaying(false);
+      setPlayingAyahIdx(null);
+    };
+  }, [selectedSurah?.number]);
+
+  const playFromIndex = useCallback((idx) => {
+    if (!selectedSurah || !quranAr) return;
+    const arabicAyahs = quranAr.surahs[selectedSurah.number - 1].ayahs;
+    if (idx >= arabicAyahs.length) {
+      // Finished surah
+      setIsPlaying(false);
+      setPlayingAyahIdx(null);
+      shouldPlayRef.current = false;
+      return;
+    }
+    const ayah = arabicAyahs[idx];
+    const url = getAudioUrl(ayah.number, reciter, selectedSurah.number, ayah.numberInSurah);
+    const audio = getPlayerAudio();
+    audio.pause();
+    audio.src = url;
+    setPlayingAyahIdx(idx);
+    shouldPlayRef.current = true;
+
+    // Auto-scroll to playing ayah
+    setTimeout(() => {
+      const el = document.getElementById(`surah-ayah-${ayah.numberInSurah}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+
+    audio.play().catch(() => {});
+    audio.onended = () => {
+      if (shouldPlayRef.current) playFromIndex(idx + 1);
+    };
+    audio.onerror = () => {
+      if (shouldPlayRef.current) playFromIndex(idx + 1);
+    };
+  }, [selectedSurah, quranAr, reciter]);
+
+  const handlePlaySurah = () => {
+    setPlayerStarted(true);
+    setIsPlaying(true);
+    playFromIndex(playingAyahIdx ?? 0);
+  };
+
+  const handlePlayPause = () => {
+    const audio = getPlayerAudio();
+    if (isPlaying) {
+      audio.pause();
+      shouldPlayRef.current = false;
+      setIsPlaying(false);
+    } else {
+      const startIdx = playingAyahIdx ?? 0;
+      setIsPlaying(true);
+      playFromIndex(startIdx);
+    }
+  };
+
+  const handleAyahTap = (idx) => {
+    setPlayerStarted(true);
+    setIsPlaying(true);
+    playFromIndex(idx);
+  };
+
+  const handleClosePlayer = () => {
+    const audio = getPlayerAudio();
+    audio.pause();
+    audio.src = '';
+    shouldPlayRef.current = false;
+    setIsPlaying(false);
+    setPlayingAyahIdx(null);
+    setPlayerStarted(false);
+  };
+
+  const handlePrevAyah = () => {
+    const idx = Math.max(0, (playingAyahIdx ?? 0) - 1);
+    setIsPlaying(true);
+    playFromIndex(idx);
+  };
+
+  const handleNextAyah = () => {
+    if (!selectedSurah || !quranAr) return;
+    const total = quranAr.surahs[selectedSurah.number - 1].ayahs.length;
+    const idx = Math.min(total - 1, (playingAyahIdx ?? 0) + 1);
+    setIsPlaying(true);
+    playFromIndex(idx);
+  };
+
+  // Keep isPlaying in sync when audio finishes naturally
+  useEffect(() => {
+    const audio = getPlayerAudio();
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => { if (!shouldPlayRef.current) setIsPlaying(false); };
+    audio.addEventListener('play', onPlay);
+    audio.addEventListener('pause', onPause);
+    return () => {
+      audio.removeEventListener('play', onPlay);
+      audio.removeEventListener('pause', onPause);
+    };
+  }, []);
+
+  // Smart header scroll detection
+  useEffect(() => {
+    const onScroll = () => {
+      const currentY = window.scrollY;
+      if (currentY < 10) {
+        setHeaderVisible(true);
+      } else if (currentY < lastScrollY.current) {
+        setHeaderVisible(true); // scrolling up
+      } else if (currentY > lastScrollY.current + 5) {
+        setHeaderVisible(false); // scrolling down
+      }
+      lastScrollY.current = currentY;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   // Feature 3: Auto-scroll to last-read ayah when returning to a surah, or top if no last-read
   useEffect(() => {
@@ -107,8 +250,13 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
       style={{ display: 'flex', flexDirection: 'column', gap: '2rem', cursor: 'grab' }}
       whileTap={{ cursor: 'grabbing' }}
     >
-       {/* Header */}
-       <div className="glass-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', position: 'sticky', top: '0.5rem', zIndex: 90 }}>
+       {/* Header — hides on scroll down, shows on scroll up */}
+       <motion.div
+         animate={{ y: headerVisible ? 0 : -80, opacity: headerVisible ? 1 : 0 }}
+         transition={{ duration: 0.25, ease: 'easeInOut' }}
+         style={{ position: 'sticky', top: '0.5rem', zIndex: 90 }}
+       >
+       <div className="glass-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem' }}>
          <button onClick={() => setView('list')} className="icon-btn">
            <ChevronLeft size={18} />
          </button>
@@ -116,6 +264,15 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
            <h2 style={{ fontSize: '1rem', fontWeight: '800', color: 'var(--text-primary)' }}>{selectedSurah.englishName}</h2>
          </div>
          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+           {/* Play Surah button */}
+           <button
+             onClick={handlePlaySurah}
+             className="icon-btn"
+             title="Play Surah"
+             style={{ color: isPlaying ? 'var(--accent-gold)' : 'var(--text-secondary)' }}
+           >
+             {isPlaying ? <Pause size={18} /> : <Play size={18} />}
+           </button>
            {isSurahAudioDownloaded(selectedSurah.number) ? (
              <button
                onClick={() => deleteSurahAudio(selectedSurah.number)}
@@ -155,6 +312,7 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
            )}
          </div>
        </div>
+       </motion.div>
 
        {/* Title + Session Button */}
        <div style={{ textAlign: 'center', marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
@@ -212,7 +370,7 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
        </div>
 
       {/* Ayahs List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem', maxWidth: '800px', margin: '0 auto', padding: '2rem 0' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem', maxWidth: '800px', margin: '0 auto', padding: '2rem 0 10rem' }}>
         {/* Unnumbered Bismillah */}
         {selectedSurah.number !== 1 && selectedSurah.number !== 9 && (
           <div style={{ textAlign: 'center', padding: '1rem 0' }}>
@@ -229,6 +387,7 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
               displayText = cleanText.slice(cleanBismillah.length).trim();
             }
           }
+          const isActive = playingAyahIdx === idx;
 
           return (
             <motion.div
@@ -237,19 +396,33 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
               viewport={{ once: true, margin: '-100px' }}
               key={ayah.number}
               id={`surah-ayah-${ayah.numberInSurah}`} data-ayah-num={ayah.numberInSurah}
-              style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '0 0.5rem' }}
+              onClick={() => handleAyahTap(idx)}
+              style={{
+                display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '1.25rem 0.75rem',
+                borderRadius: '1rem', cursor: 'pointer', transition: 'background 0.3s',
+                background: isActive ? 'var(--accent-gold-soft)' : 'transparent',
+                border: isActive ? '1px solid rgba(212,175,55,0.3)' : '1px solid transparent',
+              }}
             >
               {/* Ayah number indicator */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to right, transparent, var(--glass-border), transparent)' }} />
-                <div style={{ padding: '0.2rem 0.6rem', borderRadius: '9999px', border: '1px solid var(--glass-border)', background: 'var(--glass-bg)', fontSize: '0.6rem', fontWeight: '800', color: 'var(--text-muted)' }}>
+                <div style={{
+                  padding: '0.2rem 0.6rem', borderRadius: '9999px',
+                  border: `1px solid ${isActive ? 'var(--accent-gold)' : 'var(--glass-border)'}`,
+                  background: isActive ? 'var(--accent-gold)' : 'var(--glass-bg)',
+                  fontSize: '0.6rem', fontWeight: '800',
+                  color: isActive ? '#000' : 'var(--text-muted)',
+                  display: 'flex', alignItems: 'center', gap: '0.3rem'
+                }}>
+                  {isActive && isPlaying && <Volume2 size={9} />}
                   {selectedSurah.number}:{ayah.numberInSurah}
                 </div>
                 <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to left, transparent, var(--glass-border), transparent)' }} />
               </div>
 
               {/* Arabic */}
-              <div className="arabic-text" style={{ fontSize: 'clamp(1.75rem, 5vw, 2.5rem)', lineHeight: '1.8', color: 'var(--text-primary)', textAlign: 'center' }}>
+              <div className="arabic-text" style={{ fontSize: 'clamp(1.75rem, 5vw, 2.5rem)', lineHeight: '1.8', color: isActive ? 'var(--accent-gold)' : 'var(--text-primary)', textAlign: 'center', transition: 'color 0.3s' }}>
                 {displayText}
               </div>
 
@@ -261,6 +434,78 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
           );
         })}
       </div>
+
+      {/* ── Sticky Recitation Player Bar (only after play starts) ── */}
+      <AnimatePresence>
+        {playerStarted && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            style={{
+              position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200,
+              padding: '0.75rem 1rem 1.25rem',
+              background: 'var(--bg-primary)',
+              borderTop: '1px solid var(--glass-border)',
+              backdropFilter: 'blur(20px)',
+            }}
+          >
+          <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {/* Ayah label + close */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.65rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                {selectedSurah.englishName}
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontSize: '0.65rem', fontWeight: '700', color: playingAyahIdx !== null ? 'var(--accent-gold)' : 'var(--text-muted)' }}>
+                  {playingAyahIdx !== null
+                    ? `Ayah ${arabicAyahs[playingAyahIdx]?.numberInSurah} of ${arabicAyahs.length}`
+                    : `${arabicAyahs.length} Ayahs`}
+                </span>
+                <button
+                  onClick={handleClosePlayer}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.15rem', display: 'flex', alignItems: 'center' }}
+                  title="Close player"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+
+            {/* Controls */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.5rem' }}>
+              <button
+                onClick={handlePrevAyah}
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.5rem' }}
+              >
+                <SkipBack size={20} />
+              </button>
+
+              <button
+                onClick={handlePlayPause}
+                style={{
+                  width: '52px', height: '52px', borderRadius: '50%',
+                  background: 'var(--accent-gold)', border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 4px 20px rgba(212,175,55,0.4)',
+                }}
+              >
+                {isPlaying
+                  ? <Pause size={22} color="#000" fill="#000" />
+                  : <Play size={22} color="#000" fill="#000" style={{ marginLeft: '2px' }} />}
+              </button>
+
+              <button
+                onClick={handleNextAyah}
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.5rem' }}
+              >
+                <SkipForward size={20} />
+              </button>
+            </div>
+          </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
