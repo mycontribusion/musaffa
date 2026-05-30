@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Mic } from 'lucide-react';
+import { ChevronLeft, Mic, WifiOff, RefreshCw, FastForward } from 'lucide-react';
 
 const MudarasaView = ({
   chunks,
@@ -11,7 +11,12 @@ const MudarasaView = ({
   onLogStumble,
   isListening,
   currentVolume,
-  sensitivity
+  sensitivity,
+  isPaused,
+  onPause,
+  onResume,
+  audioError,
+  setAudioError
 }) => {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', minHeight: '80vh' }}>
@@ -43,8 +48,55 @@ const MudarasaView = ({
         </div>
       </div>
 
+      {/* Audio Error Banner */}
+      {audioError && (
+        <div style={{ maxWidth: '800px', margin: '1rem auto', padding: '0 1rem', width: '100%' }}>
+          <div style={{
+            background: 'rgba(220, 38, 38, 0.1)',
+            border: '1px solid rgba(220, 38, 38, 0.3)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '1rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--accent-red)' }}>
+              <WifiOff size={24} />
+              <div>
+                <h3 style={{ fontSize: '0.85rem', fontWeight: '800', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Audio Missing Offline</h3>
+                <p style={{ fontSize: '0.75rem', margin: '0.25rem 0 0', opacity: 0.9 }}>
+                  Connect to the internet to stream, or manually skip the App's turn.
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={() => { setAudioError(false); onNext(); }}
+                style={{
+                  flex: 1, padding: '0.6rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-red)',
+                  background: 'var(--accent-red)', color: '#fff', fontSize: '0.75rem', fontWeight: '800',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem'
+                }}
+              >
+                <FastForward size={14} /> Skip Turn
+              </button>
+              <button
+                onClick={() => { setAudioError(false); onResume(); }}
+                style={{
+                  flex: 1, padding: '0.6rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)',
+                  background: 'rgba(0,0,0,0.2)', color: 'var(--text-primary)', fontSize: '0.75rem', fontWeight: '800',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem'
+                }}
+              >
+                <RefreshCw size={14} /> Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Recitation Content */}
-      <div style={{ flex: 1, padding: '2rem 0' }}>
+      <div style={{ flex: 1, padding: '1rem 0 6rem 0' }}>
         <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '3rem' }}>
           {chunks[currentChunkIndex].map((ayah) => {
             let displayText = ayah.text;

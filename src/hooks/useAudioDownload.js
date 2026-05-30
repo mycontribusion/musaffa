@@ -98,13 +98,24 @@ export const useAudioDownload = (quranData, reciterId = 'ar.alafasy') => {
         // Use the same URL format as the app's audio playback
         const url = getAudioUrl(globalNumber, reciterId, surahNumber, ayahNumber);
 
-        try {
-          // Fetch with no-cors to trigger service worker caching
-          // The service worker will cache the response for offline use
-          await fetch(url, { mode: 'no-cors' });
-        } catch (err) {
-          console.warn(`Failed to download ayah ${ayahNumber}:`, err);
-          // Continue with other ayahs rather than failing entirely
+        let success = false;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            // Fetch with no-cors to trigger service worker caching
+            await fetch(url, { mode: 'no-cors' });
+            success = true;
+            break; // Success, exit retry loop
+          } catch (err) {
+            console.warn(`Attempt ${attempt} failed to download ayah ${ayahNumber}:`, err);
+            if (attempt < 3) {
+              // Wait 1 second before retrying
+              await new Promise(r => setTimeout(r, 1000));
+            }
+          }
+        }
+        
+        if (!success) {
+          console.error(`Failed to download ayah ${ayahNumber} completely after 3 attempts.`);
         }
 
         // Update progress

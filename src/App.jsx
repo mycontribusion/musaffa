@@ -62,7 +62,7 @@ const App = () => {
   };
 
   const { surahs, quranAr, quranEn, mutashabihatData, waqarData, loading, error } = useQuranData(syncStateWithURL);
-   const { chunks, currentChunkIndex, currentAyahNumber, mudarasaTurn, isPaused, startMusaffa, handleNextTurnManual, pauseMusaffa, resumeMusaffa, stopMusaffa } = useMusaffa(quranAr, musaffaParams, setPartnerSubView, reciter);
+   const { chunks, currentChunkIndex, currentAyahNumber, mudarasaTurn, isPaused, audioError, setAudioError, startMusaffa, handleNextTurnManual, pauseMusaffa, resumeMusaffa, stopMusaffa } = useMusaffa(quranAr, musaffaParams, setPartnerSubView, reciter);
   const { dynamicMutashabihat, setDynamicMutashabihat, currentQuizIndex, setCurrentQuizIndex, quizScore, setQuizScore, generateDynamicQuiz, handleQuizAnswer } = useQuiz(mutashabihatData, quranAr, surahs, selectedSurah);
 
   useEffect(() => { document.documentElement.setAttribute('data-theme', theme); }, [theme]);
@@ -288,6 +288,8 @@ const App = () => {
                  resumeMusaffa={resumeMusaffa}
                  stopMusaffa={stopMusaffa}
                  isPaused={isPaused}
+                 audioError={audioError}
+                 setAudioError={setAudioError}
                />
              )}
             {view === 'mutashabihat-session' && selectedSurah && waqarData && waqarData[selectedSurah.number] && (

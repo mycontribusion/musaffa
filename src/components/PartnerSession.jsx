@@ -36,6 +36,8 @@ const PartnerSession = ({
   resumeMusaffa,
   stopMusaffa,
   isPaused,
+  audioError,
+  setAudioError,
 }) => {
   // Auto-scroll: fire whenever the active ayah changes (only set during app playback)
   useEffect(() => {
@@ -122,6 +124,8 @@ const PartnerSession = ({
       isPaused={isPaused}
       onPause={pauseMusaffa}
       onResume={resumeMusaffa}
+      audioError={audioError}
+      setAudioError={setAudioError}
     />
   );
 
