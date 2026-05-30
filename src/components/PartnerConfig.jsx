@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion';
-import { Layers, FileText, LayoutGrid, Mic, MicOff, Settings2, AlertCircle } from 'lucide-react';
+import { Layers, FileText, LayoutGrid, Mic, MicOff, Settings2, AlertCircle, Download, CheckCircle, Loader } from 'lucide-react';
 import { RECITERS } from '../utils/quranUtils';
 
 const PartnerConfig = ({
   surahs, params, onChange, onStart,
   currentVolume, reciter, setReciter,
+  audioDownloadControls
 }) => {
   const getAyahCount = (n) => (surahs.find(x => x.number === n)?.numberOfAyahs || 0);
   const startAyahCount = getAyahCount(params.startSurah);

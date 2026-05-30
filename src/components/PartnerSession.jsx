@@ -38,6 +38,7 @@ const PartnerSession = ({
   isPaused,
   audioError,
   setAudioError,
+  audioDownloadControls,
 }) => {
   // Auto-scroll: fire whenever the active ayah changes (only set during app playback)
   useEffect(() => {
@@ -104,6 +105,7 @@ const PartnerSession = ({
         isListening={isListening}
         reciter={reciter}
         setReciter={setReciter}
+        audioDownloadControls={audioDownloadControls}
       />
     </div>
   );

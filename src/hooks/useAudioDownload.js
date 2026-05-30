@@ -13,6 +13,7 @@ export const useAudioDownload = (quranData, reciterId = 'ar.alafasy') => {
     progress: 0,
     error: null,
     message: '',
+    surahNumber: null,
   });
 
   // Track downloaded surahs in localStorage
@@ -57,6 +58,7 @@ export const useAudioDownload = (quranData, reciterId = 'ar.alafasy') => {
         progress: 0,
         error: 'Quran data not available',
         message: 'Unable to download audio: Quran data not loaded',
+        surahNumber: null,
       });
       return;
     }
@@ -68,6 +70,7 @@ export const useAudioDownload = (quranData, reciterId = 'ar.alafasy') => {
         progress: 0,
         error: 'Surah not found',
         message: `Unable to download audio: Surah ${surahNumber} not found`,
+        surahNumber: null,
       });
       return;
     }
@@ -79,6 +82,7 @@ export const useAudioDownload = (quranData, reciterId = 'ar.alafasy') => {
         progress: 0,
         error: 'No ayahs found',
         message: `Unable to download audio: Surah ${surahNumber} has no ayahs`,
+        surahNumber: null,
       });
       return;
     }
@@ -88,6 +92,7 @@ export const useAudioDownload = (quranData, reciterId = 'ar.alafasy') => {
       progress: 0,
       error: null,
       message: `Downloading audio for Surah ${surah.englishName}...`,
+      surahNumber,
     });
 
     try {
@@ -144,6 +149,7 @@ export const useAudioDownload = (quranData, reciterId = 'ar.alafasy') => {
         message: isPersistent 
           ? `Audio for Surah ${surah.englishName} downloaded successfully and stored persistently!`
           : `Audio for Surah ${surah.englishName} downloaded successfully! (Note: Storage may be cleared by browser under memory pressure)`,
+        surahNumber: null,
       });
     } catch (err) {
       console.error('Error downloading surah audio:', err);
@@ -152,6 +158,7 @@ export const useAudioDownload = (quranData, reciterId = 'ar.alafasy') => {
         progress: 0,
         error: err.message || 'Unknown error',
         message: `Failed to download audio for Surah ${surah.englishName}`,
+        surahNumber: null,
       });
     }
   }, [quranData, reciterId, requestPersistentStorage]);
@@ -190,6 +197,7 @@ export const useAudioDownload = (quranData, reciterId = 'ar.alafasy') => {
       progress: 0,
       error: null,
       message: `Audio for Surah ${surah.englishName} deleted successfully.`,
+      surahNumber: null,
     });
   }, [quranData, reciterId]);
 

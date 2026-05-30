@@ -3,10 +3,10 @@ import { motion } from 'framer-motion';
 import { ChevronLeft, Zap, Download, Trash2 } from 'lucide-react';
 import { useAudioDownload } from '../hooks/useAudioDownload';
 
-const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranEn, setView, openMusaffaConfig, waqarData, lastRead, setLastRead, reciter }) => {
+const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranEn, setView, openMusaffaConfig, waqarData, lastRead, setLastRead, reciter, audioDownloadControls }) => {
   const scrollTrackerRef = useRef(null);
   const scrollEffectRef = useRef({ surahNumber: null, hasScrolled: false });
-  const { downloadStatus, downloadSurahAudio, deleteSurahAudio, isSurahAudioDownloaded, downloadedSurahs } = useAudioDownload(quranAr, reciter);
+  const { downloadStatus, downloadSurahAudio, deleteSurahAudio, isSurahAudioDownloaded, downloadedSurahs } = audioDownloadControls;
 
   // Feature 3: Auto-scroll to last-read ayah when returning to a surah, or top if no last-read
   useEffect(() => {

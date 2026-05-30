@@ -1,12 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Search, ChevronRight } from 'lucide-react';
+import { Search, ChevronRight, Download, CheckCircle, Loader } from 'lucide-react';
 
 const SurahList = ({
   surahs,
   recentSurahs,
   handleSelectSurah,
   setView,
+  audioDownloadControls
 }) => {
   const [searchQuery, setSearchQuery] = React.useState('');
 
@@ -100,7 +101,25 @@ const SurahList = ({
               </div>
               <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'end', gap: '0.1rem' }}>
                 <span className="arabic" style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>{surah.name}</span>
-                <ChevronRight size={12} style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
+                  {audioDownloadControls?.isSurahAudioDownloaded(surah.number) ? (
+                    <CheckCircle size={14} style={{ color: 'var(--accent-emerald)', opacity: 0.8 }} />
+                  ) : audioDownloadControls?.downloadStatus?.isDownloading && audioDownloadControls?.downloadStatus?.surahNumber === surah.number ? (
+                    <Loader size={14} className="animate-spin" style={{ color: 'var(--accent-gold)' }} />
+                  ) : (
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        audioDownloadControls?.downloadSurahAudio(surah.number);
+                      }}
+                      style={{ padding: '0.2rem', margin: '-0.2rem', color: 'var(--text-muted)' }}
+                      className="hover:text-[var(--accent-gold)] transition-colors"
+                    >
+                      <Download size={14} />
+                    </div>
+                  )}
+                  <ChevronRight size={12} style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
+                </div>
               </div>
             </motion.div>
           ))}
