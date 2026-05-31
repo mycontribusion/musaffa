@@ -14,6 +14,7 @@
   --accent-emerald-glow: rgba(16, 185, 129, 0.3);
   --accent-red: #ef4444;
   --glass-bg: rgba(30, 41, 59, 0.7);
+  --glass-hover: rgba(30, 41, 59, 0.9);
   --glass-border: rgba(255, 255, 255, 0.05);
   --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   --radius-sm: 0.5rem;
@@ -35,6 +36,7 @@
   --accent-gold: #d97706;
   --accent-gold-soft: rgba(217, 119, 6, 0.15);
   --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-hover: rgba(255, 255, 255, 1);
   --glass-border: rgba(15, 23, 42, 0.08);
 }
 
@@ -248,8 +250,8 @@ body {
 }
 
 .glass-card:hover {
-  border-color: rgba(251, 191, 36, 0.2);
-  background: rgba(30, 41, 59, 0.8);
+  border-color: var(--accent-gold);
+  box-shadow: 0 4px 20px -2px var(--accent-gold-soft);
 }
 
 @media (max-width: 640px) {

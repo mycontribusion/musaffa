@@ -381,10 +381,12 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
         {arabicAyahs.map((ayah, idx) => {
           let displayText = ayah.text;
           if (selectedSurah.number !== 1 && selectedSurah.number !== 9 && ayah.numberInSurah === 1) {
-            const cleanBismillah = BISMILLAH.replace(/\uFEFF/g, '');
             const cleanText = displayText.replace(/\uFEFF/g, '');
-            if (cleanText.startsWith(cleanBismillah)) {
-              displayText = cleanText.slice(cleanBismillah.length).trim();
+            const bismillahEnd = "ٱلرَّحِيمِ";
+            const bIndex = cleanText.indexOf(bismillahEnd);
+            if (bIndex !== -1 && bIndex < 50) {
+              displayText = cleanText.substring(bIndex + bismillahEnd.length).trim();
+              displayText = displayText.replace(/^[\u200B-\u200D\uFEFF]+/, ''); // Clean leading zero-width chars
             }
           }
           const isActive = playingAyahIdx === idx;

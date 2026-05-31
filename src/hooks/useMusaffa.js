@@ -149,6 +149,23 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
       }
       
       const ayah = chunk[i];
+
+      // Play Bismillah for the start of any Surah (except Fatiha and Tawbah)
+      if (ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9) {
+        // Preload the actual first verse while Bismillah is playing
+        const na = getAudio(nextAudioRef);
+        na.src = getAudioUrl(ayah.number, reciter, ayah.surahNumber, ayah.numberInSurah);
+        na.load();
+        
+        try {
+          setCurrentAyahNumber('bismillah-' + ayah.number);
+          // Play Bismillah (Ayah 1 of Surah 1)
+          await playAyahAudioAsync({ number: 1, surahNumber: 1, numberInSurah: 1 });
+        } catch (err) {
+          console.warn('Failed to play Bismillah, skipping...');
+        }
+      }
+
       setCurrentAyahNumber(ayah.number);
 
       // Preload next ayah

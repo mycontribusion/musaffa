@@ -101,26 +101,46 @@ const MudarasaView = ({
           {chunks[currentChunkIndex].map((ayah) => {
             let displayText = ayah.text;
             if (ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9) {
-              const BISMILLAH = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ";
-              const cleanBismillah = BISMILLAH.replace(/\uFEFF/g, '');
               const cleanText = displayText.replace(/\uFEFF/g, '');
-              if (cleanText.startsWith(cleanBismillah)) {
-                displayText = cleanText.slice(cleanBismillah.length).trim();
+              const bismillahEnd = "ٱلرَّحِيمِ";
+              const bIndex = cleanText.indexOf(bismillahEnd);
+              if (bIndex !== -1 && bIndex < 50) {
+                displayText = cleanText.substring(bIndex + bismillahEnd.length).trim();
+                displayText = displayText.replace(/^[\u200B-\u200D\uFEFF]+/, '');
               }
             }
 
+            const isFirstAyahOfSurah = ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9;
+
             return (
-              <motion.div 
-                key={ayah.number} 
-                id={`mudarasa-ayah-${ayah.number}`}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1, scale: ayah.number === currentAyahNumber ? 1.02 : 1 }}
-                style={{ textAlign: 'right', padding: '1.5rem', borderRadius: '1.5rem', background: ayah.number === currentAyahNumber ? 'var(--accent-gold-soft)' : 'transparent', border: ayah.number === currentAyahNumber ? '1px solid var(--accent-gold-soft)' : '1px solid transparent', transition: '0.4s' }}
-              >
-                <p className="arabic-text" style={{ fontSize: '2.2rem', color: ayah.number === currentAyahNumber ? 'var(--accent-gold)' : 'var(--text-primary)' }}>
-                  {displayText} <span style={{ fontSize: '1.2rem', color: 'var(--accent-gold)', opacity: 0.5, marginRight: '0.5rem' }}>﴿{ayah.numberInSurah}﴾</span>
-                </p>
-              </motion.div>
+              <div key={ayah.number} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                {isFirstAyahOfSurah && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1, scale: currentAyahNumber === `bismillah-${ayah.number}` ? 1.02 : 1 }}
+                    style={{ 
+                      textAlign: 'center', 
+                      padding: '1.5rem', 
+                      borderRadius: '1.5rem',
+                      background: currentAyahNumber === `bismillah-${ayah.number}` ? 'var(--accent-gold-soft)' : 'transparent',
+                      border: currentAyahNumber === `bismillah-${ayah.number}` ? '1px solid var(--accent-gold-soft)' : '1px solid transparent',
+                      transition: '0.4s'
+                    }}
+                  >
+                    <p className="arabic-text" style={{ fontSize: '2.5rem', color: currentAyahNumber === `bismillah-${ayah.number}` ? 'var(--accent-gold)' : 'var(--text-primary)', opacity: currentAyahNumber === `bismillah-${ayah.number}` ? 1 : 0.8 }}>بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</p>
+                  </motion.div>
+                )}
+                <motion.div 
+                  id={`mudarasa-ayah-${ayah.number}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1, scale: ayah.number === currentAyahNumber ? 1.02 : 1 }}
+                  style={{ textAlign: 'right', padding: '1.5rem', borderRadius: '1.5rem', background: ayah.number === currentAyahNumber ? 'var(--accent-gold-soft)' : 'transparent', border: ayah.number === currentAyahNumber ? '1px solid var(--accent-gold-soft)' : '1px solid transparent', transition: '0.4s' }}
+                >
+                  <p className="arabic-text" style={{ fontSize: '2.2rem', color: ayah.number === currentAyahNumber ? 'var(--accent-gold)' : 'var(--text-primary)' }}>
+                    {displayText} <span style={{ fontSize: '1.2rem', color: 'var(--accent-gold)', opacity: 0.5, marginRight: '0.5rem' }}>﴿{ayah.numberInSurah}﴾</span>
+                  </p>
+                </motion.div>
+              </div>
             );
           })}
         </div>

@@ -24,13 +24,17 @@ const QuizEngine = ({
 
   // Scroll to top whenever a new question appears
   useEffect(() => {
-    if (subView !== 'quiz') return;
-    // Small delay lets Framer Motion finish the exit animation before scrolling
-    const t = setTimeout(() => {
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-    }, 50);
-    return () => clearTimeout(t);
+    if (subView === 'quiz') {
+      const resetScroll = () => window.scroll({ top: 0, left: 0, behavior: 'instant' });
+      resetScroll();
+      
+      // Staggered backups for aggressive browser scroll restoration
+      const t1 = setTimeout(resetScroll, 10);
+      const t2 = setTimeout(resetScroll, 150);
+      const t3 = setTimeout(resetScroll, 400);
+      
+      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    }
   }, [currentQuizIndex, subView]);
 
   if (subView === 'quiz') {

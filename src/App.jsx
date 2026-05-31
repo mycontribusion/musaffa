@@ -100,6 +100,11 @@ const App = () => {
     }
   }, [view, selectedSurah, partnerSubView, loading, error]);
 
+  // Global Scroll Reset: Prevent scroll bleeding between different pages
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [view, partnerSubView]);
+
   useEffect(() => { localStorage.setItem('quran_stumbles', JSON.stringify(stumbles)); }, [stumbles]);
   useEffect(() => { localStorage.setItem('quran_recent', JSON.stringify(recentSurahs)); }, [recentSurahs]);
   useEffect(() => { localStorage.setItem('quran_reciter', reciter); }, [reciter]);
