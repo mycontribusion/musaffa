@@ -1,8 +1,30 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import PartnerConfig from './PartnerConfig';
 import MudarasaView from './MudarasaView';
 import QuizEngine from './QuizEngine';
 import { useMic } from '../hooks/useMic';
+import { useRecitationCheck } from '../hooks/useRecitationCheck';
+import { removeTashkeel } from '../utils/quranUtils';
+
+/**
+ * Build expected text for the current chunk by concatenating ayah texts,
+ * stripping Basmala from the start of Surahs (same logic as MudarasaView display).
+ */
+const buildExpectedText = (chunk) => {
+  if (!chunk || chunk.length === 0) return '';
+  return chunk.map(ayah => {
+    let text = ayah.text || '';
+    if (ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9) {
+      const clean = text.replace(/\uFEFF/g, '');
+      const bismillahEnd = 'ٱلرَّحِيمِ';
+      const idx = clean.indexOf(bismillahEnd);
+      if (idx !== -1 && idx < 50) {
+        text = clean.substring(idx + bismillahEnd.length).trim();
+      }
+    }
+    return removeTashkeel(text);
+  }).join(' ');
+};
 
 const PartnerSession = ({
   subView,
@@ -39,6 +61,7 @@ const PartnerSession = ({
   audioError,
   setAudioError,
   audioDownloadControls,
+  enableErrorDetection,
 }) => {
   // Auto-scroll: fire whenever the active ayah changes (only set during app playback)
   useEffect(() => {
@@ -57,6 +80,37 @@ const PartnerSession = ({
     params.micSensitivity,
     subView === 'mudarasa' && turn === 'user' ? handleNextTurn : null
   );
+
+  // Build expected text for the current chunk
+  const currentChunk = chunks[currentChunkIndex] || null;
+  const expectedText = currentChunk ? buildExpectedText(currentChunk) : '';
+
+  // STT error detection — active during user's recitation turn only
+  const sttActive = !!(enableErrorDetection && subView === 'mudarasa' && turn === 'user');
+  const {
+    isSupported: sttSupported,
+    isListening: isSttListening,
+    transcript,
+    results: recitationResults,
+    stopAndCheck,
+    clearResults,
+  } = useRecitationCheck(sttActive, expectedText);
+
+  // When the user taps "Finished Portion" with error detection enabled:
+  // stop STT + trigger comparison (results flow back via recitationResults state)
+  const handleFinishedTurn = useCallback(() => {
+    if (enableErrorDetection && sttSupported) {
+      stopAndCheck(); // results will appear in recitationResults → shows feedback card
+    } else {
+      handleNextTurn();
+    }
+  }, [enableErrorDetection, sttSupported, stopAndCheck, handleNextTurn]);
+
+  // When feedback card "Continue" is clicked, clear and advance turn
+  const handleContinueAfterFeedback = useCallback(() => {
+    clearResults();
+    handleNextTurn();
+  }, [clearResults, handleNextTurn]);
 
   // Dispatcher
   if (subView === 'config') return (
@@ -106,6 +160,7 @@ const PartnerSession = ({
         reciter={reciter}
         setReciter={setReciter}
         audioDownloadControls={audioDownloadControls}
+        sttSupported={sttSupported}
       />
     </div>
   );
@@ -128,6 +183,12 @@ const PartnerSession = ({
       onResume={resumeMusaffa}
       audioError={audioError}
       setAudioError={setAudioError}
+      enableErrorDetection={enableErrorDetection && sttSupported}
+      isSttListening={isSttListening}
+      recitationResults={recitationResults}
+      transcript={transcript}
+      onFinishedTurn={handleFinishedTurn}
+      onClearResults={handleContinueAfterFeedback}
     />
   );
 

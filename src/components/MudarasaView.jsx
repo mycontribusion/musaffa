@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Mic, WifiOff, RefreshCw, FastForward } from 'lucide-react';
+import { ChevronLeft, Mic, WifiOff, RefreshCw, FastForward, BrainCircuit } from 'lucide-react';
+import RecitationFeedbackCard from './RecitationFeedbackCard';
 
 const MudarasaView = ({
   chunks,
@@ -16,8 +17,23 @@ const MudarasaView = ({
   onPause,
   onResume,
   audioError,
-  setAudioError
+  setAudioError,
+  // Error detection props
+  enableErrorDetection,
+  isSttListening,
+  recitationResults,
+  transcript,
+  onFinishedTurn,
+  onClearResults,
 }) => {
+  // Show feedback card when results are ready and it's (still) the user's turn
+  const showFeedback = mudarasaTurn === 'user' && !!recitationResults;
+
+  const handleContinueAfterFeedback = () => {
+    onClearResults();
+    onNext();
+  };
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', minHeight: '80vh' }}>
       {/* Dynamic Header */}
@@ -33,6 +49,21 @@ const MudarasaView = ({
             </div>
           </div>
            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+             {/* Error detection indicator badge */}
+             {enableErrorDetection && mudarasaTurn === 'user' && (
+               <div style={{
+                 display: 'flex', alignItems: 'center', gap: '0.3rem',
+                 padding: '0.25rem 0.5rem', borderRadius: '999px',
+                 background: isSttListening ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.05)',
+                 border: `1px solid ${isSttListening ? 'rgba(16,185,129,0.4)' : 'var(--glass-border)'}`,
+                 transition: 'all 0.3s',
+               }}>
+                 <BrainCircuit size={10} color={isSttListening ? 'var(--accent-emerald)' : 'var(--text-muted)'} />
+                 <span style={{ fontSize: '0.5rem', fontWeight: '800', color: isSttListening ? 'var(--accent-emerald)' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                   {isSttListening ? 'Checking' : 'Ready'}
+                 </span>
+               </div>
+             )}
              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: mudarasaTurn === 'app' ? 'var(--accent-gold)' : 'var(--bg-accent)', boxShadow: mudarasaTurn === 'app' ? '0 0 10px var(--accent-gold)' : 'none' }} />
              <div style={{ 
                width: '8px', height: '8px', borderRadius: '50%', 
@@ -102,7 +133,7 @@ const MudarasaView = ({
             let displayText = ayah.text;
             if (ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9) {
               const cleanText = displayText.replace(/\uFEFF/g, '');
-              const bismillahEnd = "ٱلرَّحِيمِ";
+              const bismillahEnd = "ٱلرَّحِيمِ";
               const bIndex = cleanText.indexOf(bismillahEnd);
               if (bIndex !== -1 && bIndex < 50) {
                 displayText = cleanText.substring(bIndex + bismillahEnd.length).trim();
@@ -149,10 +180,10 @@ const MudarasaView = ({
       {/* Control Bar */}
       <div style={{ position: 'fixed', bottom: '2rem', left: '0', right: '0', zIndex: 100, display: 'flex', justifyContent: 'center' }}>
         <AnimatePresence mode="wait">
-          {mudarasaTurn === 'user' && (
+          {mudarasaTurn === 'user' && !showFeedback && (
             <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
               <button 
-                onClick={onNext}
+                onClick={enableErrorDetection ? onFinishedTurn : onNext}
                 className="btn-primary"
                 style={{ background: 'var(--accent-emerald)', padding: '1.25rem 2.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#fff', fontSize: '0.8rem', letterSpacing: '0.1em' }}
               >
@@ -170,6 +201,17 @@ const MudarasaView = ({
           )}
         </AnimatePresence>
       </div>
+
+      {/* Recitation Feedback Card — shown above the control bar */}
+      {showFeedback && (
+        <RecitationFeedbackCard
+          results={recitationResults}
+          chunk={chunks[currentChunkIndex]}
+          transcript={transcript}
+          onContinue={handleContinueAfterFeedback}
+          onLogStumble={onLogStumble}
+        />
+      )}
     </motion.div>
   );
 };

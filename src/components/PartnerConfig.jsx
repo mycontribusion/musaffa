@@ -1,11 +1,11 @@
 import { motion } from 'framer-motion';
-import { Layers, FileText, LayoutGrid, Mic, MicOff, Settings2, AlertCircle, Download, CheckCircle, Loader } from 'lucide-react';
+import { Layers, FileText, LayoutGrid, Mic, MicOff, Settings2, AlertCircle, Download, CheckCircle, Loader, BrainCircuit } from 'lucide-react';
 import { RECITERS } from '../utils/quranUtils';
 
 const PartnerConfig = ({
   surahs, params, onChange, onStart,
   currentVolume, reciter, setReciter,
-  audioDownloadControls
+  audioDownloadControls, sttSupported
 }) => {
   const getAyahCount = (n) => (surahs.find(x => x.number === n)?.numberOfAyahs || 0);
   const startAyahCount = getAyahCount(params.startSurah);
@@ -194,7 +194,49 @@ const PartnerConfig = ({
           )}
         </div>
 
-        {/* ── Who Starts ── */}
+        {/* ── Smart Error Detection ── */}
+        {sttSupported && (
+          <div>
+            <div style={sectionLabel}>Error Detection</div>
+            <button onClick={() => onChange('errorDetection', !params.errorDetection)}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '0.9rem 1rem', borderRadius: 'var(--radius-lg)', cursor: 'pointer',
+                background: params.errorDetection ? 'rgba(99,102,241,0.1)' : 'var(--bg-accent)',
+                border: '1px solid', borderColor: params.errorDetection ? 'rgba(99,102,241,0.5)' : 'var(--glass-border)',
+              }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                  background: params.errorDetection ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.05)',
+                  color: params.errorDetection ? '#818cf8' : 'var(--text-muted)' }}>
+                  <BrainCircuit size={16} />
+                </div>
+                <div style={{ textAlign: 'left' }}>
+                  <p style={{ fontWeight: '800', fontSize: '0.8rem', color: params.errorDetection ? '#818cf8' : 'var(--text-primary)' }}>
+                    Smart Error Detection
+                  </p>
+                  <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Listens and checks recitation accuracy after each turn.</p>
+                </div>
+              </div>
+              <div style={{ width: '38px', height: '20px', borderRadius: '10px', flexShrink: 0,
+                background: params.errorDetection ? '#6366f1' : 'rgba(255,255,255,0.1)', position: 'relative' }}>
+                <motion.div animate={{ x: params.errorDetection ? 20 : 2 }}
+                  style={{ width: '16px', height: '16px', borderRadius: '50%', position: 'absolute', top: '2px',
+                    background: params.errorDetection ? '#fff' : 'var(--text-muted)' }} />
+              </div>
+            </button>
+            {params.errorDetection && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                style={{ marginTop: '0.5rem', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-md)',
+                  background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)',
+                  fontSize: '0.65rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                🎙 Microphone will be used to capture your recitation. A word-by-word accuracy card will appear after each of your turns.
+              </motion.div>
+            )}
+          </div>
+        )}
+
         <div>
           <div style={sectionLabel}>Who Starts?</div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
