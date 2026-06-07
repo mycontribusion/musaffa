@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import PartnerConfig from './PartnerConfig';
 import MudarasaView from './MudarasaView';
 import QuizEngine from './QuizEngine';
@@ -74,9 +74,9 @@ const PartnerSession = ({
     }
   }, [currentAyahNumber]);
 
-  // Mic logic for Hands-Free
+  // Mic logic for Hands-Free (disabled when error detection is on — STT owns the mic)
   const { currentVolume, isListening } = useMic(
-    params.autoNext && (subView === 'config' || subView === 'mudarasa'),
+    params.autoNext && !enableErrorDetection && (subView === 'config' || subView === 'mudarasa'),
     params.micSensitivity,
     subView === 'mudarasa' && turn === 'user' ? handleNextTurn : null
   );
@@ -85,7 +85,12 @@ const PartnerSession = ({
   const currentChunk = chunks[currentChunkIndex] || null;
   const expectedText = currentChunk ? buildExpectedText(currentChunk) : '';
 
+  // Declare handleFinishedTurn BEFORE useRecitationCheck so it can be passed as onAutoFinish.
+  // We use a ref to avoid stale closure issues with the initial callback registration.
+  const handleFinishedTurnRef = useRef(null);
+
   // STT error detection — active during user's recitation turn only
+  // onAutoFinish fires automatically after silence, triggering handleFinishedTurn
   const sttActive = !!(enableErrorDetection && subView === 'mudarasa' && turn === 'user');
   const {
     isSupported: sttSupported,
@@ -94,20 +99,25 @@ const PartnerSession = ({
     results: recitationResults,
     stopAndCheck,
     clearResults,
-  } = useRecitationCheck(sttActive, expectedText);
+  } = useRecitationCheck(
+    sttActive,
+    expectedText,
+    useCallback(() => { handleFinishedTurnRef.current?.(); }, []),
+  );
 
-  // When the user taps "Finished Portion" with error detection enabled:
-  // stop STT + trigger comparison (results flow back via recitationResults state)
+  // When the user taps "Tap to finish early" or auto-silence triggers:
+  // stop STT → comparison runs async → feedback card appears
+  // Turn only advances when user clicks "Continue" (handleContinueAfterFeedback)
   const handleFinishedTurn = useCallback(() => {
     if (enableErrorDetection && sttSupported) {
-      stopAndCheck(); // results will appear in recitationResults → shows feedback card
-      // after stopping STT, advance turn to let partner speak
-      // slight delay to ensure results are processed before UI change
-      setTimeout(handleNextTurn, 300);
+      stopAndCheck();
     } else {
       handleNextTurn();
     }
   }, [enableErrorDetection, sttSupported, stopAndCheck, handleNextTurn]);
+
+  // Keep the ref in sync so the onAutoFinish closure always calls the latest version
+  handleFinishedTurnRef.current = handleFinishedTurn;
 
   // When feedback card "Continue" is clicked, clear and advance turn
   const handleContinueAfterFeedback = useCallback(() => {
