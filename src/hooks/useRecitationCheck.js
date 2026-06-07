@@ -73,6 +73,10 @@ export const useRecitationCheck = (isActive, expectedText) => {
       } else {
         setTranscript(transcriptRef.current + interim);
       }
+      // Live comparison for realtime feedback
+      const combined = (transcriptRef.current + interim).trim();
+      const liveComp = compareRecitation(expectedRef.current, combined);
+      setResults(liveComp);
     };
 
     recognition.onerror = (e) => {

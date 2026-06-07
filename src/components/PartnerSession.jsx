@@ -101,6 +101,9 @@ const PartnerSession = ({
   const handleFinishedTurn = useCallback(() => {
     if (enableErrorDetection && sttSupported) {
       stopAndCheck(); // results will appear in recitationResults → shows feedback card
+      // after stopping STT, advance turn to let partner speak
+      // slight delay to ensure results are processed before UI change
+      setTimeout(handleNextTurn, 300);
     } else {
       handleNextTurn();
     }

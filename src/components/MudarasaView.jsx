@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import RedBlinkOverlay from './RedBlinkOverlay';
 import { ChevronLeft, Mic, WifiOff, RefreshCw, FastForward, BrainCircuit } from 'lucide-react';
 import RecitationFeedbackCard from './RecitationFeedbackCard';
 
@@ -34,9 +35,24 @@ const MudarasaView = ({
     onNext();
   };
 
+  // Determine live error state
+  const hasLiveErrors = enableErrorDetection && mudarasaTurn === 'user' && recitationResults && recitationResults.results.some(r => r.status !== 'correct');
+  const showInternetBanner = enableErrorDetection && !isSttListening;
+
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', minHeight: '80vh' }}>
-      {/* Dynamic Header */}
+    <>
+      {hasLiveErrors && <RedBlinkOverlay active={true} />}
+      {showInternetBanner && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, padding: '0.5rem 1rem',
+          background: 'rgba(255,165,0,0.2)', borderBottom: '1px solid rgba(255,165,0,0.5)',
+          color: '#fff', textAlign: 'center', zIndex: 300, fontWeight: '600'
+        }}>
+          Smart Error Detection requires internet (Web Speech API)
+        </div>
+      )}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', minHeight: '80vh' }}>
+        {/* Dynamic Header */}
       <div style={{ position: 'sticky', top: '70px', zIndex: 90, padding: '1rem 0' }}>
         <div className="glass-card" style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--glass-bg)', backdropFilter: 'blur(20px)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -213,6 +229,7 @@ const MudarasaView = ({
         />
       )}
     </motion.div>
+  </>
   );
 };
 
