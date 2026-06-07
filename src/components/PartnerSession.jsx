@@ -96,6 +96,7 @@ const PartnerSession = ({
     isSupported: sttSupported,
     isListening: isSttListening,
     transcript,
+    liveResults,
     results: recitationResults,
     stopAndCheck,
     clearResults,
@@ -198,6 +199,7 @@ const PartnerSession = ({
       setAudioError={setAudioError}
       enableErrorDetection={enableErrorDetection && sttSupported}
       isSttListening={isSttListening}
+      liveResults={liveResults}
       recitationResults={recitationResults}
       transcript={transcript}
       onFinishedTurn={handleFinishedTurn}

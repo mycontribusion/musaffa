@@ -9,6 +9,9 @@ const getSpeechRecognition = () =>
 /** Silence duration (ms) after onspeechend before auto-finish fires */
 const AUTO_FINISH_DELAY = 1800;
 
+/** Debounce for live worker comparisons (ms) — keeps worker queue light */
+const LIVE_DEBOUNCE = 350;
+
 /**
  * useRecitationCheck — Arabic speech-to-text hook for Musaffa error detection.
  *
@@ -19,12 +22,13 @@ const AUTO_FINISH_DELAY = 1800;
  *                                   advance without a manual tap.
  *
  * Returns:
- *   isSupported  — false on Firefox / Safari
- *   isListening  — currently capturing
- *   transcript   — accumulated raw STT output
- *   results      — word-level comparison after stopAndCheck()
+ *   isSupported   — false on Firefox / Safari
+ *   isListening   — currently capturing
+ *   transcript    — accumulated raw STT output
+ *   liveResults   — word-level comparison updated live (via Web Worker)
+ *   results       — final word-level comparison after stopAndCheck()
  *   startListening()
- *   stopAndCheck()  — stop recognition and run comparison
+ *   stopAndCheck()  — stop recognition and run final comparison
  *   clearResults()  — reset for next turn
  */
 export const useRecitationCheck = (isActive, expectedText, onAutoFinish) => {
@@ -33,31 +37,71 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish) => {
 
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
-  const [results, setResults] = useState(null);
+  const [liveResults, setLiveResults] = useState(null);  // updated live via worker
+  const [results, setResults] = useState(null);           // set only on stopAndCheck
 
   const recognitionRef = useRef(null);
   const transcriptRef = useRef('');
   const expectedRef = useRef(expectedText);
-  const silenceTimerRef = useRef(null);   // auto-finish grace timer
+  const silenceTimerRef = useRef(null);    // auto-finish grace timer
+  const liveDebounceRef = useRef(null);    // debounce for worker dispatches
   const hasSpeechRef = useRef(false);      // guard: only auto-finish after speech started
-  const onAutoFinishRef = useRef(onAutoFinish); // stable ref so callbacks don't re-init
+  const onAutoFinishRef = useRef(onAutoFinish);
+  const workerRef = useRef(null);          // Web Worker instance
+  const pendingIdRef = useRef(0);          // track latest request to discard stale results
 
   // Keep refs in sync without restarting recognition
   useEffect(() => { expectedRef.current = expectedText; }, [expectedText]);
   useEffect(() => { onAutoFinishRef.current = onAutoFinish; }, [onAutoFinish]);
 
+  // ── Web Worker lifecycle ────────────────────────────────────────────────────
+  useEffect(() => {
+    const worker = new Worker(
+      new URL('../workers/recitationWorker.js', import.meta.url),
+      { type: 'module' }
+    );
+    worker.onmessage = (event) => {
+      const { type, payload, id } = event.data;
+      if (type === 'RESULT' && id === pendingIdRef.current) {
+        setLiveResults(payload);
+      }
+    };
+    workerRef.current = worker;
+    return () => {
+      worker.terminate();
+      workerRef.current = null;
+    };
+  }, []);
+
+  // ── Dispatch live comparison to worker (debounced) ─────────────────────────
+  const dispatchLiveCompare = useCallback((spoken) => {
+    if (!workerRef.current || !expectedRef.current) return;
+    if (liveDebounceRef.current) clearTimeout(liveDebounceRef.current);
+    liveDebounceRef.current = setTimeout(() => {
+      const id = ++pendingIdRef.current;
+      workerRef.current.postMessage({
+        type: 'COMPARE',
+        expected: expectedRef.current,
+        spoken,
+        id,
+      });
+    }, LIVE_DEBOUNCE);
+  }, []);
+
+  // ── Start listening ─────────────────────────────────────────────────────────
   const startListening = useCallback(() => {
     if (!isSupported) return;
 
-    // Clean up any previous instance
     if (recognitionRef.current) {
       try { recognitionRef.current.abort(); } catch (_) {}
     }
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    if (liveDebounceRef.current) clearTimeout(liveDebounceRef.current);
 
     transcriptRef.current = '';
     hasSpeechRef.current = false;
     setTranscript('');
+    setLiveResults(null);
     setResults(null);
 
     const recognition = new SR();
@@ -77,19 +121,17 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish) => {
           interim += chunk;
         }
       }
-      if (final) {
-        transcriptRef.current += final;
-        setTranscript(transcriptRef.current + interim);
-      } else {
-        setTranscript(transcriptRef.current + interim);
-      }
-      // No live comparison — runs once in stopAndCheck()
+      if (final) transcriptRef.current += final;
+      const combined = (transcriptRef.current + interim).trim();
+      setTranscript(combined);
+
+      // Dispatch to worker for live word overlay — non-blocking
+      if (combined) dispatchLiveCompare(combined);
     };
 
-    // ── Silence detection ────────────────────────────────────────────────────
+    // ── Silence detection ──────────────────────────────────────────────────
     recognition.onspeechstart = () => {
       hasSpeechRef.current = true;
-      // Cancel pending auto-finish (user resumed speaking)
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = null;
@@ -97,20 +139,17 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish) => {
     };
 
     recognition.onspeechend = () => {
-      // Only auto-finish if the user has actually spoken something
       if (!hasSpeechRef.current) return;
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = setTimeout(() => {
-        // If still in an active session, fire auto-finish
         if (recognitionRef.current?._shouldRestart && onAutoFinishRef.current) {
           onAutoFinishRef.current();
         }
       }, AUTO_FINISH_DELAY);
     };
-    // ─────────────────────────────────────────────────────────────────────────
+    // ──────────────────────────────────────────────────────────────────────
 
     recognition.onend = () => {
-      // Auto-restart unless we deliberately stopped
       if (recognitionRef.current && recognitionRef.current._shouldRestart) {
         try { recognition.start(); } catch (_) {}
       } else {
@@ -127,35 +166,43 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish) => {
     } catch (e) {
       console.warn('Could not start STT:', e);
     }
-  }, [isSupported, SR]);
+  }, [isSupported, SR, dispatchLiveCompare]);
 
+  // ── Stop & run final comparison ─────────────────────────────────────────────
   const stopAndCheck = useCallback(() => {
-    if (!recognitionRef.current) return null;
-    // Cancel any pending auto-finish timer
+    if (!recognitionRef.current) return;
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
+    }
+    if (liveDebounceRef.current) {
+      clearTimeout(liveDebounceRef.current);
+      liveDebounceRef.current = null;
     }
     recognitionRef.current._shouldRestart = false;
     try { recognitionRef.current.stop(); } catch (_) {}
     setIsListening(false);
 
-    // Run comparison once, off the critical path so the UI updates first
+    // Final comparison: run on main thread (one-shot, not live) via setTimeout
+    // to let the UI update (mic stops) before the sync computation
     setTimeout(() => {
       const spoken = transcriptRef.current.trim();
       const expected = expectedRef.current || '';
       const comparison = compareRecitation(expected, spoken);
       setResults(comparison);
+      setLiveResults(null); // clear live overlay — feedback card takes over
     }, 0);
   }, []);
 
+  // ── Clear for next turn ────────────────────────────────────────────────────
   const clearResults = useCallback(() => {
     setResults(null);
+    setLiveResults(null);
     setTranscript('');
     transcriptRef.current = '';
   }, []);
 
-  // Auto-start/stop based on isActive
+  // ── Auto-start / stop based on isActive ────────────────────────────────────
   useEffect(() => {
     if (isActive) {
       startListening();
@@ -164,14 +211,16 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish) => {
         recognitionRef.current._shouldRestart = false;
         try { recognitionRef.current.stop(); } catch (_) {}
       }
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       setIsListening(false);
     }
   }, [isActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Cleanup on unmount
+  // ── Cleanup on unmount ────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      if (liveDebounceRef.current) clearTimeout(liveDebounceRef.current);
       if (recognitionRef.current) {
         recognitionRef.current._shouldRestart = false;
         try { recognitionRef.current.abort(); } catch (_) {}
@@ -179,5 +228,5 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish) => {
     };
   }, []);
 
-  return { isSupported, isListening, transcript, results, startListening, stopAndCheck, clearResults };
+  return { isSupported, isListening, transcript, liveResults, results, startListening, stopAndCheck, clearResults };
 };

@@ -22,13 +22,14 @@ const MudarasaView = ({
   // Error detection props
   enableErrorDetection,
   isSttListening,
-  recitationResults,
+  liveResults,        // word-level live comparison from worker
+  recitationResults,  // final comparison shown in feedback card
   transcript,
   onFinishedTurn,
   onClearResults,
 }) => {
   // Show feedback card when results are ready and it's (still) the user's turn
-  const showFeedback = mudarasaTurn === 'user' && !!recitationResults;
+  const showFeedback = mudarasaTurn === 'user' && !!recitationResults?.results;
 
   const handleContinueAfterFeedback = () => {
     onClearResults();
@@ -36,9 +37,9 @@ const MudarasaView = ({
   };
 
   // Determine live error state
-  const hasLiveErrors = enableErrorDetection && mudarasaTurn === 'user' && recitationResults && recitationResults.results.some(r => r.status !== 'correct');
+  const hasLiveErrors = enableErrorDetection && mudarasaTurn === 'user' && recitationResults?.results?.some(r => r.status !== 'correct' && r.status !== 'pending');
   // Only show internet banner if STT is enabled but not running at all
-  const showInternetBanner = enableErrorDetection && mudarasaTurn === 'user' && !isSttListening && !recitationResults;
+  const showInternetBanner = enableErrorDetection && mudarasaTurn === 'user' && !isSttListening && !recitationResults?.results;
 
   return (
     <>
@@ -159,16 +160,18 @@ const MudarasaView = ({
             }
 
             const isFirstAyahOfSurah = ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9;
+            // Show live overlay when STT is active and we have live results for this ayah
+            const showLiveOverlay = enableErrorDetection && isSttListening && liveResults && mudarasaTurn === 'user';
 
             return (
               <div key={ayah.number} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 {isFirstAyahOfSurah && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1, scale: currentAyahNumber === `bismillah-${ayah.number}` ? 1.02 : 1 }}
-                    style={{ 
-                      textAlign: 'center', 
-                      padding: '1.5rem', 
+                    style={{
+                      textAlign: 'center',
+                      padding: '1.5rem',
                       borderRadius: '1.5rem',
                       background: currentAyahNumber === `bismillah-${ayah.number}` ? 'var(--accent-gold-soft)' : 'transparent',
                       border: currentAyahNumber === `bismillah-${ayah.number}` ? '1px solid var(--accent-gold-soft)' : '1px solid transparent',
@@ -178,15 +181,27 @@ const MudarasaView = ({
                     <p className="arabic-text" style={{ fontSize: '2.5rem', color: currentAyahNumber === `bismillah-${ayah.number}` ? 'var(--accent-gold)' : 'var(--text-primary)', opacity: currentAyahNumber === `bismillah-${ayah.number}` ? 1 : 0.8 }}>بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</p>
                   </motion.div>
                 )}
-                <motion.div 
+                <motion.div
                   id={`mudarasa-ayah-${ayah.number}`}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1, scale: ayah.number === currentAyahNumber ? 1.02 : 1 }}
-                  style={{ textAlign: 'right', padding: '1.5rem', borderRadius: '1.5rem', background: ayah.number === currentAyahNumber ? 'var(--accent-gold-soft)' : 'transparent', border: ayah.number === currentAyahNumber ? '1px solid var(--accent-gold-soft)' : '1px solid transparent', transition: '0.4s' }}
+                  style={{
+                    textAlign: 'right', padding: '1.5rem', borderRadius: '1.5rem',
+                    background: ayah.number === currentAyahNumber ? 'var(--accent-gold-soft)' : 'transparent',
+                    border: ayah.number === currentAyahNumber ? '1px solid var(--accent-gold-soft)' : '1px solid transparent',
+                    transition: '0.4s'
+                  }}
                 >
-                  <p className="arabic-text" style={{ fontSize: '2.2rem', color: ayah.number === currentAyahNumber ? 'var(--accent-gold)' : 'var(--text-primary)' }}>
-                    {displayText} <span style={{ fontSize: '1.2rem', color: 'var(--accent-gold)', opacity: 0.5, marginRight: '0.5rem' }}>﴿{ayah.numberInSurah}﴾</span>
-                  </p>
+                  {showLiveOverlay ? (
+                    <LiveWordOverlay
+                      results={liveResults.results}
+                      numberInSurah={ayah.numberInSurah}
+                    />
+                  ) : (
+                    <p className="arabic-text" style={{ fontSize: '2.2rem', color: ayah.number === currentAyahNumber ? 'var(--accent-gold)' : 'var(--text-primary)' }}>
+                      {displayText} <span style={{ fontSize: '1.2rem', color: 'var(--accent-gold)', opacity: 0.5, marginRight: '0.5rem' }}>﴿{ayah.numberInSurah}﴾</span>
+                    </p>
+                  )}
                 </motion.div>
               </div>
             );
@@ -253,7 +268,9 @@ const MudarasaView = ({
       {/* Recitation Feedback Card — shown above the control bar */}
       {showFeedback && (
         <RecitationFeedbackCard
-          results={recitationResults}
+          results={recitationResults?.results}
+          insertions={recitationResults?.insertions}
+          breakdown={recitationResults?.breakdown}
           chunk={chunks[currentChunkIndex]}
           transcript={transcript}
           onContinue={handleContinueAfterFeedback}
@@ -265,4 +282,53 @@ const MudarasaView = ({
   );
 };
 
+// ── Live word overlay ─────────────────────────────────────────────────────────
+const WORD_COLORS = {
+  correct:      { color: '#10b981', glow: 'rgba(16,185,129,0.3)' },   // emerald
+  substitution: { color: '#f59e0b', glow: 'rgba(245,158,11,0.25)' },  // amber
+  omission:     { color: '#ef4444', glow: 'rgba(239,68,68,0.2)' },    // red
+  pending:      { color: 'rgba(255,255,255,0.25)', glow: 'none' },     // dim — not yet reached
+};
+
+const LiveWordOverlay = ({ results }) => {
+  if (!results || results.length === 0) return null;
+  return (
+    <p
+      className="arabic-text"
+      style={{
+        fontSize: '2.2rem',
+        lineHeight: '2.4',
+        direction: 'rtl',
+        textAlign: 'right',
+        wordSpacing: '0.15rem',
+      }}
+    >
+      {results.map((item, idx) => {
+        const cfg = WORD_COLORS[item.status] || WORD_COLORS.pending;
+        return (
+          <motion.span
+            key={idx}
+            initial={{ opacity: 0.4 }}
+            animate={{ opacity: 1, color: cfg.color }}
+            transition={{ duration: 0.25 }}
+            title={item.status === 'substitution' && item.spokenWord ? `You said: ${item.spokenWord}` : undefined}
+            style={{
+              display: 'inline-block',
+              marginLeft: '0.3rem',
+              color: cfg.color,
+              textShadow: item.status !== 'pending' ? `0 0 12px ${cfg.glow}` : 'none',
+              textDecoration: item.status === 'omission' ? 'underline wavy #ef4444' : 'none',
+              transition: 'color 0.3s, text-shadow 0.3s',
+              fontWeight: item.status === 'correct' ? '400' : '700',
+            }}
+          >
+            {item.word}
+          </motion.span>
+        );
+      })}
+    </p>
+  );
+};
+
 export default MudarasaView;
+
