@@ -32,6 +32,8 @@ export const useRecitationCheck = (isActive, expectedText) => {
   const recognitionRef = useRef(null);
   const transcriptRef = useRef('');
   const expectedRef = useRef(expectedText);
+  // Debounce timer for live comparison to avoid UI freeze
+  const compareTimer = useRef(null);
 
   // Keep expectedRef in sync without restarting recognition
   useEffect(() => {
@@ -55,7 +57,6 @@ export const useRecitationCheck = (isActive, expectedText) => {
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
-
     recognition.onresult = (event) => {
       let interim = '';
       let final = '';
@@ -73,17 +74,13 @@ export const useRecitationCheck = (isActive, expectedText) => {
       } else {
         setTranscript(transcriptRef.current + interim);
       }
-      // Live comparison for realtime feedback
-      const combined = (transcriptRef.current + interim).trim();
-      const liveComp = compareRecitation(expectedRef.current, combined);
-      setResults(liveComp);
-    };
-
-    recognition.onerror = (e) => {
-      // 'no-speech' is normal — ignore it
-      if (e.error !== 'no-speech') {
-        console.warn('STT error:', e.error);
-      }
+      // Debounced live comparison to avoid UI freeze
+      if (compareTimer.current) clearTimeout(compareTimer.current);
+      compareTimer.current = setTimeout(() => {
+        const combined = (transcriptRef.current + interim).trim();
+        const liveComp = compareRecitation(expectedRef.current, combined);
+        setResults(liveComp);
+      }, 250);
     };
 
     recognition.onend = () => {
@@ -98,6 +95,11 @@ export const useRecitationCheck = (isActive, expectedText) => {
     recognition._shouldRestart = true;
     recognitionRef.current = recognition;
 
+    // Clear any pending debounce when starting new session
+    if (compareTimer.current) {
+      clearTimeout(compareTimer.current);
+    }
+
     try {
       recognition.start();
       setIsListening(true);
@@ -108,8 +110,12 @@ export const useRecitationCheck = (isActive, expectedText) => {
 
   const stopAndCheck = useCallback(() => {
     if (!recognitionRef.current) return null;
+    // Stop speech recognition and cancel debounce
     recognitionRef.current._shouldRestart = false;
     try { recognitionRef.current.stop(); } catch (_) {}
+    if (compareTimer.current) {
+      clearTimeout(compareTimer.current);
+    }
     setIsListening(false);
 
     const spoken = transcriptRef.current.trim();
@@ -144,6 +150,9 @@ export const useRecitationCheck = (isActive, expectedText) => {
       if (recognitionRef.current) {
         recognitionRef.current._shouldRestart = false;
         try { recognitionRef.current.abort(); } catch (_) {}
+      }
+      if (compareTimer.current) {
+        clearTimeout(compareTimer.current);
       }
     };
   }, []);
