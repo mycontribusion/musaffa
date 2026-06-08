@@ -4,10 +4,10 @@ import { CheckCircle2, XCircle, ChevronRight, AlertTriangle, Mic, ArrowLeftRight
 
 // ── Colour + label config per status ────────────────────────────────────────
 const STATUS_CONFIG = {
-  correct:      { color: 'var(--accent-emerald)', bg: 'rgba(16,185,129,0.12)', label: 'Correct' },
-  omission:     { color: 'var(--accent-red)',     bg: 'rgba(220,38,38,0.12)',  label: 'Omission'     },
-  substitution: { color: '#f59e0b',               bg: 'rgba(245,158,11,0.12)', label: 'Substitution' },
-  insertion:    { color: 'var(--text-muted)',      bg: 'rgba(255,255,255,0.06)', label: 'Extra' },
+  correct: { color: 'var(--accent-emerald)', bg: 'rgba(16,185,129,0.12)', label: 'Correct' },
+  omission: { color: 'var(--accent-red)', bg: 'rgba(220,38,38,0.12)', label: 'Omission' },
+  substitution: { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', label: 'Substitution' },
+  insertion: { color: 'var(--text-muted)', bg: 'rgba(255,255,255,0.06)', label: 'Extra' },
 };
 
 /**
@@ -34,13 +34,13 @@ const RecitationFeedbackCard = ({ results, insertions = [], breakdown, chunk, tr
 
   const ringColour =
     accuracy >= 80 ? 'var(--accent-emerald)' :
-    accuracy >= 60 ? '#f59e0b' :
-    'var(--accent-red)';
+      accuracy >= 60 ? '#f59e0b' :
+        'var(--accent-red)';
 
   const ringLabel =
     accuracy >= 80 ? 'Excellent' :
-    accuracy >= 60 ? 'Needs Work' :
-    'Review Needed';
+      accuracy >= 60 ? 'Needs Work' :
+        'Review Needed';
 
   const hasMissedWords = results.some(r => r.status === 'omission' || r.status === 'substitution');
 
@@ -122,8 +122,8 @@ const RecitationFeedbackCard = ({ results, insertions = [], breakdown, chunk, tr
             {/* ── Breakdown pills ── */}
             {breakdown && (
               <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                <BreakdownPill icon={<CheckCircle2 size={10} />} count={breakdown.correct}       label="Correct"      color={STATUS_CONFIG.correct.color}      bg={STATUS_CONFIG.correct.bg} />
-                <BreakdownPill icon={<MinusCircle  size={10} />} count={breakdown.omissions}     label="Omitted"      color={STATUS_CONFIG.omission.color}     bg={STATUS_CONFIG.omission.bg} />
+                <BreakdownPill icon={<CheckCircle2 size={10} />} count={breakdown.correct} label="Correct" color={STATUS_CONFIG.correct.color} bg={STATUS_CONFIG.correct.bg} />
+                <BreakdownPill icon={<MinusCircle size={10} />} count={breakdown.omissions} label="Omitted" color={STATUS_CONFIG.omission.color} bg={STATUS_CONFIG.omission.bg} />
                 <BreakdownPill icon={<ArrowLeftRight size={10} />} count={breakdown.substitutions} label="Substituted" color={STATUS_CONFIG.substitution.color} bg={STATUS_CONFIG.substitution.bg} />
                 {breakdown.insertions > 0 && (
                   <BreakdownPill icon={<PlusCircle size={10} />} count={breakdown.insertions} label="Extra" color={STATUS_CONFIG.insertion.color} bg={STATUS_CONFIG.insertion.bg} />
@@ -194,10 +194,10 @@ const RecitationFeedbackCard = ({ results, insertions = [], breakdown, chunk, tr
             {/* ── Legend ── */}
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
               {[
-                { status: 'correct',      label: 'Correct' },
-                { status: 'omission',     label: 'Omitted' },
+                { status: 'correct', label: 'Correct' },
+                { status: 'omission', label: 'Omitted' },
                 { status: 'substitution', label: 'Wrong word' },
-                { status: 'insertion',    label: 'Extra' },
+                { status: 'insertion', label: 'Extra' },
               ].map(({ status, label }) => (
                 <div key={status} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                   <div style={{ width: 8, height: 8, borderRadius: 2, background: STATUS_CONFIG[status].color, opacity: 0.85 }} />

@@ -1,3 +1,4 @@
+import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import RedBlinkOverlay from './RedBlinkOverlay';
 import { ChevronLeft, Mic, WifiOff, RefreshCw, FastForward, BrainCircuit } from 'lucide-react';
@@ -36,6 +37,22 @@ const MudarasaView = ({
     onNext();
   };
 
+  // Live error flash logic: flash red on screen when error count increases
+  const prevErrorCount = useRef(0);
+  const [errorFlash, setErrorFlash] = useState(0);
+
+  useEffect(() => {
+    if (mudarasaTurn !== 'user' || !enableErrorDetection || !liveResults) {
+      prevErrorCount.current = 0;
+      return;
+    }
+    const currentErrors = (liveResults.breakdown?.omissions || 0) + (liveResults.breakdown?.substitutions || 0);
+    if (currentErrors > prevErrorCount.current) {
+      setErrorFlash(prev => prev + 1);
+    }
+    prevErrorCount.current = currentErrors;
+  }, [liveResults, mudarasaTurn, enableErrorDetection]);
+
   // Determine live error state
   const hasLiveErrors = enableErrorDetection && mudarasaTurn === 'user' && recitationResults?.results?.some(r => r.status !== 'correct' && r.status !== 'pending');
   // Only show internet banner if STT is enabled but not running at all
@@ -44,6 +61,7 @@ const MudarasaView = ({
   return (
     <>
       {hasLiveErrors && <RedBlinkOverlay active={true} />}
+      {errorFlash > 0 && <RedBlinkOverlay active={errorFlash} />}
       {showInternetBanner && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, padding: '0.5rem 1rem',

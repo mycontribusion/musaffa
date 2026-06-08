@@ -64,6 +64,24 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish) => {
       const { type, payload, id } = event.data;
       if (type === 'RESULT' && id === pendingIdRef.current) {
         setLiveResults(payload);
+
+        // Smart finish auto-detection: when all expected words have been resolved (not pending)
+        if (payload && payload.results && payload.results.length > 0) {
+          const allResolved = payload.results.every(r => r.status !== 'pending');
+          if (allResolved) {
+            // Cancel any pending silence timer so we don't double-trigger
+            if (silenceTimerRef.current) {
+              clearTimeout(silenceTimerRef.current);
+              silenceTimerRef.current = null;
+            }
+            // Auto finish immediately with a small delay for user satisfaction / smooth transition
+            silenceTimerRef.current = setTimeout(() => {
+              if (recognitionRef.current?._shouldRestart && onAutoFinishRef.current) {
+                onAutoFinishRef.current();
+              }
+            }, 600);
+          }
+        }
       }
     };
     workerRef.current = worker;
