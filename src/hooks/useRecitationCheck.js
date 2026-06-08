@@ -49,10 +49,12 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish) => {
   const onAutoFinishRef = useRef(onAutoFinish);
   const workerRef = useRef(null);          // Web Worker instance
   const pendingIdRef = useRef(0);          // track latest request to discard stale results
+  const isActiveRef = useRef(isActive);    // track error-detection mode for silence logic
 
   // Keep refs in sync without restarting recognition
   useEffect(() => { expectedRef.current = expectedText; }, [expectedText]);
   useEffect(() => { onAutoFinishRef.current = onAutoFinish; }, [onAutoFinish]);
+  useEffect(() => { isActiveRef.current = isActive; }, [isActive]);
 
   // ── Web Worker lifecycle ────────────────────────────────────────────────────
   useEffect(() => {
@@ -159,11 +161,15 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish) => {
     recognition.onspeechend = () => {
       if (!hasSpeechRef.current) return;
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = setTimeout(() => {
-        if (recognitionRef.current?._shouldRestart && onAutoFinishRef.current) {
-          onAutoFinishRef.current();
-        }
-      }, AUTO_FINISH_DELAY);
+      // In error-detection mode, rely on smart finish (worker allResolved) or tap-to-finish only
+      // Do NOT use silence-based auto-finish as it can cut off the user prematurely
+      if (!isActiveRef.current) {
+        silenceTimerRef.current = setTimeout(() => {
+          if (recognitionRef.current?._shouldRestart && onAutoFinishRef.current) {
+            onAutoFinishRef.current();
+          }
+        }, AUTO_FINISH_DELAY);
+      }
     };
     // ──────────────────────────────────────────────────────────────────────
 
