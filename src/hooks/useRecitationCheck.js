@@ -208,7 +208,7 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish) => {
       const expected = expectedRef.current || '';
       const comparison = compareRecitation(expected, spoken);
       setResults(comparison);
-      setLiveResults(null); // clear live overlay — feedback card takes over
+      setLiveResults(comparison); // Keep live overlay colored with final results during transition
     }, 0);
   }, []);
 

@@ -129,11 +129,15 @@ const compareRecitation = (expectedText, spokenText) => {
     .map(a => ({ word: a.spkWord, status: 'insertion' }));
 
   // Words beyond what the user has spoken yet → mark as 'pending' (not yet reached)
-  const spokenWordCount = spkWords.length;
-  let spokenSoFar = 0;
-  const resultsWithPending = results.map(r => {
-    if (r.status === 'correct' || r.status === 'substitution') spokenSoFar++;
-    if (spokenSoFar === 0 && r.status === 'omission') return { ...r, status: 'pending' };
+  const lastExpMatchIdx = matches.length > 0 ? matches[matches.length - 1].expIdx : -1;
+  const lastSpkMatchIdx = matches.length > 0 ? matches[matches.length - 1].spkIdx : -1;
+  const trailingSpkCount = n - (lastSpkMatchIdx + 1);
+  const lastReachedExpIdx = lastExpMatchIdx + trailingSpkCount;
+
+  const resultsWithPending = results.map((r, idx) => {
+    if (idx > lastReachedExpIdx && r.status === 'omission') {
+      return { ...r, status: 'pending' };
+    }
     return r;
   });
 

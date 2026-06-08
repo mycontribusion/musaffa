@@ -106,25 +106,74 @@ const PartnerSession = ({
     useCallback(() => { handleFinishedTurnRef.current?.(); }, []),
   );
 
+  const autoAdvanceTimerRef = useRef(null);
+
+  // When feedback card "Continue" is clicked, clear and advance turn
+  const handleContinueAfterFeedback = useCallback(() => {
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
+    clearResults();
+    handleNextTurn();
+  }, [clearResults, handleNextTurn]);
+
   // When the user taps "Tap to finish early" or auto-silence triggers:
-  // stop STT → comparison runs async → feedback card appears
-  // Turn only advances when user clicks "Continue" (handleContinueAfterFeedback)
+  // stop STT → comparison runs async → auto-advance after 2.5s
   const handleFinishedTurn = useCallback(() => {
     if (enableErrorDetection && sttSupported) {
+      if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
       stopAndCheck();
+      
+      autoAdvanceTimerRef.current = setTimeout(() => {
+        handleContinueAfterFeedback();
+      }, 2500);
     } else {
       handleNextTurn();
     }
-  }, [enableErrorDetection, sttSupported, stopAndCheck, handleNextTurn]);
+  }, [enableErrorDetection, sttSupported, stopAndCheck, handleContinueAfterFeedback, handleNextTurn]);
 
   // Keep the ref in sync so the onAutoFinish closure always calls the latest version
   handleFinishedTurnRef.current = handleFinishedTurn;
 
-  // When feedback card "Continue" is clicked, clear and advance turn
-  const handleContinueAfterFeedback = useCallback(() => {
-    clearResults();
-    handleNextTurn();
-  }, [clearResults, handleNextTurn]);
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
+    };
+  }, []);
+
+  // Automatically log stumbles and store recitation history in localStorage when results are computed
+  useEffect(() => {
+    if (recitationResults && recitationResults.results) {
+      const hasErrors = recitationResults.results.some(r => r.status === 'omission' || r.status === 'substitution');
+      if (hasErrors) {
+        const chunk = chunks[currentChunkIndex];
+        if (chunk) {
+          chunk.forEach(ayah => {
+            logStumble(ayah);
+          });
+        }
+      }
+
+      // Store the recitation attempt feedback in localStorage history
+      try {
+        const history = JSON.parse(localStorage.getItem('quran_recitation_history') || '[]');
+        const newRecord = {
+          date: new Date().toISOString(),
+          surahNumber: chunks[currentChunkIndex]?.[0]?.surahNumber,
+          chunkIndex: currentChunkIndex,
+          accuracy: recitationResults.accuracy,
+          breakdown: recitationResults.breakdown,
+          expectedText: buildExpectedText(chunks[currentChunkIndex]),
+          transcript: transcript,
+        };
+        localStorage.setItem('quran_recitation_history', JSON.stringify([newRecord, ...history].slice(0, 100)));
+      } catch (e) {
+        console.error('Failed to save recitation history:', e);
+      }
+    }
+  }, [recitationResults, currentChunkIndex, chunks, logStumble, transcript]);
 
   // Dispatcher
   if (subView === 'config') return (

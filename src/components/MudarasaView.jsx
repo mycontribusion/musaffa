@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import RedBlinkOverlay from './RedBlinkOverlay';
 import { ChevronLeft, Mic, WifiOff, RefreshCw, FastForward, BrainCircuit } from 'lucide-react';
-import RecitationFeedbackCard from './RecitationFeedbackCard';
 
 const MudarasaView = ({
   chunks,
@@ -29,13 +28,6 @@ const MudarasaView = ({
   onFinishedTurn,
   onClearResults,
 }) => {
-  // Show feedback card when results are ready and it's (still) the user's turn
-  const showFeedback = mudarasaTurn === 'user' && !!recitationResults?.results;
-
-  const handleContinueAfterFeedback = () => {
-    onClearResults();
-    onNext();
-  };
 
   // Live error flash logic: flash red on screen when error count increases
   const prevErrorCount = useRef(0);
@@ -60,7 +52,6 @@ const MudarasaView = ({
 
   return (
     <>
-      {hasLiveErrors && <RedBlinkOverlay active={true} />}
       {errorFlash > 0 && <RedBlinkOverlay active={errorFlash} />}
       {showInternetBanner && (
         <div style={{
@@ -283,18 +274,6 @@ const MudarasaView = ({
         </AnimatePresence>
       </div>
 
-      {/* Recitation Feedback Card — shown above the control bar */}
-      {showFeedback && (
-        <RecitationFeedbackCard
-          results={recitationResults?.results}
-          insertions={recitationResults?.insertions}
-          breakdown={recitationResults?.breakdown}
-          chunk={chunks[currentChunkIndex]}
-          transcript={transcript}
-          onContinue={handleContinueAfterFeedback}
-          onLogStumble={onLogStumble}
-        />
-      )}
     </motion.div>
   </>
   );
