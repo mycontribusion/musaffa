@@ -174,76 +174,88 @@ const MudarasaView = ({
       {/* Recitation Content */}
       <div style={{ flex: 1, padding: '1rem 0 6rem 0' }}>
         <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '3rem' }}>
-          {chunks[currentChunkIndex].map((ayah) => {
-            // Use quranSimple plain text for error detection when available
-            // This ensures Surah A Verse 1 of original text matches Surah A Verse 1 in plain text
-            let displayText = ayah.text;
-            if (enableErrorDetection && quranSimple) {
-              const key = `${ayah.surahNumber}|${ayah.numberInSurah}`;
-              const simpleText = quranSimple[key];
-              if (simpleText) {
-                displayText = simpleText;
+          {(() => {
+            let cumulativeWordCount = 0;
+            return chunks[currentChunkIndex].map((ayah) => {
+              // Use quranSimple plain text for error detection when available
+              let displayText = ayah.text;
+              if (enableErrorDetection && quranSimple) {
+                const key = `${ayah.surahNumber}|${ayah.numberInSurah}`;
+                const simpleText = quranSimple[key];
+                if (simpleText) {
+                  displayText = simpleText;
+                }
               }
-            }
-            
-            if (ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9) {
-              const cleanText = displayText.replace(/\uFEFF/g, '');
-              const bismillahEnd = "ٱلرَّحِيمِ";
-              const bIndex = cleanText.indexOf(bismillahEnd);
-              if (bIndex !== -1 && bIndex < 50) {
-                displayText = cleanText.substring(bIndex + bismillahEnd.length).trim();
-                displayText = displayText.replace(/^[\u200B-\u200D\uFEFF]+/, '');
+              
+              if (ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9) {
+                const cleanText = displayText.replace(/\uFEFF/g, '');
+                const bismillahEnd = "ٱلرَّحِيمِ";
+                const plainBismillahEnd = "بسم الله الرحمن الرحيم";
+                
+                const bIndex = cleanText.indexOf(bismillahEnd);
+                const bIndexPlain = cleanText.indexOf(plainBismillahEnd);
+                
+                if (bIndex !== -1 && bIndex < 50) {
+                  displayText = cleanText.substring(bIndex + bismillahEnd.length).trim();
+                  displayText = displayText.replace(/^[\u200B-\u200D\uFEFF]+/, '');
+                } else if (bIndexPlain !== -1 && bIndexPlain < 50) {
+                  displayText = cleanText.substring(bIndexPlain + plainBismillahEnd.length).trim();
+                }
               }
-            }
 
-            const isFirstAyahOfSurah = ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9;
-            // Show live overlay when STT is active and we have live results for this ayah
-            const showLiveOverlay = enableErrorDetection && isSttListening && liveResults && mudarasaTurn === 'user';
+              const isFirstAyahOfSurah = ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9;
+              // Show live overlay when STT is active and we have live results for this ayah
+              const showLiveOverlay = enableErrorDetection && isSttListening && liveResults && mudarasaTurn === 'user';
+              
+              const currentOffset = cumulativeWordCount;
+              cumulativeWordCount += displayText.split(/\s+/).filter(Boolean).length;
 
-            return (
-              <div key={ayah.number} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                {isFirstAyahOfSurah && (
+              return (
+                <div key={ayah.number} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                  {isFirstAyahOfSurah && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1, scale: currentAyahNumber === `bismillah-${ayah.number}` ? 1.02 : 1 }}
+                      style={{
+                        textAlign: 'center',
+                        padding: '1.5rem',
+                        borderRadius: '1.5rem',
+                        background: currentAyahNumber === `bismillah-${ayah.number}` ? 'var(--accent-gold-soft)' : 'transparent',
+                        border: currentAyahNumber === `bismillah-${ayah.number}` ? '1px solid var(--accent-gold-soft)' : '1px solid transparent',
+                        transition: '0.4s'
+                      }}
+                    >
+                      <p className="arabic-text" style={{ fontSize: '2.5rem', color: currentAyahNumber === `bismillah-${ayah.number}` ? 'var(--accent-gold)' : 'var(--text-primary)', opacity: currentAyahNumber === `bismillah-${ayah.number}` ? 1 : 0.8 }}>بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</p>
+                    </motion.div>
+                  )}
                   <motion.div
+                    id={`mudarasa-ayah-${ayah.number}`}
                     initial={{ opacity: 0 }}
-                    animate={{ opacity: 1, scale: currentAyahNumber === `bismillah-${ayah.number}` ? 1.02 : 1 }}
+                    animate={{ opacity: 1, scale: ayah.number === currentAyahNumber ? 1.02 : 1 }}
                     style={{
-                      textAlign: 'center',
-                      padding: '1.5rem',
-                      borderRadius: '1.5rem',
-                      background: currentAyahNumber === `bismillah-${ayah.number}` ? 'var(--accent-gold-soft)' : 'transparent',
-                      border: currentAyahNumber === `bismillah-${ayah.number}` ? '1px solid var(--accent-gold-soft)' : '1px solid transparent',
+                      textAlign: 'right', padding: '1.5rem', borderRadius: '1.5rem',
+                      background: ayah.number === currentAyahNumber ? 'var(--accent-gold-soft)' : 'transparent',
+                      border: ayah.number === currentAyahNumber ? '1px solid var(--accent-gold-soft)' : '1px solid transparent',
                       transition: '0.4s'
                     }}
                   >
-                    <p className="arabic-text" style={{ fontSize: '2.5rem', color: currentAyahNumber === `bismillah-${ayah.number}` ? 'var(--accent-gold)' : 'var(--text-primary)', opacity: currentAyahNumber === `bismillah-${ayah.number}` ? 1 : 0.8 }}>بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</p>
+                    {showLiveOverlay ? (
+                        <LiveTextOverlay
+                          plainText={displayText}
+                          results={liveResults.results}
+                          numberInSurah={ayah.numberInSurah}
+                          wordOffset={currentOffset}
+                        />
+                      ) : (
+                       <p className="arabic-text" style={{ fontSize: '2.2rem', color: ayah.number === currentAyahNumber ? 'var(--accent-gold)' : 'var(--text-primary)' }}>
+                         {displayText} <span style={{ fontSize: '1.2rem', color: 'var(--accent-gold)', opacity: 0.5, marginRight: '0.5rem' }}>﴿{ayah.numberInSurah}﴾</span>
+                       </p>
+                     )}
                   </motion.div>
-                )}
-                <motion.div
-                  id={`mudarasa-ayah-${ayah.number}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1, scale: ayah.number === currentAyahNumber ? 1.02 : 1 }}
-                  style={{
-                    textAlign: 'right', padding: '1.5rem', borderRadius: '1.5rem',
-                    background: ayah.number === currentAyahNumber ? 'var(--accent-gold-soft)' : 'transparent',
-                    border: ayah.number === currentAyahNumber ? '1px solid var(--accent-gold-soft)' : '1px solid transparent',
-                    transition: '0.4s'
-                  }}
-                >
-                  {showLiveOverlay ? (
-                      <LiveTextOverlay
-                        plainText={displayText}
-                        results={liveResults.results}
-                        numberInSurah={ayah.numberInSurah}
-                      />
-                    ) : (
-                     <p className="arabic-text" style={{ fontSize: '2.2rem', color: ayah.number === currentAyahNumber ? 'var(--accent-gold)' : 'var(--text-primary)' }}>
-                       {displayText} <span style={{ fontSize: '1.2rem', color: 'var(--accent-gold)', opacity: 0.5, marginRight: '0.5rem' }}>﴿{ayah.numberInSurah}﴾</span>
-                     </p>
-                   )}
-                </motion.div>
-              </div>
-            );
-          })}
+                </div>
+              );
+            });
+          })()}
         </div>
       </div>
 
@@ -359,7 +371,7 @@ const WORD_COLORS = {
  * The overlay uses the same word positions as the plain text, applying
  * background colors and text shadows to indicate recitation status.
  */
-const LiveTextOverlay = ({ plainText, results, numberInSurah }) => {
+const LiveTextOverlay = ({ plainText, results, numberInSurah, wordOffset = 0 }) => {
   if (!plainText) return null;
   
   // Split plain text into words - these are the words to display
@@ -369,13 +381,15 @@ const LiveTextOverlay = ({ plainText, results, numberInSurah }) => {
   // We need to map each result to its corresponding plain text word
   // Build a mapping: for each result, find the matching plain text word
   const getWordStatus = (idx) => {
-    if (!results || idx >= results.length) return 'pending';
-    return results[idx]?.status || 'pending';
+    const globalIdx = idx + wordOffset;
+    if (!results || globalIdx >= results.length) return 'pending';
+    return results[globalIdx]?.status || 'pending';
   };
   
   const getSpokenWord = (idx) => {
-    if (!results || idx >= results.length) return null;
-    return results[idx]?.spokenWord || null;
+    const globalIdx = idx + wordOffset;
+    if (!results || globalIdx >= results.length) return null;
+    return results[globalIdx]?.spokenWord || null;
   };
   
   return (
