@@ -11,7 +11,6 @@
 const normalizeArabic = (text) => {
   if (!text) return '';
   return text
-    .replace(/[\u064B-\u065F]/g, '')
     .replace(/[\u0622\u0623\u0625\u0671]/g, '\u0627')
     .replace(/\u0649/g, '\u064A')
     .replace(/\u0624/g, '\u0648')

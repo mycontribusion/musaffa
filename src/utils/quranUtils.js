@@ -64,7 +64,6 @@ export const removeTashkeel = (text) => text.replace(/[\u064B-\u065F]/g, "");
 export const normalizeArabic = (text) => {
   if (!text) return '';
   return text
-    .replace(/[\u064B-\u065F]/g, '')           // tashkeel
     .replace(/[\u0622\u0623\u0625\u0671]/g, '\u0627') // alef variants → ا
     .replace(/\u0649/g, '\u064A')               // alef maqsura ى → ي
     .replace(/\u0624/g, '\u0648')               // ؤ → و
