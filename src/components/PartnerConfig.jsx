@@ -221,7 +221,7 @@ const PartnerConfig = ({
         {/* ── Smart Error Detection ── */}
         {sttSupported && (
           <div>
-            <div style={sectionLabel}>Error Detection (Uses Internet)</div>
+            <div style={sectionLabel}>Error Detection (Requires Internet)</div>
             <button onClick={() => onChange('errorDetection', !params.errorDetection)}
               style={{
                 width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',

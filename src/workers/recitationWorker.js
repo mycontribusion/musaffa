@@ -131,6 +131,7 @@ const compareRecitation = (expectedText, spokenText) => {
   const insertions = [];
   let spkIdx = 0;
   let correct = 0, omissions = 0, substitutions = 0;
+  let unresolvedIndices = [];
 
   for (let expIdx = 0; expIdx < expWords.length; expIdx++) {
     const expWord = expWords[expIdx];
@@ -159,6 +160,13 @@ const compareRecitation = (expectedText, spokenText) => {
     }
 
     if (bestMatch !== -1) {
+      // A match was found! This means any previously unresolved words were definitively skipped.
+      for (const idx of unresolvedIndices) {
+        results[idx].status = 'omission';
+        omissions++;
+      }
+      unresolvedIndices = [];
+
       // Mark any skipped spoken words as insertions
       for (let i = spkIdx; i < bestMatch; i++) {
         insertions.push({ word: spkWords[i], status: 'insertion' });
@@ -176,9 +184,17 @@ const compareRecitation = (expectedText, spokenText) => {
 
       spkIdx = bestMatch + 1;
     } else {
-      results.push({ word: expWord, status: 'omission', spokenWord: null });
-      omissions++;
+      // No match found YET. We mark it as unresolved.
+      // If a later word matches, these will become omissions.
+      // If the end of the text is reached, these will become pending.
+      results.push({ word: expWord, status: 'unresolved', spokenWord: null });
+      unresolvedIndices.push(results.length - 1);
     }
+  }
+
+  // Any remaining unresolved words are just unread (pending)
+  for (const idx of unresolvedIndices) {
+    results[idx].status = 'pending';
   }
 
   // Remaining spoken words are insertions

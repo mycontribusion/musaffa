@@ -52,11 +52,15 @@ const MudarasaView = ({
   }, [transcript]);
 
   useEffect(() => {
-    if (mudarasaTurn !== 'user' || !enableErrorDetection || !liveResults) {
+    if (mudarasaTurn !== 'user' || !enableErrorDetection || !liveResults?.results) {
       prevErrorCount.current = 0;
       return;
     }
-    const currentErrors = (liveResults.breakdown?.omissions || 0) + (liveResults.breakdown?.substitutions || 0);
+    // Count errors directly from results array — breakdown.omissions lags behind
+    // because unresolved words only become 'omission' when the next match is found.
+    const currentErrors = liveResults.results.filter(
+      r => r.status === 'omission' || r.status === 'substitution'
+    ).length;
     if (currentErrors > prevErrorCount.current) {
       setErrorFlash(prev => prev + 1);
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
