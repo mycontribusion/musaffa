@@ -259,23 +259,17 @@ const MudarasaView = ({
                   {transcript && (
                     <div style={{
                       maxWidth: '90vw',
-                      padding: '0.5rem 0.8rem',
+                      padding: '0.6rem 1rem',
                       borderRadius: 'var(--radius-md)',
                       background: 'rgba(16,185,129,0.15)',
                       border: '1px solid rgba(16,185,129,0.4)',
                       color: '#fff',
-                      fontSize: '0.7rem',
+                      fontSize: '0.75rem',
                       fontWeight: '600',
                       textAlign: 'center',
-                      lineHeight: 1.4,
+                      lineHeight: 1.5,
                       wordBreak: 'break-word',
                       backdropFilter: 'blur(8px)',
-                      maxHeight: '2.8em',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
                     }}>
                       Hearing: {transcript}
                     </div>
