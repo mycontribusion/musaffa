@@ -188,7 +188,7 @@ export const compareRecitation = (expectedText, spokenText) => {
 
     // Look for a match in the next few spoken words (limited lookahead)
     let bestMatch = -1;
-    const lookahead = Math.min(4, spkWords.length - spkIdx);
+    const lookahead = Math.min(30, spkWords.length - spkIdx);
     for (let i = 0; i < lookahead; i++) {
       const candidateIdx = spkIdx + i;
       if (fuzzyMatch(expWord, spkWords[candidateIdx])) {
