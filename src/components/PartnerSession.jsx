@@ -257,6 +257,7 @@ const PartnerSession = ({
       transcript={transcript}
       onFinishedTurn={handleFinishedTurn}
       onClearResults={handleContinueAfterFeedback}
+      quranSimple={quranSimple}
     />
   );
 

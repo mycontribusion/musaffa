@@ -58,8 +58,8 @@ export const useQuranData = (syncStateWithURL) => {
       // continues to come from quran-ar.json.
       if (!hasError) {
         try {
-          const simpleRes = await fetch('/data/quran-simple.txt');
-          if (!simpleRes.ok) throw new Error(`quran-simple.txt fetch failed: ${simpleRes.status}`);
+          const simpleRes = await fetch('/data/quran-simple-clean.txt');
+          if (!simpleRes.ok) throw new Error(`quran-simple-clean.txt fetch failed: ${simpleRes.status}`);
           const simpleTxt = await simpleRes.text();
           const lookup = {};
           simpleTxt.split('\n').forEach(line => {
