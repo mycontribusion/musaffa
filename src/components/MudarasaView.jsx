@@ -59,9 +59,28 @@ const MudarasaView = ({
     const currentErrors = (liveResults.breakdown?.omissions || 0) + (liveResults.breakdown?.substitutions || 0);
     if (currentErrors > prevErrorCount.current) {
       setErrorFlash(prev => prev + 1);
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate(200);
+      }
     }
     prevErrorCount.current = currentErrors;
   }, [liveResults, mudarasaTurn, enableErrorDetection]);
+
+  // Auto-scroll logic for live tracking
+  const activeAyahIdRef = useRef(null);
+  useEffect(() => {
+    if (mudarasaTurn === 'user' && activeAyahIdRef.current) {
+      const el = document.getElementById(activeAyahIdRef.current);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        // Check if the element is outside the comfortable reading zone (header is ~70px, footer is ~100px)
+        const isOutsideView = rect.top < 150 || rect.bottom > (window.innerHeight - 200);
+        if (isOutsideView) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    }
+  });
 
   // Determine live error state
   const hasLiveErrors = enableErrorDetection && mudarasaTurn === 'user' && recitationResults?.results?.some(r => r.status !== 'correct' && r.status !== 'pending');
@@ -175,6 +194,16 @@ const MudarasaView = ({
       <div style={{ flex: 1, padding: '1rem 0 6rem 0' }}>
         <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '3rem' }}>
           {(() => {
+            let lastSpokenIdx = -1;
+            if (enableErrorDetection && liveResults?.results) {
+              for (let i = liveResults.results.length - 1; i >= 0; i--) {
+                if (liveResults.results[i].status !== 'pending') {
+                  lastSpokenIdx = i;
+                  break;
+                }
+              }
+            }
+
             let cumulativeWordCount = 0;
             return chunks[currentChunkIndex].map((ayah) => {
               // Use quranSimple plain text for error detection when available
@@ -219,6 +248,11 @@ const MudarasaView = ({
               
               const currentOffset = cumulativeWordCount;
               cumulativeWordCount += displayText.split(/\s+/).filter(Boolean).length;
+              
+              const isActiveAyah = enableErrorDetection && lastSpokenIdx >= currentOffset && lastSpokenIdx < cumulativeWordCount;
+              if (isActiveAyah) {
+                activeAyahIdRef.current = `mudarasa-ayah-${ayah.number}`;
+              }
 
               return (
                 <div key={ayah.number} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
