@@ -248,7 +248,7 @@ const MudarasaView = ({
                   >
                     <Mic size={16} />
                     <span style={{ fontWeight: '800', fontSize: '0.8rem', letterSpacing: '0.05em' }}>Listening…</span>
-                    <span style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: '600' }}>Stops when you go quiet</span>
+                    <span style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: '600' }}>Stops when you finish reading</span>
                   </motion.div>
                   <button
                     onClick={onFinishedTurn}

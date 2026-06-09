@@ -64,7 +64,7 @@ const compareRecitation = (expectedText, spokenText) => {
   if (expWords.length === 0) return { results: [], insertions: [], accuracy: 100, breakdown: { correct: 0, omissions: 0, substitutions: 0, insertions: 0 } };
   if (spkWords.length === 0) {
     return {
-      results: expWords.map(w => ({ word: w, status: 'pending' })),
+      results: expWords.map(w => ({ word: w, status: 'omission', spokenWord: null })),
       insertions: [],
       accuracy: 0,
       breakdown: { correct: 0, omissions: expWords.length, substitutions: 0, insertions: 0 },
@@ -128,26 +128,13 @@ const compareRecitation = (expectedText, spokenText) => {
     .filter(a => a.type === 'insertion')
     .map(a => ({ word: a.spkWord, status: 'insertion' }));
 
-  // Words beyond what the user has spoken yet → mark as 'pending' (not yet reached)
-  // The user can only have "reached" as many expected words as they've actually spoken.
-  // This prevents premature smart-finish when the user says only a word near the end
-  // without having progressed through the earlier words.
-  const lastReachedExpIdx = Math.min(n - 1, m - 1);
-
-  const resultsWithPending = results.map((r, idx) => {
-    if (idx > lastReachedExpIdx) {
-      return { ...r, status: 'pending' };
-    }
-    return r;
-  });
-
-  const correct = resultsWithPending.filter(r => r.status === 'correct').length;
-  const omissions = resultsWithPending.filter(r => r.status === 'omission').length;
-  const substitutions = resultsWithPending.filter(r => r.status === 'substitution').length;
+  const correct = results.filter(r => r.status === 'correct').length;
+  const omissions = results.filter(r => r.status === 'omission').length;
+  const substitutions = results.filter(r => r.status === 'substitution').length;
   const accuracy = Math.round((correct / m) * 100);
 
   return {
-    results: resultsWithPending,
+    results,
     insertions,
     accuracy,
     breakdown: { correct, omissions, substitutions, insertions: insertions.length },

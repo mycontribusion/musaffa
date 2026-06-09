@@ -6,8 +6,6 @@ const getSpeechRecognition = () =>
     ? window.SpeechRecognition || window.webkitSpeechRecognition
     : null;
 
-/** Silence duration (ms) after onspeechend before auto-finish fires */
-const AUTO_FINISH_DELAY = 1800;
 
 /** Debounce for live worker comparisons (ms) — keeps worker queue light */
 const LIVE_DEBOUNCE = 350;
@@ -49,12 +47,10 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish) => {
   const onAutoFinishRef = useRef(onAutoFinish);
   const workerRef = useRef(null);          // Web Worker instance
   const pendingIdRef = useRef(0);          // track latest request to discard stale results
-  const isActiveRef = useRef(isActive);    // track error-detection mode for silence logic
 
   // Keep refs in sync without restarting recognition
   useEffect(() => { expectedRef.current = expectedText; }, [expectedText]);
   useEffect(() => { onAutoFinishRef.current = onAutoFinish; }, [onAutoFinish]);
-  useEffect(() => { isActiveRef.current = isActive; }, [isActive]);
 
   // ── Web Worker lifecycle ────────────────────────────────────────────────────
   useEffect(() => {
@@ -67,10 +63,10 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish) => {
       if (type === 'RESULT' && id === pendingIdRef.current) {
         setLiveResults(payload);
 
-        // Smart finish auto-detection: when all expected words have been resolved (not pending)
+        // Smart finish auto-detection: only when ALL words are correct (green)
         if (payload && payload.results && payload.results.length > 0) {
-          const allResolved = payload.results.every(r => r.status !== 'pending');
-          if (allResolved) {
+          const allCorrect = payload.results.every(r => r.status === 'correct');
+          if (allCorrect) {
             // Cancel any pending silence timer so we don't double-trigger
             if (silenceTimerRef.current) {
               clearTimeout(silenceTimerRef.current);
@@ -159,16 +155,10 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish) => {
     };
 
     recognition.onspeechend = () => {
-      if (!hasSpeechRef.current) return;
-      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-      // In error-detection mode, rely on smart finish (worker allResolved) or tap-to-finish only
-      // Do NOT use silence-based auto-finish as it can cut off the user prematurely
-      if (!isActiveRef.current) {
-        silenceTimerRef.current = setTimeout(() => {
-          if (recognitionRef.current?._shouldRestart && onAutoFinishRef.current) {
-            onAutoFinishRef.current();
-          }
-        }, AUTO_FINISH_DELAY);
+      hasSpeechRef.current = true;
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
       }
     };
     // ──────────────────────────────────────────────────────────────────────
