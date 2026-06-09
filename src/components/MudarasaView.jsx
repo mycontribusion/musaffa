@@ -77,10 +77,8 @@ const MudarasaView = ({
     }
   });
 
-  // Determine live error state
-  const hasLiveErrors = enableErrorDetection && mudarasaTurn === 'user' && recitationResults?.results?.some(r => r.status !== 'correct' && r.status !== 'pending');
   // Only show internet banner if STT is enabled but not running at all
-  const showInternetBanner = enableErrorDetection && mudarasaTurn === 'user' && !isSttListening && !recitationResults?.results;
+  const showInternetBanner = enableErrorDetection && mudarasaTurn === 'user' && !isSttListening;
 
   return (
     <>
