@@ -64,16 +64,56 @@ export const removeTashkeel = (text) => text.replace(/[\u064B-\u065F]/g, "");
 export const normalizeArabic = (text) => {
   if (!text) return '';
   return text
-    .replace(/[\u0622\u0623\u0625\u0671]/g, '\u0627') // alef variants → ا
-    .replace(/\u0649/g, '\u064A')               // alef maqsura ى → ي
-    .replace(/\u0624/g, '\u0648')               // ؤ → و
-    .replace(/\u0626/g, '\u064A')               // ئ → ي
-    .replace(/\u0629/g, '\u0647')               // ة → ه
-    .replace(/\u0640/g, '')                     // tatweel
-    .replace(/[\u200B-\u200D\uFEFF]/g, '')      // zero-width / BOM
-    .replace(/[،؛؟!.,:;'"()[\]{}]/g, '')       // strip punctuation (Arabic + Latin)
-    .replace(/(.)\1{3,}/g, '$1$1')             // collapse ≥4 identical chars → 2 (madd STT artifact)
+    // 1. Strip all Tashkeel (vowel marks, shadda, sukoon, etc.)
+    .replace(/[\u064B-\u065F]/g, '')
+    // 2. Normalize all Alef variants to a bare Alef
+    .replace(/[\u0622\u0623\u0625\u0671]/g, '\u0627')
+    // 3. Normalize Alef Maksura to Yaa
+    .replace(/\u0649/g, '\u064A')
+    // 4. Normalize Waw with Hamza to plain Waw
+    .replace(/\u0624/g, '\u0648')
+    // 5. Normalize Yaa with Hamza to plain Yaa
+    .replace(/\u0626/g, '\u064A')
+    // 6. Normalize Ta Marbuta to Haa
+    .replace(/\u0629/g, '\u0647')
+    // 7. Remove Tatweel (Kashida)
+    .replace(/\u0640/g, '')
+    // 8. Remove zero-width spaces and formatting characters
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    // 9. Remove punctuation
+    .replace(/[،؛؟!.,:;'"()[\]{}]/g, '')
+    // 10. Collapse repeated characters (e.g., STT sometimes outputs "ووو" instead of "و")
+    // Note: We only collapse if it's repeated 3 or more times to avoid breaking words like "الله"
+    .replace(/(.)\1{3,}/g, '$1$1')
     .trim();
+};
+
+const replaceMuqattaat = (text) => {
+  if (!text) return text;
+  let res = text;
+  
+  const muqattaat = [
+    { p: /(^|\s)(الف لام ميم صاد|افلام ميم صاد|افلام لام ميم صاد)(?=\s|$)/g, r: '$1المص' },
+    { p: /(^|\s)(الف لام ميم را|افلام ميم را|افلام لام ميم را|الف لام ميم راء|افلام ميم راء|افلام لام ميم راء)(?=\s|$)/g, r: '$1المر' },
+    { p: /(^|\s)(الف لام ميم|افلام ميم|افلام لام ميم)(?=\s|$)/g, r: '$1الم' },
+    { p: /(^|\s)(الف لام را|افلام را|افلام لام را|الف لام راء|افلام راء|افلام لام راء)(?=\s|$)/g, r: '$1الر' },
+    { p: /(^|\s)(كاف ها يا عين صاد|كاف ها ياعين صاد)(?=\s|$)/g, r: '$1كهيعص' },
+    { p: /(^|\s)(حا ميم عين سين قاف|حاميم عين سين قاف|حا ميم عسق)(?=\s|$)/g, r: '$1حمعسق' },
+    { p: /(^|\s)(طا سين ميم|طاسين ميم)(?=\s|$)/g, r: '$1طسم' },
+    { p: /(^|\s)(طا ها|طاها)(?=\s|$)/g, r: '$1طه' },
+    { p: /(^|\s)(طا سين|طاسين)(?=\s|$)/g, r: '$1طس' },
+    { p: /(^|\s)(يا سين|ياسين)(?=\s|$)/g, r: '$1يس' },
+    { p: /(^|\s)(حا ميم|حاميم)(?=\s|$)/g, r: '$1حم' },
+    { p: /(^|\s)(صاد)(?=\s|$)/g, r: '$1ص' },
+    { p: /(^|\s)(قاف)(?=\s|$)/g, r: '$1ق' },
+    { p: /(^|\s)(نون)(?=\s|$)/g, r: '$1ن' },
+  ];
+
+  muqattaat.forEach(({ p, r }) => {
+    res = res.replace(p, r);
+  });
+  
+  return res;
 };
 
 // ── Levenshtein edit distance (character-level) ─────────────────────────────
@@ -154,7 +194,10 @@ export const compareRecitation = (expectedText, spokenText) => {
   // so we normalise the reference to plain letters for a fair word-level comparison.
   const expNorm = expectedText.replace(/[\u064B-\u065F]/g, '');
   const expWords = normalizeArabic(expNorm).split(/\s+/).filter(Boolean);
-  const rawSpkWords = normalizeArabic(spokenText).split(/\s+/).filter(Boolean);
+  
+  // Normalize spoken text, then replace phonetic Muqatta'at, then split
+  const spkNorm = replaceMuqattaat(normalizeArabic(spokenText));
+  const rawSpkWords = spkNorm.split(/\s+/).filter(Boolean);
 
   // Deduplicate consecutive identical words in spoken text.
   // STT often repeats words (e.g., "الله الله الله" → "الله"), which would

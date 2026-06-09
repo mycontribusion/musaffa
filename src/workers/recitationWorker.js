@@ -24,6 +24,35 @@ const normalizeArabic = (text) => {
     .trim();
 };
 
+const replaceMuqattaat = (text) => {
+  if (!text) return text;
+  let res = text;
+  
+  const muqattaat = [
+    { p: /(^|\s)(الف لام ميم صاد|افلام ميم صاد|افلام لام ميم صاد)(?=\s|$)/g, r: '$1المص' },
+    { p: /(^|\s)(الف لام ميم را|افلام ميم را|افلام لام ميم را|الف لام ميم راء|افلام ميم راء|افلام لام ميم راء)(?=\s|$)/g, r: '$1المر' },
+    { p: /(^|\s)(الف لام ميم|افلام ميم|افلام لام ميم)(?=\s|$)/g, r: '$1الم' },
+    { p: /(^|\s)(الف لام را|افلام را|افلام لام را|الف لام راء|افلام راء|افلام لام راء)(?=\s|$)/g, r: '$1الر' },
+    { p: /(^|\s)(كاف ها يا عين صاد|كاف ها ياعين صاد)(?=\s|$)/g, r: '$1كهيعص' },
+    { p: /(^|\s)(حا ميم عين سين قاف|حاميم عين سين قاف|حا ميم عسق)(?=\s|$)/g, r: '$1حمعسق' },
+    { p: /(^|\s)(طا سين ميم|طاسين ميم)(?=\s|$)/g, r: '$1طسم' },
+    { p: /(^|\s)(طا ها|طاها)(?=\s|$)/g, r: '$1طه' },
+    { p: /(^|\s)(طا سين|طاسين)(?=\s|$)/g, r: '$1طس' },
+    { p: /(^|\s)(يا سين|ياسين)(?=\s|$)/g, r: '$1يس' },
+    { p: /(^|\s)(حا ميم|حاميم)(?=\s|$)/g, r: '$1حم' },
+    { p: /(^|\s)(صاد)(?=\s|$)/g, r: '$1ص' },
+    { p: /(^|\s)(قاف)(?=\s|$)/g, r: '$1ق' },
+    { p: /(^|\s)(نون)(?=\s|$)/g, r: '$1ن' },
+  ];
+
+  muqattaat.forEach(({ p, r }) => {
+    res = res.replace(p, r);
+  });
+  
+  return res;
+};
+
+
 const levenshtein = (a, b) => {
   if (a === b) return 0;
   if (a.length === 0) return b.length;
@@ -71,7 +100,10 @@ const compareRecitation = (expectedText, spokenText) => {
   // so we normalise the reference to plain letters for a fair word-level comparison.
   const expNorm = expectedText.replace(/[\u064B-\u065F]/g, '');
   const expWords = normalizeArabic(expNorm).split(/\s+/).filter(Boolean);
-  const rawSpkWords = normalizeArabic(spokenText).split(/\s+/).filter(Boolean);
+  
+  // Normalize spoken text, then replace phonetic Muqatta'at, then split
+  const spkNorm = replaceMuqattaat(normalizeArabic(spokenText));
+  const rawSpkWords = spkNorm.split(/\s+/).filter(Boolean);
 
   // Deduplicate consecutive identical words in spoken text.
   // STT often repeats words (e.g., "الله الله الله" → "الله"), which would
