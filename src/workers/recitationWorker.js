@@ -129,13 +129,13 @@ const compareRecitation = (expectedText, spokenText) => {
     .map(a => ({ word: a.spkWord, status: 'insertion' }));
 
   // Words beyond what the user has spoken yet → mark as 'pending' (not yet reached)
-  const lastExpMatchIdx = matches.length > 0 ? matches[matches.length - 1].expIdx : -1;
-  const lastSpkMatchIdx = matches.length > 0 ? matches[matches.length - 1].spkIdx : -1;
-  const trailingSpkCount = n - (lastSpkMatchIdx + 1);
-  const lastReachedExpIdx = lastExpMatchIdx + trailingSpkCount;
+  // The user can only have "reached" as many expected words as they've actually spoken.
+  // This prevents premature smart-finish when the user says only a word near the end
+  // without having progressed through the earlier words.
+  const lastReachedExpIdx = Math.min(n - 1, m - 1);
 
   const resultsWithPending = results.map((r, idx) => {
-    if (idx > lastReachedExpIdx && r.status === 'omission') {
+    if (idx > lastReachedExpIdx) {
       return { ...r, status: 'pending' };
     }
     return r;
