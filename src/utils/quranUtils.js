@@ -72,6 +72,7 @@ export const normalizeArabic = (text) => {
     .replace(/\u0629/g, '\u0647')               // ة → ه
     .replace(/\u0640/g, '')                     // tatweel
     .replace(/[\u200B-\u200D\uFEFF]/g, '')      // zero-width / BOM
+    .replace(/[،؛؟!.,:;'"()[\]{}]/g, '')       // strip punctuation (Arabic + Latin)
     .replace(/(.)\1{3,}/g, '$1$1')             // collapse ≥4 identical chars → 2 (madd STT artifact)
     .trim();
 };

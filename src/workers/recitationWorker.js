@@ -19,6 +19,7 @@ const normalizeArabic = (text) => {
     .replace(/\u0629/g, '\u0647')
     .replace(/\u0640/g, '')
     .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/[،؛؟!.,:;'"()[\]{}]/g, '')
     .replace(/(.)\1{3,}/g, '$1$1')
     .trim();
 };
