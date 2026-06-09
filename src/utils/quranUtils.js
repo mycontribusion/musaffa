@@ -143,7 +143,10 @@ const fuzzyMatch = (a, b) => {
  *   breakdown:  { correct, omissions, substitutions, insertions }
  */
 export const compareRecitation = (expectedText, spokenText) => {
-  const expWords = normalizeArabic(expectedText).split(/\s+/).filter(Boolean);
+  // Strip tashkeel from expected text only — STT output typically lacks harakat,
+  // so we normalise the reference to plain letters for a fair word-level comparison.
+  const expNorm = expectedText.replace(/[\u064B-\u065F]/g, '');
+  const expWords = normalizeArabic(expNorm).split(/\s+/).filter(Boolean);
   const spkWords = normalizeArabic(spokenText).split(/\s+/).filter(Boolean);
 
   if (expWords.length === 0) return { results: [], insertions: [], accuracy: 100, breakdown: { correct: 0, omissions: 0, substitutions: 0, insertions: 0 } };
