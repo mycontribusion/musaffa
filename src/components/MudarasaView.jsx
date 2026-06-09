@@ -195,11 +195,21 @@ const MudarasaView = ({
                 const bIndex = cleanText.indexOf(bismillahEnd);
                 const bIndexPlain = cleanText.indexOf(plainBismillahEnd);
                 
+                const originalWordCount = cleanText.split(/\s+/).filter(Boolean).length;
+                let stripped = false;
+                
                 if (bIndex !== -1 && bIndex < 50) {
                   displayText = cleanText.substring(bIndex + bismillahEnd.length).trim();
                   displayText = displayText.replace(/^[\u200B-\u200D\uFEFF]+/, '');
+                  stripped = true;
                 } else if (bIndexPlain !== -1 && bIndexPlain < 50) {
                   displayText = cleanText.substring(bIndexPlain + plainBismillahEnd.length).trim();
+                  stripped = true;
+                }
+                
+                if (stripped) {
+                  const newWordCount = displayText.split(/\s+/).filter(Boolean).length;
+                  cumulativeWordCount += (originalWordCount - newWordCount);
                 }
               }
 
