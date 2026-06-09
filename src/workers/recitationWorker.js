@@ -52,6 +52,13 @@ const fuzzyTolerance = (word) => {
 
 const fuzzyMatch = (a, b) => {
   if (a === b) return true;
+  // Prevent matching words that differ only in the last character
+  // (e.g., الرحمن vs الرحيم) to avoid confusing similar Quranic words
+  if (a.length === b.length && a.length > 1) {
+    const aBody = a.slice(0, -1);
+    const bBody = b.slice(0, -1);
+    if (aBody === bBody) return false;
+  }
   const tol = Math.min(fuzzyTolerance(a), fuzzyTolerance(b));
   if (tol === 0) return false;
   if (Math.abs(a.length - b.length) > tol) return false;
@@ -75,67 +82,56 @@ const compareRecitation = (expectedText, spokenText) => {
     };
   }
 
-  const m = expWords.length;
-  const n = spkWords.length;
-  const dp = Array.from({ length: m + 1 }, () => new Int16Array(n + 1));
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      dp[i][j] = fuzzyMatch(expWords[i - 1], spkWords[j - 1])
-        ? dp[i - 1][j - 1] + 1
-        : Math.max(dp[i - 1][j], dp[i][j - 1]);
-    }
-  }
+  // Sequential matching: enforce positional order to prevent earlier words
+  // from being "stolen" by later similar words as the transcript grows.
+  const results = [];
+  const insertions = [];
+  let spkIdx = 0;
+  let correct = 0, omissions = 0, substitutions = 0;
 
-  const matches = [];
-  let bi = m, bj = n;
-  while (bi > 0 && bj > 0) {
-    if (fuzzyMatch(expWords[bi - 1], spkWords[bj - 1])) {
-      matches.unshift({ expIdx: bi - 1, spkIdx: bj - 1 });
-      bi--; bj--;
-    } else if (dp[bi - 1][bj] >= dp[bi][bj - 1]) {
-      bi--;
+  for (let expIdx = 0; expIdx < expWords.length; expIdx++) {
+    const expWord = expWords[expIdx];
+
+    // Look for a match in the next few spoken words (limited lookahead)
+    let bestMatch = -1;
+    const lookahead = Math.min(4, spkWords.length - spkIdx);
+    for (let i = 0; i < lookahead; i++) {
+      const candidateIdx = spkIdx + i;
+      if (fuzzyMatch(expWord, spkWords[candidateIdx])) {
+        bestMatch = candidateIdx;
+        break; // Use the first (earliest) match to maintain order
+      }
+    }
+
+    if (bestMatch !== -1) {
+      // Mark any skipped spoken words as insertions
+      for (let i = spkIdx; i < bestMatch; i++) {
+        insertions.push({ word: spkWords[i], status: 'insertion' });
+      }
+
+      const spkWord = spkWords[bestMatch];
+      const isExact = expWord === spkWord;
+      results.push({
+        word: expWord,
+        status: isExact ? 'correct' : 'substitution',
+        spokenWord: spkWord,
+      });
+      if (isExact) correct++;
+      else substitutions++;
+
+      spkIdx = bestMatch + 1;
     } else {
-      bj--;
+      results.push({ word: expWord, status: 'omission', spokenWord: null });
+      omissions++;
     }
   }
 
-  const alignment = [];
-  const processGap = (expStart, expEnd, spkStart, spkEnd) => {
-    const expLen = expEnd - expStart;
-    const spkLen = spkEnd - spkStart;
-    const subLen = Math.min(expLen, spkLen);
-    for (let k = 0; k < subLen; k++) {
-      alignment.push({ type: 'substitution', expWord: expWords[expStart + k], spkWord: spkWords[spkStart + k] });
-    }
-    for (let k = subLen; k < expLen; k++) {
-      alignment.push({ type: 'omission', expWord: expWords[expStart + k], spkWord: null });
-    }
-    for (let k = subLen; k < spkLen; k++) {
-      alignment.push({ type: 'insertion', expWord: null, spkWord: spkWords[spkStart + k] });
-    }
-  };
-
-  let lastExpIdx = -1, lastSpkIdx = -1;
-  for (const match of matches) {
-    processGap(lastExpIdx + 1, match.expIdx, lastSpkIdx + 1, match.spkIdx);
-    alignment.push({ type: 'correct', expWord: expWords[match.expIdx], spkWord: spkWords[match.spkIdx] });
-    lastExpIdx = match.expIdx;
-    lastSpkIdx = match.spkIdx;
+  // Remaining spoken words are insertions
+  for (let i = spkIdx; i < spkWords.length; i++) {
+    insertions.push({ word: spkWords[i], status: 'insertion' });
   }
-  processGap(lastExpIdx + 1, m, lastSpkIdx + 1, n);
 
-  const results = alignment
-    .filter(a => a.expWord !== null)
-    .map(a => ({ word: a.expWord, status: a.type, spokenWord: a.spkWord || null }));
-
-  const insertions = alignment
-    .filter(a => a.type === 'insertion')
-    .map(a => ({ word: a.spkWord, status: 'insertion' }));
-
-  const correct = results.filter(r => r.status === 'correct').length;
-  const omissions = results.filter(r => r.status === 'omission').length;
-  const substitutions = results.filter(r => r.status === 'substitution').length;
-  const accuracy = Math.round((correct / m) * 100);
+  const accuracy = Math.round((correct / expWords.length) * 100);
 
   return {
     results,
