@@ -6,6 +6,33 @@ const getSpeechRecognition = () =>
     ? window.SpeechRecognition || window.webkitSpeechRecognition
     : null;
 
+// Helper to cleanly merge Android's cumulative STT chunks
+const mergeTranscripts = (oldText, newText) => {
+  const oldWords = oldText.trim().split(/\s+/).filter(Boolean);
+  const newWords = newText.trim().split(/\s+/).filter(Boolean);
+  
+  if (oldWords.length === 0) return newText;
+  if (newWords.length === 0) return oldText;
+  
+  let maxOverlap = 0;
+  const maxPossible = Math.min(oldWords.length, newWords.length);
+  
+  for (let i = 1; i <= maxPossible; i++) {
+    let match = true;
+    for (let j = 0; j < i; j++) {
+      if (oldWords[oldWords.length - i + j] !== newWords[j]) {
+        match = false;
+        break;
+      }
+    }
+    if (match) {
+      maxOverlap = i;
+    }
+  }
+  
+  const mergedWords = [...oldWords, ...newWords.slice(maxOverlap)];
+  return mergedWords.join(' ') + ' ';
+};
 
 /** Debounce for live worker comparisons (ms) — keeps worker queue light */
 const LIVE_DEBOUNCE = 350;
@@ -127,18 +154,20 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish) => {
     recognition.maxAlternatives = 1;
 
     recognition.onresult = (event) => {
-      let finalTranscript = '';
-      let interimTranscript = '';
+      let currentFinal = '';
+      let currentInterim = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const chunk = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          finalTranscript += chunk + ' ';
+          currentFinal += chunk + ' ';
         } else {
-          interimTranscript += chunk;
+          currentInterim += chunk + ' ';
         }
       }
-      if (finalTranscript) transcriptRef.current += finalTranscript;
-      const combined = (transcriptRef.current + interimTranscript).trim();
+      if (currentFinal) {
+        transcriptRef.current = mergeTranscripts(transcriptRef.current, currentFinal);
+      }
+      const combined = mergeTranscripts(transcriptRef.current, currentInterim).trim();
       setTranscript(combined);
 
       // Dispatch to worker for live word overlay — non-blocking
