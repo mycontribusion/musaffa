@@ -90,21 +90,23 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish) => {
       if (type === 'RESULT' && id === pendingIdRef.current) {
         setLiveResults(payload);
 
-        // Smart finish auto-detection: only when ALL words are correct (green)
+        // Smart auto-finish: trigger immediately when ALL words are confirmed correct
+        // (no 'pending' remaining = the user has spoken every word in the chunk).
+        // This fires regardless of silence — the moment 100% is reached, we advance.
         if (payload && payload.results && payload.results.length > 0) {
           const allCorrect = payload.results.every(r => r.status === 'correct');
-          if (allCorrect) {
-            // Cancel any pending silence timer so we don't double-trigger
+          const hasPending = payload.results.some(r => r.status === 'pending');
+          if (allCorrect && !hasPending) {
             if (silenceTimerRef.current) {
               clearTimeout(silenceTimerRef.current);
               silenceTimerRef.current = null;
             }
-            // Auto finish immediately with a small delay for user satisfaction / smooth transition
+            // Short celebratory delay (300ms) so user sees the full green before turn switches
             silenceTimerRef.current = setTimeout(() => {
-              if (recognitionRef.current?._shouldRestart && onAutoFinishRef.current) {
+              if (onAutoFinishRef.current) {
                 onAutoFinishRef.current();
               }
-            }, 600);
+            }, 300);
           }
         }
       }

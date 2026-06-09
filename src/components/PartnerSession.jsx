@@ -122,20 +122,21 @@ const PartnerSession = ({
     handleNextTurn();
   }, [clearResults, handleNextTurn]);
 
-  // When the user taps "Tap to finish early" or auto-silence triggers:
-  // stop STT → comparison runs async → auto-advance after 2.5s
+  // Called when 100% accuracy is confirmed OR user taps "Tap to finish early"
   const handleFinishedTurn = useCallback(() => {
     if (enableErrorDetection && sttSupported) {
       if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
       stopAndCheck();
-      
+      // Advance immediately — if triggered by auto-finish, 100% is already confirmed.
+      // If triggered manually, we give a brief moment for final comparison to log.
       autoAdvanceTimerRef.current = setTimeout(() => {
-        handleContinueAfterFeedback();
-      }, 2500);
+        clearResults();
+        handleNextTurn();
+      }, 200);
     } else {
       handleNextTurn();
     }
-  }, [enableErrorDetection, sttSupported, stopAndCheck, handleContinueAfterFeedback, handleNextTurn]);
+  }, [enableErrorDetection, sttSupported, stopAndCheck, clearResults, handleNextTurn]);
 
   // Keep the ref in sync so the onAutoFinish closure always calls the latest version
   handleFinishedTurnRef.current = handleFinishedTurn;
@@ -233,7 +234,7 @@ const PartnerSession = ({
   );
 
   if (subView === 'mudarasa' && chunks[currentChunkIndex]) return (
-    <MudarasaView
+      <MudarasaView
       key="mudarasa"
       chunks={chunks}
       currentChunkIndex={currentChunkIndex}
@@ -253,10 +254,8 @@ const PartnerSession = ({
       enableErrorDetection={enableErrorDetection && sttSupported}
       isSttListening={isSttListening}
       liveResults={liveResults}
-      recitationResults={recitationResults}
       transcript={transcript}
       onFinishedTurn={handleFinishedTurn}
-      onClearResults={handleContinueAfterFeedback}
       quranSimple={quranSimple}
     />
   );
