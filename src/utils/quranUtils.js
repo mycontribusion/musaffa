@@ -154,7 +154,17 @@ export const compareRecitation = (expectedText, spokenText) => {
   // so we normalise the reference to plain letters for a fair word-level comparison.
   const expNorm = expectedText.replace(/[\u064B-\u065F]/g, '');
   const expWords = normalizeArabic(expNorm).split(/\s+/).filter(Boolean);
-  const spkWords = normalizeArabic(spokenText).split(/\s+/).filter(Boolean);
+  const rawSpkWords = normalizeArabic(spokenText).split(/\s+/).filter(Boolean);
+
+  // Deduplicate consecutive identical words in spoken text.
+  // STT often repeats words (e.g., "الله الله الله" → "الله"), which would
+  // cause the limited lookahead to miss subsequent expected words.
+  const spkWords = [];
+  for (let i = 0; i < rawSpkWords.length; i++) {
+    if (i === 0 || rawSpkWords[i] !== rawSpkWords[i - 1]) {
+      spkWords.push(rawSpkWords[i]);
+    }
+  }
 
   if (expWords.length === 0) return { results: [], insertions: [], accuracy: 100, breakdown: { correct: 0, omissions: 0, substitutions: 0, insertions: 0 } };
   if (spkWords.length === 0) {
