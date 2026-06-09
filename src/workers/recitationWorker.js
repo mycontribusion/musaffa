@@ -136,14 +136,26 @@ const compareRecitation = (expectedText, spokenText) => {
     const expWord = expWords[expIdx];
 
     // Look for a match in the next few spoken words (limited lookahead)
+    // We prioritize an EXACT match over a fuzzy match. If a user stumbles (fuzzy)
+    // but corrects themselves (exact) shortly after, we want to match the correction.
     let bestMatch = -1;
+    let firstFuzzyMatch = -1;
     const lookahead = Math.min(30, spkWords.length - spkIdx);
+    
     for (let i = 0; i < lookahead; i++) {
       const candidateIdx = spkIdx + i;
-      if (fuzzyMatch(expWord, spkWords[candidateIdx])) {
+      const spkWord = spkWords[candidateIdx];
+      
+      if (expWord === spkWord) {
         bestMatch = candidateIdx;
-        break; // Use the first (earliest) match to maintain order
+        break; // Exact match found, stop looking
+      } else if (firstFuzzyMatch === -1 && fuzzyMatch(expWord, spkWord)) {
+        firstFuzzyMatch = candidateIdx; // Remember the first fuzzy match
       }
+    }
+    
+    if (bestMatch === -1 && firstFuzzyMatch !== -1) {
+      bestMatch = firstFuzzyMatch; // Fallback to fuzzy match if no exact match
     }
 
     if (bestMatch !== -1) {
