@@ -299,7 +299,7 @@ const MudarasaView = ({
       {/* Control Bar */}
       <div style={{ position: 'fixed', bottom: '2rem', left: '0', right: '0', zIndex: 100, display: 'flex', justifyContent: 'center' }}>
         <AnimatePresence mode="wait">
-          {mudarasaTurn === 'user' && !showFeedback && (
+          {mudarasaTurn === 'user' && (
             <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
 
               {enableErrorDetection && isSttListening ? (
