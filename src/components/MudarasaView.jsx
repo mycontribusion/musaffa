@@ -41,6 +41,15 @@ const MudarasaView = ({
   const prevErrorCount = useRef(0);
   const [errorFlash, setErrorFlash] = useState(0);
 
+  // Transcript autoscroll ref
+  const transcriptRef = useRef(null);
+
+  useEffect(() => {
+    if (transcriptRef.current) {
+      transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
+    }
+  }, [transcript]);
+
   useEffect(() => {
     if (mudarasaTurn !== 'user' || !enableErrorDetection || !liveResults) {
       prevErrorCount.current = 0;
@@ -257,20 +266,25 @@ const MudarasaView = ({
                     Tap to finish early
                   </button>
                   {transcript && (
-                    <div style={{
-                      maxWidth: '90vw',
-                      padding: '0.6rem 1rem',
-                      borderRadius: 'var(--radius-md)',
-                      background: 'rgba(16,185,129,0.15)',
-                      border: '1px solid rgba(16,185,129,0.4)',
-                      color: '#fff',
-                      fontSize: '0.75rem',
-                      fontWeight: '600',
-                      textAlign: 'center',
-                      lineHeight: 1.5,
-                      wordBreak: 'break-word',
-                      backdropFilter: 'blur(8px)',
-                    }}>
+                    <div
+                      ref={transcriptRef}
+                      style={{
+                        maxWidth: '90vw',
+                        maxHeight: '3.5rem',
+                        overflowY: 'auto',
+                        padding: '0.6rem 1rem',
+                        borderRadius: 'var(--radius-md)',
+                        background: 'rgba(16,185,129,0.15)',
+                        border: '1px solid rgba(16,185,129,0.4)',
+                        color: 'var(--text-primary)',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        textAlign: 'center',
+                        lineHeight: 1.5,
+                        wordBreak: 'break-word',
+                        backdropFilter: 'blur(8px)',
+                      }}
+                    >
                       Hearing: {transcript}
                     </div>
                   )}
