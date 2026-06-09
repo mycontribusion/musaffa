@@ -127,18 +127,18 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish) => {
     recognition.maxAlternatives = 1;
 
     recognition.onresult = (event) => {
-      let finalTranscript = '';
-      let interimTranscript = '';
-      for (let i = 0; i < event.results.length; i++) {
+      let interim = '';
+      let final = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
         const chunk = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          finalTranscript += chunk + ' ';
+          final += chunk + ' ';
         } else {
-          interimTranscript += chunk;
+          interim += chunk;
         }
       }
-      const combined = (finalTranscript + interimTranscript).trim();
-      transcriptRef.current = combined;
+      if (final) transcriptRef.current += final;
+      const combined = (transcriptRef.current + interim).trim();
       setTranscript(combined);
 
       // Dispatch to worker for live word overlay — non-blocking
