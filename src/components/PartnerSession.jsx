@@ -7,22 +7,25 @@ import { useRecitationCheck } from '../hooks/useRecitationCheck';
 import { removeTashkeel } from '../utils/quranUtils';
 
 /**
- * Build expected text for the current chunk by concatenating ayah texts,
- * stripping Basmala from the start of Surahs (same logic as MudarasaView display).
+ * Build expected text for the current chunk by concatenating ayah texts.
+ * Uses quranSimple (plain text) for error-detection comparison when available,
+ * ensuring the exact same surah|ayah is used for comparison as shown on screen.
+ * Falls back to quranAr text if quranSimple is not loaded.
  */
-const buildExpectedText = (chunk) => {
+const buildExpectedText = (chunk, quranSimple) => {
   if (!chunk || chunk.length === 0) return '';
   return chunk.map(ayah => {
-    let text = ayah.text || '';
-    if (ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9) {
-      const clean = text.replace(/\uFEFF/g, '');
-      const bismillahEnd = 'ٱلرَّحِيمِ';
-      const idx = clean.indexOf(bismillahEnd);
-      if (idx !== -1 && idx < 50) {
-        text = clean.substring(idx + bismillahEnd.length).trim();
+    // Use quranSimple plain text for error detection if available
+    // This ensures Surah A Verse 1 of original text matches Surah A Verse 1 in plain text
+    if (quranSimple) {
+      const key = `${ayah.surahNumber}|${ayah.numberInSurah}`;
+      const simpleText = quranSimple[key];
+      if (simpleText) {
+        return removeTashkeel(simpleText);
       }
     }
-    return removeTashkeel(text);
+    // Fallback to quranAr text
+    return removeTashkeel(ayah.text || '');
   }).join(' ');
 };
 
@@ -62,6 +65,7 @@ const PartnerSession = ({
   setAudioError,
   audioDownloadControls,
   enableErrorDetection,
+  quranSimple,
 }) => {
   // Auto-scroll: fire whenever the active ayah changes (only set during app playback)
   useEffect(() => {
@@ -83,7 +87,7 @@ const PartnerSession = ({
 
   // Build expected text for the current chunk
   const currentChunk = chunks[currentChunkIndex] || null;
-  const expectedText = currentChunk ? buildExpectedText(currentChunk) : '';
+  const expectedText = currentChunk ? buildExpectedText(currentChunk, quranSimple) : '';
 
   // Declare handleFinishedTurn BEFORE useRecitationCheck so it can be passed as onAutoFinish.
   // We use a ref to avoid stale closure issues with the initial callback registration.
@@ -165,7 +169,7 @@ const PartnerSession = ({
           chunkIndex: currentChunkIndex,
           accuracy: recitationResults.accuracy,
           breakdown: recitationResults.breakdown,
-          expectedText: buildExpectedText(chunks[currentChunkIndex]),
+          expectedText: buildExpectedText(chunks[currentChunkIndex], quranSimple),
           transcript: transcript,
         };
         localStorage.setItem('quran_recitation_history', JSON.stringify([newRecord, ...history].slice(0, 100)));
@@ -173,7 +177,7 @@ const PartnerSession = ({
         console.error('Failed to save recitation history:', e);
       }
     }
-  }, [recitationResults, currentChunkIndex, chunks, logStumble, transcript]);
+  }, [recitationResults, currentChunkIndex, chunks, logStumble, transcript, quranSimple]);
 
   // Dispatcher
   if (subView === 'config') return (

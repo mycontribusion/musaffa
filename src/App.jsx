@@ -62,7 +62,7 @@ const App = () => {
     if (pv) setPartnerSubView(pv);
   };
 
-  const { surahs, quranAr, quranEn, mutashabihatData, waqarData, loading, error } = useQuranData(syncStateWithURL);
+  const { surahs, quranAr, quranEn, mutashabihatData, waqarData, quranSimple, loading, error } = useQuranData(syncStateWithURL);
    const { chunks, currentChunkIndex, currentAyahNumber, mudarasaTurn, isPaused, audioError, setAudioError, startMusaffa, handleNextTurnManual, pauseMusaffa, resumeMusaffa, stopMusaffa } = useMusaffa(quranAr, musaffaParams, setPartnerSubView, reciter);
   const { dynamicMutashabihat, setDynamicMutashabihat, currentQuizIndex, setCurrentQuizIndex, quizScore, setQuizScore, generateDynamicQuiz, handleQuizAnswer } = useQuiz(mutashabihatData, quranAr, surahs, selectedSurah);
   const audioDownloadControls = useAudioDownload(quranAr, reciter);
@@ -263,44 +263,45 @@ const App = () => {
             {view === 'list' && <SurahList surahs={surahs} recentSurahs={recentSurahs} handleSelectSurah={handleSelectSurah} setView={setView} audioDownloadControls={audioDownloadControls} />}
             {view === 'detail' && selectedSurah && <SurahDetail selectedSurah={selectedSurah} surahs={surahs} handleSelectSurah={handleSelectSurah} quranAr={quranAr} quranEn={quranEn} setView={setView} openMusaffaConfig={(s) => { handleSelectSurah(s); setPartnerSubView('config'); setView('partner'); }} startQuiz={startQuiz} waqarData={waqarData} lastRead={lastRead} setLastRead={setLastRead} reciter={reciter} audioDownloadControls={audioDownloadControls} />}
              {view === 'partner' && (
-               <PartnerSession
-                 key="partner-view"
-                 subView={partnerSubView}
-                 setSubView={setPartnerSubView}
-                 params={musaffaParams}
-                 setParams={setMusaffaParams}
-                 surahs={surahs}
-                 startMusaffa={startMusaffa}
-                 startQuiz={startQuiz}
-                 chunks={chunks}
-                 currentChunkIndex={currentChunkIndex}
-                 currentAyahNumber={currentAyahNumber}
-                 turn={mudarasaTurn}
-                 handleNextTurn={handleNextTurnManual}
-                 logStumble={logStumble}
-                 setView={setView}
-                 questions={dynamicMutashabihat}
-                 quizScore={quizScore}
-                 handleQuizAnswer={(a) => handleQuizAnswer(a, () => setPartnerSubView('quiz-result'))}
-                 currentQuizIndex={currentQuizIndex}
-                 reciter={reciter}
-                 setReciter={setReciter}
-                 activeQuizType={activeQuizType}
-                 handleMusaffaParamChange={handleMusaffaParamChange}
-                 savedMusaffaSession={savedMusaffaSession}
-                 saveMusaffaSession={saveMusaffaSession}
-                 clearMusaffaSession={clearMusaffaSession}
-                 resumeMusaffaSession={resumeMusaffaSession}
-                 pauseMusaffa={pauseMusaffa}
-                 resumeMusaffa={resumeMusaffa}
-                 stopMusaffa={stopMusaffa}
-                 isPaused={isPaused}
-                 audioError={audioError}
-                 setAudioError={setAudioError}
-                 audioDownloadControls={audioDownloadControls}
+                <PartnerSession
+                  key="partner-view"
+                  subView={partnerSubView}
+                  setSubView={setPartnerSubView}
+                  params={musaffaParams}
+                  setParams={setMusaffaParams}
+                  surahs={surahs}
+                  startMusaffa={startMusaffa}
+                  startQuiz={startQuiz}
+                  chunks={chunks}
+                  currentChunkIndex={currentChunkIndex}
+                  currentAyahNumber={currentAyahNumber}
+                  turn={mudarasaTurn}
+                  handleNextTurn={handleNextTurnManual}
+                  logStumble={logStumble}
+                  setView={setView}
+                  questions={dynamicMutashabihat}
+                  quizScore={quizScore}
+                  handleQuizAnswer={(a) => handleQuizAnswer(a, () => setPartnerSubView('quiz-result'))}
+                  currentQuizIndex={currentQuizIndex}
+                  reciter={reciter}
+                  setReciter={setReciter}
+                  activeQuizType={activeQuizType}
+                  handleMusaffaParamChange={handleMusaffaParamChange}
+                  savedMusaffaSession={savedMusaffaSession}
+                  saveMusaffaSession={saveMusaffaSession}
+                  clearMusaffaSession={clearMusaffaSession}
+                  resumeMusaffaSession={resumeMusaffaSession}
+                  pauseMusaffa={pauseMusaffa}
+                  resumeMusaffa={resumeMusaffa}
+                  stopMusaffa={stopMusaffa}
+                  isPaused={isPaused}
+                  audioError={audioError}
+                  setAudioError={setAudioError}
+                  audioDownloadControls={audioDownloadControls}
                   enableErrorDetection={musaffaParams.errorDetection}
-               />
-             )}
+                  quranSimple={quranSimple}
+                />
+              )}
             {view === 'mutashabihat-session' && selectedSurah && waqarData && waqarData[selectedSurah.number] && (
               <MutashabihatSession
                 key={`waqar-${selectedSurah.number}`}
