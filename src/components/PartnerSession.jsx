@@ -4,7 +4,7 @@ import MudarasaView from './MudarasaView';
 import QuizEngine from './QuizEngine';
 import { useMic } from '../hooks/useMic';
 import { useRecitationCheck } from '../hooks/useRecitationCheck';
-import { normalizeArabic } from '../utils/quranUtils';
+import { removeTashkeel } from '../utils/quranUtils';
 
 /**
  * Build expected text for the current chunk by concatenating ayah texts,
@@ -22,7 +22,7 @@ const buildExpectedText = (chunk) => {
         text = clean.substring(idx + bismillahEnd.length).trim();
       }
     }
-    return normalizeArabic(text);
+    return removeTashkeel(text);
   }).join(' ');
 };
 
