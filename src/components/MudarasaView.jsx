@@ -28,6 +28,7 @@ const MudarasaView = ({
   transcript,
   onFinishedTurn,
   onClearResults,
+  quranSimple,        // plain text for error detection comparison
 }) => {
   // Show feedback card when results are ready and it's (still) the user's turn
   const showFeedback = mudarasaTurn === 'user' && !!recitationResults?.results;
@@ -174,7 +175,17 @@ const MudarasaView = ({
       <div style={{ flex: 1, padding: '1rem 0 6rem 0' }}>
         <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '3rem' }}>
           {chunks[currentChunkIndex].map((ayah) => {
+            // Use quranSimple plain text for error detection when available
+            // This ensures Surah A Verse 1 of original text matches Surah A Verse 1 in plain text
             let displayText = ayah.text;
+            if (enableErrorDetection && quranSimple) {
+              const key = `${ayah.surahNumber}|${ayah.numberInSurah}`;
+              const simpleText = quranSimple[key];
+              if (simpleText) {
+                displayText = simpleText;
+              }
+            }
+            
             if (ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9) {
               const cleanText = displayText.replace(/\uFEFF/g, '');
               const bismillahEnd = "ٱلرَّحِيمِ";
@@ -219,15 +230,16 @@ const MudarasaView = ({
                   }}
                 >
                   {showLiveOverlay ? (
-                    <LiveWordOverlay
-                      results={liveResults.results}
-                      numberInSurah={ayah.numberInSurah}
-                    />
-                  ) : (
-                    <p className="arabic-text" style={{ fontSize: '2.2rem', color: ayah.number === currentAyahNumber ? 'var(--accent-gold)' : 'var(--text-primary)' }}>
-                      {displayText} <span style={{ fontSize: '1.2rem', color: 'var(--accent-gold)', opacity: 0.5, marginRight: '0.5rem' }}>﴿{ayah.numberInSurah}﴾</span>
-                    </p>
-                  )}
+                      <LiveTextOverlay
+                        plainText={displayText}
+                        results={liveResults.results}
+                        numberInSurah={ayah.numberInSurah}
+                      />
+                    ) : (
+                     <p className="arabic-text" style={{ fontSize: '2.2rem', color: ayah.number === currentAyahNumber ? 'var(--accent-gold)' : 'var(--text-primary)' }}>
+                       {displayText} <span style={{ fontSize: '1.2rem', color: 'var(--accent-gold)', opacity: 0.5, marginRight: '0.5rem' }}>﴿{ayah.numberInSurah}﴾</span>
+                     </p>
+                   )}
                 </motion.div>
               </div>
             );
@@ -333,14 +345,39 @@ const MudarasaView = ({
 
 // ── Live word overlay ─────────────────────────────────────────────────────────
 const WORD_COLORS = {
-  correct:      { color: '#10b981', glow: 'rgba(16,185,129,0.3)' },   // emerald
-  substitution: { color: '#f59e0b', glow: 'rgba(245,158,11,0.25)' },  // amber
-  omission:     { color: '#ef4444', glow: 'rgba(239,68,68,0.2)' },    // red
-  pending:      { color: 'rgba(255,255,255,0.25)', glow: 'none' },     // dim — not yet reached
+  correct:      { color: 'rgba(16,185,129,0.9)', bg: 'rgba(16,185,129,0.15)' },   // emerald
+  substitution: { color: 'rgba(245,158,11,0.95)', bg: 'rgba(245,158,11,0.2)' },  // amber
+  omission:     { color: 'rgba(239,68,68,0.95)', bg: 'rgba(239,68,68,0.15)' },    // red
+  pending:      { color: 'rgba(255,255,255,0.3)', bg: 'transparent' },     // dim — not yet reached
 };
 
-const LiveWordOverlay = ({ results }) => {
-  if (!results || results.length === 0) return null;
+/**
+ * LiveTextOverlay – shows the plain text with a live comparison overlay.
+ * The plain text is displayed as the base, and a semi-transparent overlay
+ * highlights words based on their recitation status (correct, substitution, omission).
+ * 
+ * The overlay uses the same word positions as the plain text, applying
+ * background colors and text shadows to indicate recitation status.
+ */
+const LiveTextOverlay = ({ plainText, results, numberInSurah }) => {
+  if (!plainText) return null;
+  
+  // Split plain text into words - these are the words to display
+  const plainWords = plainText.split(/\s+/).filter(Boolean);
+  
+  // The results array has the same number of words as plainWords (minus insertions)
+  // We need to map each result to its corresponding plain text word
+  // Build a mapping: for each result, find the matching plain text word
+  const getWordStatus = (idx) => {
+    if (!results || idx >= results.length) return 'pending';
+    return results[idx]?.status || 'pending';
+  };
+  
+  const getSpokenWord = (idx) => {
+    if (!results || idx >= results.length) return null;
+    return results[idx]?.spokenWord || null;
+  };
+  
   return (
     <p
       className="arabic-text"
@@ -350,31 +387,37 @@ const LiveWordOverlay = ({ results }) => {
         direction: 'rtl',
         textAlign: 'right',
         wordSpacing: '0.15rem',
+        margin: 0,
       }}
     >
-      {results.map((item, idx) => {
-        const cfg = WORD_COLORS[item.status] || WORD_COLORS.pending;
+      {plainWords.map((word, idx) => {
+        const status = getWordStatus(idx);
+        const cfg = WORD_COLORS[status] || WORD_COLORS.pending;
         return (
-          <motion.span
+          <span
             key={idx}
-            initial={{ opacity: 0.4 }}
-            animate={{ opacity: 1, color: cfg.color }}
-            transition={{ duration: 0.25 }}
-            title={item.status === 'substitution' && item.spokenWord ? `You said: ${item.spokenWord}` : undefined}
             style={{
               display: 'inline-block',
               marginLeft: '0.3rem',
               color: cfg.color,
-              textShadow: item.status !== 'pending' ? `0 0 12px ${cfg.glow}` : 'none',
-              textDecoration: item.status === 'omission' ? 'underline wavy #ef4444' : 'none',
-              transition: 'color 0.3s, text-shadow 0.3s',
-              fontWeight: item.status === 'correct' ? '400' : '700',
+              background: cfg.bg,
+              borderRadius: '4px',
+              fontWeight: status === 'correct' ? '400' : '700',
+              textDecoration: status === 'omission' ? 'underline wavy #ef4444' : 'none',
+              textShadow: status !== 'pending' ? `0 0 8px ${cfg.color}` : 'none',
+              transition: 'all 0.2s',
             }}
+            title={status === 'substitution' && getSpokenWord(idx) ? `You said: ${getSpokenWord(idx)}` : undefined}
           >
-            {item.word}
-          </motion.span>
+            {word}
+          </span>
         );
       })}
+      {numberInSurah && (
+        <span style={{ fontSize: '1.2rem', color: 'var(--accent-gold)', opacity: 0.5, marginRight: '0.5rem' }}>
+          ﴿{numberInSurah}﴾
+        </span>
+      )}
     </p>
   );
 };
