@@ -31,8 +31,8 @@ const Header = ({ theme, setTheme, view, setView, setPartnerSubView, isInMusaffa
           style={{ paddingLeft: '0.25rem', paddingRight: '0.25rem' }}
         >
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => { setView('list'); }}>
-            <img src="/pwa-192x192.png" alt="MusaffaPro Icon" style={{ width: '28px', height: '28px', borderRadius: '6px' }} />
-            <h1 style={{ fontSize: 'clamp(1rem, 4vw, 1.0rem)', fontWeight: '800', letterSpacing: '-0.02em', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+            <img src="/pwa-192x192.png" alt="MusaffaPro Icon" style={{ width: '15px', height: '15px', borderRadius: '6px' }} />
+            <h1 style={{ fontSize: 'clamp(0.8rem, 4vw, 0.8rem)', fontWeight: '800', letterSpacing: '-0.02em', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
               MusaffaPro
             </h1>
           </div>

@@ -256,16 +256,6 @@ const PartnerConfig = ({
                   }} />
               </div>
             </button>
-            {params.errorDetection && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-                style={{
-                  marginTop: '0.5rem', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-md)',
-                  background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)',
-                  fontSize: '0.65rem', color: 'var(--text-secondary)', lineHeight: 1.6
-                }}>
-                🎙 Microphone will be used to capture your recitation. A word-by-word accuracy card will appear after each of your turns.
-              </motion.div>
-            )}
           </div>
         )}
 

@@ -1,40 +1,46 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useEffect, useState } from 'react';
 
 /**
- * RedBlinkOverlay – flashes a semi‑transparent red overlay when `active` is true.
- * It appears for a brief moment (0.3 s) then fades out, providing a noticeable
- * error cue without blocking interaction. The component is lightweight and can
- * be dropped anywhere in the component tree.
+ * RecitationStatusOverlay – provides continuous hands-free visual feedback.
+ *
+ * mode:
+ *   'error'   → continuous red pulse — stays until all errors are resolved
+ *   'correct' → gentle green pulse — the recitation is on track
+ *   null      → invisible
  */
-const RedBlinkOverlay = ({ active }) => {
-  const [show, setShow] = useState(false);
-
-  // Trigger the flash whenever `active` flips to true.
-  useEffect(() => {
-    if (active) {
-      setShow(true);
-    }
-  }, [active]);
-
-  // After the entry animation finishes, hide it so it can be re‑triggered.
-  const handleAnimationComplete = () => {
-    setShow(false);
-  };
+const RecitationStatusOverlay = ({ mode }) => {
+  const isError = mode === 'error';
+  const isCorrect = mode === 'correct';
 
   return (
     <AnimatePresence>
-      {show && (
+      {isError && (
         <motion.div
+          key="error-overlay"
           initial={{ opacity: 0 }}
-          animate={{ opacity: 0.4 }}
+          animate={{ opacity: [0.15, 0.45, 0.15] }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          onAnimationComplete={handleAnimationComplete}
+          transition={{ duration: 0.8, repeat: Infinity, ease: 'easeInOut' }}
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(255, 0, 0, 0.4)',
+            background: 'rgba(239, 68, 68, 1)',
+            pointerEvents: 'none',
+            zIndex: 300,
+          }}
+        />
+      )}
+      {isCorrect && (
+        <motion.div
+          key="correct-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0.04, 0.12, 0.04] }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(16, 185, 129, 1)',
             pointerEvents: 'none',
             zIndex: 300,
           }}
@@ -44,4 +50,4 @@ const RedBlinkOverlay = ({ active }) => {
   );
 };
 
-export default RedBlinkOverlay;
+export default RecitationStatusOverlay;

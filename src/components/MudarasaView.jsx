@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import RedBlinkOverlay from './RedBlinkOverlay';
+import RecitationStatusOverlay from './RedBlinkOverlay';
 import { ChevronLeft, Mic, WifiOff, RefreshCw, FastForward, BrainCircuit } from 'lucide-react';
 
 const MudarasaView = ({
@@ -29,37 +29,45 @@ const MudarasaView = ({
   quranSimple,        // plain text for error detection comparison
 }) => {
 
-  // Live error flash logic: flash red on screen when error count increases
-  const prevErrorCount = useRef(0);
-  const [errorFlash, setErrorFlash] = useState(0);
+  // Derive overlay mode from live results for hands-free feedback
+  let overlayMode = null;
+  if (enableErrorDetection && isSttListening && liveResults?.results?.length > 0) {
+    const hasError = liveResults.results.some(
+      r => r.status === 'omission' || r.status === 'substitution'
+    );
+    const hasProgress = liveResults.results.some(r => r.status === 'correct');
+    if (hasError) {
+      overlayMode = 'error';
+    } else if (hasProgress) {
+      overlayMode = 'correct';
+    }
+  }
+
+  // Vibrate when a new error is detected
+  const prevErrorCountRef = useRef(0);
+  useEffect(() => {
+    if (!enableErrorDetection || !liveResults?.results) {
+      prevErrorCountRef.current = 0;
+      return;
+    }
+    const currentErrors = liveResults.results.filter(
+      r => r.status === 'omission' || r.status === 'substitution'
+    ).length;
+    if (currentErrors > prevErrorCountRef.current) {
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate(200);
+      }
+    }
+    prevErrorCountRef.current = currentErrors;
+  }, [liveResults, enableErrorDetection]);
 
   // Transcript autoscroll ref
   const transcriptRef = useRef(null);
-
   useEffect(() => {
     if (transcriptRef.current) {
       transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
     }
   }, [transcript]);
-
-  useEffect(() => {
-    if (mudarasaTurn !== 'user' || !enableErrorDetection || !liveResults?.results) {
-      prevErrorCount.current = 0;
-      return;
-    }
-    // Count errors directly from results array — breakdown.omissions lags behind
-    // because unresolved words only become 'omission' when the next match is found.
-    const currentErrors = liveResults.results.filter(
-      r => r.status === 'omission' || r.status === 'substitution'
-    ).length;
-    if (currentErrors > prevErrorCount.current) {
-      setErrorFlash(prev => prev + 1);
-      if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        navigator.vibrate(200);
-      }
-    }
-    prevErrorCount.current = currentErrors;
-  }, [liveResults, mudarasaTurn, enableErrorDetection]);
 
   // Auto-scroll logic for live tracking
   const activeAyahIdRef = useRef(null);
@@ -82,7 +90,7 @@ const MudarasaView = ({
 
   return (
     <>
-      {errorFlash > 0 && <RedBlinkOverlay active={errorFlash} />}
+      <RecitationStatusOverlay mode={overlayMode} />
       {showInternetBanner && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, padding: '0.5rem 1rem',

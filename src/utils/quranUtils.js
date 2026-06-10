@@ -235,7 +235,7 @@ export const compareRecitation = (expectedText, spokenText) => {
     // but corrects themselves (exact) shortly after, we want to match the correction.
     let bestMatch = -1;
     let firstFuzzyMatch = -1;
-    const lookahead = Math.min(30, spkWords.length - spkIdx);
+    const lookahead = Math.min(6, spkWords.length - spkIdx);
     
     for (let i = 0; i < lookahead; i++) {
       const candidateIdx = spkIdx + i;
@@ -289,6 +289,24 @@ export const compareRecitation = (expectedText, spokenText) => {
   // Any remaining unresolved words are just unread (pending)
   for (const idx of unresolvedIndices) {
     results[idx].status = 'pending';
+  }
+
+  // ── Strict sequential blocking ───────────────────────────────────────────
+  // No word can be 'correct' if there's an unresolved error before it.
+  let firstErrorIdx = -1;
+  for (let i = 0; i < results.length; i++) {
+    if (results[i].status === 'omission' || results[i].status === 'substitution') {
+      firstErrorIdx = i;
+      break;
+    }
+  }
+  if (firstErrorIdx !== -1) {
+    for (let i = firstErrorIdx + 1; i < results.length; i++) {
+      if (results[i].status === 'correct') {
+        results[i] = { ...results[i], status: 'pending' };
+      }
+    }
+    correct = results.filter(r => r.status === 'correct').length;
   }
 
   // Remaining spoken words are insertions
