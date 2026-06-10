@@ -235,7 +235,7 @@ export const compareRecitation = (expectedText, spokenText) => {
     // but corrects themselves (exact) shortly after, we want to match the correction.
     let bestMatch = -1;
     let firstFuzzyMatch = -1;
-    const lookahead = Math.min(6, spkWords.length - spkIdx);
+    const lookahead = Math.min(30, spkWords.length - spkIdx);
     
     for (let i = 0; i < lookahead; i++) {
       const candidateIdx = spkIdx + i;
