@@ -30,16 +30,14 @@ const MudarasaView = ({
 }) => {
 
   // Derive overlay mode from live results for hands-free feedback
+  // Only show overlay during user's recitation turn, not when app is playing
   let overlayMode = null;
-  if (enableErrorDetection && isSttListening && liveResults?.results?.length > 0) {
+  if (enableErrorDetection && mudarasaTurn === 'user' && isSttListening && liveResults?.results?.length > 0) {
     const hasError = liveResults.results.some(
       r => r.status === 'omission' || r.status === 'substitution'
     );
-    const hasProgress = liveResults.results.some(r => r.status === 'correct');
     if (hasError) {
       overlayMode = 'error';
-    } else if (hasProgress) {
-      overlayMode = 'correct';
     }
   }
 

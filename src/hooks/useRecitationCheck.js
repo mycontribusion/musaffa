@@ -258,6 +258,8 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish) => {
       }
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       setIsListening(false);
+      // Clear live results when turn switches away from user (prevents lingering state)
+      setLiveResults(null);
     }
   }, [isActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
