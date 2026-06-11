@@ -125,75 +125,100 @@ const compareRecitation = (expectedText, spokenText) => {
     };
   }
 
-  // Sequential matching: enforce positional order to prevent earlier words
-  // from being "stolen" by later similar words as the transcript grows.
-  const results = [];
-  const insertions = [];
-  let spkIdx = 0;
-  let correct = 0, omissions = 0, substitutions = 0;
-  let unresolvedIndices = [];
+  // ── Dynamic Programming (Wagner-Fischer) Alignment ───────────────────────
+  // We use DP to find the global optimal alignment, preventing "stolen words"
+  // where a greedy lookahead might skip 20 correct words just to match a single dropped "wa".
+  
+  const expLen = expWords.length;
+  const spkLen = spkWords.length;
+  
+  const dp = Array(expLen + 1).fill(null).map(() => Array(spkLen + 1).fill(0));
+  const ptr = Array(expLen + 1).fill(null).map(() => Array(spkLen + 1).fill(0)); 
+  // ptr: 1 = match/sub, 2 = insertion (skip spk), 3 = omission (skip exp)
 
-  for (let expIdx = 0; expIdx < expWords.length; expIdx++) {
-    const expWord = expWords[expIdx];
+  for (let i = 0; i <= expLen; i++) {
+    dp[i][0] = i; // omissions
+    ptr[i][0] = 3;
+  }
+  for (let j = 0; j <= spkLen; j++) {
+    dp[0][j] = j; // insertions
+    ptr[0][j] = 2;
+  }
 
-    // Look for a match in the next few spoken words (limited lookahead)
-    // We prioritize an EXACT match over a fuzzy match. If a user stumbles (fuzzy)
-    // but corrects themselves (exact) shortly after, we want to match the correction.
-    let bestMatch = -1;
-    let firstFuzzyMatch = -1;
-    const lookahead = Math.min(50, spkWords.length - spkIdx);
-    
-    for (let i = 0; i < lookahead; i++) {
-      const candidateIdx = spkIdx + i;
-      const spkWord = spkWords[candidateIdx];
+  for (let i = 1; i <= expLen; i++) {
+    for (let j = 1; j <= spkLen; j++) {
+      const eW = expWords[i - 1];
+      const sW = spkWords[j - 1];
       
-      if (expWord === spkWord) {
-        bestMatch = candidateIdx;
-        break; // Exact match found, stop looking
-      } else if (firstFuzzyMatch === -1 && fuzzyMatch(expWord, spkWord)) {
-        firstFuzzyMatch = candidateIdx; // Remember the first fuzzy match
-      }
-    }
-    
-    if (bestMatch === -1 && firstFuzzyMatch !== -1) {
-      bestMatch = firstFuzzyMatch; // Fallback to fuzzy match if no exact match
-    }
-
-    if (bestMatch !== -1) {
-      // A match was found! This means any previously unresolved words were definitively skipped.
-      for (const idx of unresolvedIndices) {
-        results[idx].status = 'omission';
-        omissions++;
-      }
-      unresolvedIndices = [];
-
-      // Mark any skipped spoken words as insertions
-      for (let i = spkIdx; i < bestMatch; i++) {
-        insertions.push({ word: spkWords[i], status: 'insertion' });
+      let matchCost = 2; // high cost for faking a match
+      let isMatch = false;
+      if (eW === sW) {
+        matchCost = 0;
+        isMatch = true;
+      } else if (fuzzyMatch(eW, sW)) {
+        matchCost = 0.5;
+        isMatch = true;
       }
 
-      const spkWord = spkWords[bestMatch];
-      const isExact = expWord === spkWord;
-      results.push({
-        word: expWord,
-        status: isExact ? 'correct' : 'substitution',
-        spokenWord: spkWord,
-      });
-      if (isExact) correct++;
-      else substitutions++;
+      const costSub = dp[i - 1][j - 1] + matchCost;
+      const costInsert = dp[i][j - 1] + 1;
+      const costOmit = dp[i - 1][j] + 1;
 
-      spkIdx = bestMatch + 1;
-    } else {
-      // No match found YET. We mark it as unresolved.
-      // If a later word matches, these will become omissions.
-      // If the end of the text is reached, these will become pending.
-      results.push({ word: expWord, status: 'unresolved', spokenWord: null });
-      unresolvedIndices.push(results.length - 1);
+      // Only allow substitution if it's an actual match or fuzzy match
+      if (isMatch && costSub <= costInsert && costSub <= costOmit) {
+        dp[i][j] = costSub;
+        ptr[i][j] = 1;
+      } else if (costInsert <= costOmit) {
+        dp[i][j] = costInsert;
+        ptr[i][j] = 2;
+      } else {
+        dp[i][j] = costOmit;
+        ptr[i][j] = 3;
+      }
     }
   }
 
-  // Any remaining unresolved words are just unread (pending)
-  for (const idx of unresolvedIndices) {
+  const alignment = [];
+  let i = expLen;
+  let j = spkLen;
+  
+  while (i > 0 || j > 0) {
+    const op = ptr[i][j];
+    if (op === 1) {
+      alignment.unshift({ expIdx: i - 1, spkIdx: j - 1, type: 'match' });
+      i--;
+      j--;
+    } else if (op === 2) {
+      alignment.unshift({ expIdx: null, spkIdx: j - 1, type: 'insertion' });
+      j--;
+    } else {
+      alignment.unshift({ expIdx: i - 1, spkIdx: null, type: 'omission' });
+      i--;
+    }
+  }
+
+  const results = Array(expLen).fill(null).map((_, idx) => ({ word: expWords[idx], status: 'omission', spokenWord: null }));
+  const insertions = [];
+  let lastMatchedExpIdx = -1;
+
+  for (const item of alignment) {
+    if (item.type === 'match') {
+      const eIdx = item.expIdx;
+      const sIdx = item.spkIdx;
+      const isExact = expWords[eIdx] === spkWords[sIdx];
+      results[eIdx] = {
+        word: expWords[eIdx],
+        status: isExact ? 'correct' : 'substitution',
+        spokenWord: spkWords[sIdx]
+      };
+      if (eIdx > lastMatchedExpIdx) lastMatchedExpIdx = eIdx;
+    } else if (item.type === 'insertion') {
+      insertions.push({ word: spkWords[item.spkIdx], status: 'insertion' });
+    }
+  }
+
+  // Any expected words AFTER the last successful match are considered "pending" (not yet spoken)
+  for (let idx = lastMatchedExpIdx + 1; idx < expLen; idx++) {
     results[idx].status = 'pending';
   }
 
@@ -203,30 +228,36 @@ const compareRecitation = (expectedText, spokenText) => {
   const preBlockAccuracy = Math.round((preBlockCorrect / expWords.length) * 100);
   const smartAnchorHit = results.length > 0 && results[results.length - 1].status === 'correct';
 
+  // Re-calculate basic metrics since they were removed from the DP loop
+  let correct = 0;
+  let substitutions = 0;
+  let omissions = 0;
+  
+  for (const r of results) {
+    if (r.status === 'correct') correct++;
+    else if (r.status === 'substitution') substitutions++;
+    else if (r.status === 'omission') omissions++;
+  }
+
   // ── Strict sequential blocking ───────────────────────────────────────────
   // No word can be 'correct' if there's an unresolved error before it.
   // Any 'correct' word appearing after the first error is reset to 'pending'
   // so the user must fix errors in order before the system advances.
   let firstErrorIdx = -1;
-  for (let i = 0; i < results.length; i++) {
-    if (results[i].status === 'omission' || results[i].status === 'substitution') {
-      firstErrorIdx = i;
+  for (let idx = 0; idx < results.length; idx++) {
+    if (results[idx].status === 'omission' || results[idx].status === 'substitution') {
+      firstErrorIdx = idx;
       break;
     }
   }
   if (firstErrorIdx !== -1) {
-    for (let i = firstErrorIdx + 1; i < results.length; i++) {
-      if (results[i].status === 'correct') {
-        results[i] = { ...results[i], status: 'pending' };
+    for (let idx = firstErrorIdx + 1; idx < results.length; idx++) {
+      if (results[idx].status === 'correct' || results[idx].status === 'substitution') {
+        results[idx] = { ...results[idx], status: 'pending' };
       }
     }
     // Recount correct words after blocking
     correct = results.filter(r => r.status === 'correct').length;
-  }
-
-  // Remaining spoken words are insertions
-  for (let i = spkIdx; i < spkWords.length; i++) {
-    insertions.push({ word: spkWords[i], status: 'insertion' });
   }
 
   const accuracy = Math.round((correct / expWords.length) * 100);
