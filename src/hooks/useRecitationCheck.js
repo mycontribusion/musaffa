@@ -224,6 +224,7 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish) => {
       clearTimeout(liveDebounceRef.current);
       liveDebounceRef.current = null;
     }
+    pendingIdRef.current++; // Discard any pending worker messages
     recognitionRef.current._shouldRestart = false;
     try { recognitionRef.current.stop(); } catch (_) {}
     setIsListening(false);
@@ -241,6 +242,7 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish) => {
 
   // ── Clear for next turn ────────────────────────────────────────────────────
   const clearResults = useCallback(() => {
+    pendingIdRef.current++; // Discard any pending worker messages
     setResults(null);
     setLiveResults(null);
     setTranscript('');

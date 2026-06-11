@@ -201,11 +201,9 @@ const compareRecitation = (expectedText, spokenText) => {
   // No word can be 'correct' if there's an unresolved error before it.
   // Any 'correct' word appearing after the first error is reset to 'pending'
   // so the user must fix errors in order before the system advances.
-  // Also, if there's a pending word (unspoken), words after it are blocked
-  // because the user cannot advance past unspoken words.
   let firstErrorIdx = -1;
   for (let i = 0; i < results.length; i++) {
-    if (results[i].status !== 'correct') {
+    if (results[i].status === 'omission' || results[i].status === 'substitution') {
       firstErrorIdx = i;
       break;
     }

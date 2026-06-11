@@ -309,11 +309,9 @@ const MudarasaView = ({
             <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
 
               {enableErrorDetection && isSttListening ? (
-                // ── Auto-detect mode: animated listening pill ──
+                // ── Auto-detect mode: static listening pill (no green animation) ──
                 <>
-                  <motion.div
-                    animate={{ scale: [1, 1.04, 1], boxShadow: ['0 0 0px rgba(16,185,129,0)', '0 0 18px rgba(16,185,129,0.5)', '0 0 0px rgba(16,185,129,0)'] }}
-                    transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                  <div
                     style={{
                       display: 'flex', alignItems: 'center', gap: '0.75rem',
                       padding: '1rem 2rem', borderRadius: '999px',
@@ -325,7 +323,7 @@ const MudarasaView = ({
                     <Mic size={16} />
                     <span style={{ fontWeight: '800', fontSize: '0.8rem', letterSpacing: '0.05em' }}>Listening…</span>
                     <span style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: '600' }}>Stops when you finish reading</span>
-                  </motion.div>
+                  </div>
                   <button
                     onClick={onFinishedTurn}
                     style={{ background: 'none', border: 'none', color: 'var(--text-muted)', opacity: 0.5, fontWeight: '700', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer' }}
@@ -409,6 +407,12 @@ const LiveTextOverlay = ({ plainText, results, numberInSurah, wordOffset = 0 }) 
   // Split plain text into words - these are the words to display
   const plainWords = plainText.split(/\s+/).filter(Boolean);
   
+  // Find the global index of the first unresolved error in the entire chunk
+  let globalFirstErrorIdx = -1;
+  if (results) {
+    globalFirstErrorIdx = results.findIndex(r => r.status === 'omission' || r.status === 'substitution');
+  }
+  
   // The results array has the same number of words as plainWords (minus insertions)
   // We need to map each result to its corresponding plain text word
   // Build a mapping: for each result, find the matching plain text word
@@ -437,8 +441,13 @@ const LiveTextOverlay = ({ plainText, results, numberInSurah, wordOffset = 0 }) 
       }}
     >
       {plainWords.map((word, idx) => {
+        const globalIdx = idx + wordOffset;
         const status = getWordStatus(idx);
         const cfg = WORD_COLORS[status] || WORD_COLORS.pending;
+        
+        // Hide words completely if they appear after the first unresolved error
+        const isHidden = globalFirstErrorIdx !== -1 && globalIdx > globalFirstErrorIdx;
+        
         return (
           <span
             key={idx}
@@ -452,6 +461,8 @@ const LiveTextOverlay = ({ plainText, results, numberInSurah, wordOffset = 0 }) 
               textDecoration: status === 'omission' ? 'underline wavy #ef4444' : 'none',
               textShadow: status !== 'pending' ? `0 0 8px ${cfg.color}` : 'none',
               transition: 'all 0.2s',
+              opacity: isHidden ? 0 : 1,
+              pointerEvents: isHidden ? 'none' : 'auto',
             }}
             title={status === 'substitution' && getSpokenWord(idx) ? `You said: ${getSpokenWord(idx)}` : undefined}
           >
@@ -460,7 +471,13 @@ const LiveTextOverlay = ({ plainText, results, numberInSurah, wordOffset = 0 }) 
         );
       })}
       {numberInSurah && (
-        <span style={{ fontSize: '1.2rem', color: 'var(--accent-gold)', opacity: 0.5, marginRight: '0.5rem' }}>
+        <span style={{ 
+          fontSize: '1.2rem', 
+          color: 'var(--accent-gold)', 
+          opacity: (globalFirstErrorIdx !== -1 && (wordOffset + plainWords.length - 1) > globalFirstErrorIdx) ? 0 : 0.5, 
+          marginRight: '0.5rem',
+          transition: 'opacity 0.2s'
+        }}>
           ﴿{numberInSurah}﴾
         </span>
       )}
