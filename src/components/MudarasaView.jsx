@@ -324,12 +324,17 @@ const MudarasaView = ({
                     <span style={{ fontWeight: '800', fontSize: '0.8rem', letterSpacing: '0.05em' }}>Listening…</span>
                     <span style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: '600' }}>Stops when you finish reading</span>
                   </div>
-                  <button
-                    onClick={onFinishedTurn}
-                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', opacity: 0.5, fontWeight: '700', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer' }}
-                  >
-                    Tap to finish early
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
+                    <button
+                      onClick={onFinishedTurn}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', opacity: 0.5, fontWeight: '700', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer' }}
+                    >
+                      Tap to finish early
+                    </button>
+                    {liveResults?.preBlockAccuracy !== undefined && (
+                      <span style={{ color: 'var(--accent-gold)', opacity: 0.8, fontWeight: '800', fontSize: '0.65rem' }}>• {liveResults.preBlockAccuracy}%</span>
+                    )}
+                  </div>
                   {transcript && (
                     <div
                       ref={transcriptRef}
