@@ -260,7 +260,7 @@ const App = () => {
       <div className="app-container">
         <main className="pb-24">
           <AnimatePresence mode="wait">
-            {view === 'list' && <SurahList surahs={surahs} recentSurahs={recentSurahs} handleSelectSurah={handleSelectSurah} setView={setView} audioDownloadControls={audioDownloadControls} />}
+            {view === 'list' && <SurahList surahs={surahs} recentSurahs={recentSurahs} handleSelectSurah={handleSelectSurah} setView={setView} audioDownloadControls={audioDownloadControls} savedMusaffaSession={savedMusaffaSession} resumeMusaffaSession={resumeMusaffaSession} clearMusaffaSession={clearMusaffaSession} />}
             {view === 'detail' && selectedSurah && <SurahDetail selectedSurah={selectedSurah} surahs={surahs} handleSelectSurah={handleSelectSurah} quranAr={quranAr} quranEn={quranEn} setView={setView} openMusaffaConfig={(s) => { handleSelectSurah(s); setPartnerSubView('config'); setView('partner'); }} startQuiz={startQuiz} waqarData={waqarData} lastRead={lastRead} setLastRead={setLastRead} reciter={reciter} audioDownloadControls={audioDownloadControls} />}
              {view === 'partner' && (
                 <PartnerSession

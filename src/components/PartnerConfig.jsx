@@ -268,19 +268,19 @@ const PartnerConfig = ({
                 <div style={{ padding: '0 0.5rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                     <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-secondary)' }}>Accuracy Threshold</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--accent-gold)' }}>{params.errorThreshold ?? 100}%</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--accent-gold)' }}>{params.errorThreshold ?? 55}%</span>
                   </div>
                   <input
                     type="range"
                     min="50"
                     max="100"
                     step="5"
-                    value={params.errorThreshold ?? 100}
+                    value={params.errorThreshold ?? 55}
                     onChange={(e) => onChange('errorThreshold', parseInt(e.target.value))}
                     style={{ width: '100%', accentColor: '#6366f1' }}
                   />
                   <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.5rem', lineHeight: '1.4' }}>
-                    Auto-advances when you hit the <strong style={{color: '#818cf8'}}>last word anchor</strong> AND your overall accuracy is at least {params.errorThreshold ?? 100}%.
+                    Auto-advances when you hit the <strong style={{color: '#818cf8'}}>last word anchor</strong> AND your overall accuracy is at least {params.errorThreshold ?? 55}%.
                   </p>
                 </div>
               </motion.div>

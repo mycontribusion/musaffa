@@ -108,7 +108,7 @@ const PartnerSession = ({
     sttActive,
     expectedText,
     useCallback(() => { handleFinishedTurnRef.current?.(); }, []),
-    params.errorThreshold ?? 100
+    params.errorThreshold ?? 55
   );
 
   const autoAdvanceTimerRef = useRef(null);
@@ -258,7 +258,7 @@ const PartnerSession = ({
       transcript={transcript}
       onFinishedTurn={handleFinishedTurn}
       quranSimple={quranSimple}
-      targetAccuracy={params.errorThreshold ?? 100}
+      targetAccuracy={params.errorThreshold ?? 55}
     />
   );
 
