@@ -108,6 +108,7 @@ const PartnerSession = ({
     sttActive,
     expectedText,
     useCallback(() => { handleFinishedTurnRef.current?.(); }, []),
+    params.errorThreshold ?? 100
   );
 
   const autoAdvanceTimerRef = useRef(null);

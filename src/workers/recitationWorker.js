@@ -197,6 +197,12 @@ const compareRecitation = (expectedText, spokenText) => {
     results[idx].status = 'pending';
   }
 
+  // ── Smart Anchor & Threshold metrics BEFORE blocking ───────────────────
+  const preBlockCorrect = results.filter(r => r.status === 'correct').length;
+  const preBlockHasPending = results.some(r => r.status === 'pending');
+  const preBlockAccuracy = Math.round((preBlockCorrect / expWords.length) * 100);
+  const smartAnchorHit = results.length > 0 && results[results.length - 1].status === 'correct';
+
   // ── Strict sequential blocking ───────────────────────────────────────────
   // No word can be 'correct' if there's an unresolved error before it.
   // Any 'correct' word appearing after the first error is reset to 'pending'
@@ -230,6 +236,9 @@ const compareRecitation = (expectedText, spokenText) => {
     insertions,
     accuracy,
     breakdown: { correct, omissions, substitutions, insertions: insertions.length },
+    smartAnchorHit,
+    preBlockHasPending,
+    preBlockAccuracy
   };
 };
 

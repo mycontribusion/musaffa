@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Layers, FileText, LayoutGrid, Mic, MicOff, Settings2, AlertCircle, Download, CheckCircle, Loader, BrainCircuit } from 'lucide-react';
 import { RECITERS } from '../utils/quranUtils';
 
@@ -256,6 +256,36 @@ const PartnerConfig = ({
                   }} />
               </div>
             </button>
+          {/* Accuracy Threshold Slider (Visible only when Error Detection is ON) */}
+          <AnimatePresence>
+            {params.errorDetection && (
+              <motion.div
+                initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                animate={{ opacity: 1, height: 'auto', marginTop: '1rem' }}
+                exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                style={{ overflow: 'hidden' }}
+              >
+                <div style={{ padding: '0 0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-secondary)' }}>Accuracy Threshold</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--accent-gold)' }}>{params.errorThreshold ?? 100}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="50"
+                    max="100"
+                    step="5"
+                    value={params.errorThreshold ?? 100}
+                    onChange={(e) => onChange('errorThreshold', parseInt(e.target.value))}
+                    style={{ width: '100%', accentColor: '#6366f1' }}
+                  />
+                  <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.5rem', lineHeight: '1.4' }}>
+                    Auto-advances when you hit the <strong style={{color: '#818cf8'}}>last word anchor</strong> AND your overall accuracy is at least {params.errorThreshold ?? 100}%.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
           </div>
         )}
 

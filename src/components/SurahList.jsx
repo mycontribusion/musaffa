@@ -1,13 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Search, ChevronRight, Download, CheckCircle, Loader } from 'lucide-react';
+import { Search, Download, CheckCircle, Loader } from 'lucide-react';
 
 const SurahList = ({
   surahs,
   recentSurahs,
   handleSelectSurah,
   setView,
-  audioDownloadControls
+  audioDownloadControls,
 }) => {
   const [searchQuery, setSearchQuery] = React.useState('');
 
@@ -20,10 +20,10 @@ const SurahList = ({
     );
   }
 
-  const filteredSurahs = surahs.filter((s) =>
-    s.englishName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.name.includes(searchQuery)
-  );
+  const filteredSurahs = surahs.filter((s) => {
+    const matchesSearch = s.englishName.toLowerCase().includes(searchQuery.toLowerCase()) || s.name.includes(searchQuery);
+    return matchesSearch;
+  });
 
   return (
     <motion.div
@@ -33,8 +33,9 @@ const SurahList = ({
       style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', paddingBottom: '3rem', paddingTop: '1.5rem' }}
     >
       {/* Search Section */}
-      <div className="search-input-wrapper" style={{ maxWidth: '600px', margin: '0 auto' }}>
-        <Search className="search-icon" size={18} strokeWidth={2} />
+      <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+        <div className="search-input-wrapper" style={{ width: '100%' }}>
+          <Search className="search-icon" size={18} strokeWidth={2} />
         <input
           type="text"
           placeholder="Search Surah..."
@@ -42,6 +43,7 @@ const SurahList = ({
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
+        </div>
       </div>
 
       {/* Recent Reads */}
@@ -84,7 +86,10 @@ const SurahList = ({
               layout
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              onClick={() => { handleSelectSurah(surah); setView('detail'); }}
+              onClick={() => {
+                handleSelectSurah(surah);
+                setView('detail');
+              }}
               className="glass-card"
               style={{ padding: '1.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
             >

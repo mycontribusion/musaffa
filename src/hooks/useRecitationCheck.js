@@ -56,7 +56,7 @@ const LIVE_DEBOUNCE = 350;
  *   stopAndCheck()  — stop recognition and run final comparison
  *   clearResults()  — reset for next turn
  */
-export const useRecitationCheck = (isActive, expectedText, onAutoFinish) => {
+export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accuracyThreshold = 100) => {
   const SR = getSpeechRecognition();
   const isSupported = !!SR;
 
@@ -72,12 +72,14 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish) => {
   const liveDebounceRef = useRef(null);    // debounce for worker dispatches
   const hasSpeechRef = useRef(false);      // guard: only auto-finish after speech started
   const onAutoFinishRef = useRef(onAutoFinish);
+  const thresholdRef = useRef(accuracyThreshold);
   const workerRef = useRef(null);          // Web Worker instance
   const pendingIdRef = useRef(0);          // track latest request to discard stale results
 
   // Keep refs in sync without restarting recognition
   useEffect(() => { expectedRef.current = expectedText; }, [expectedText]);
   useEffect(() => { onAutoFinishRef.current = onAutoFinish; }, [onAutoFinish]);
+  useEffect(() => { thresholdRef.current = accuracyThreshold; }, [accuracyThreshold]);
 
   // ── Web Worker lifecycle ────────────────────────────────────────────────────
   useEffect(() => {
@@ -90,13 +92,12 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish) => {
       if (type === 'RESULT' && id === pendingIdRef.current) {
         setLiveResults(payload);
 
-        // Smart auto-finish: trigger immediately when ALL words are confirmed correct
-        // (no 'pending' remaining = the user has spoken every word in the chunk).
-        // This fires regardless of silence — the moment 100% is reached, we advance.
+        // Smart auto-finish: evaluate if the user has completed the turn.
+        // We require BOTH the accuracy to meet the threshold AND the last word to be spoken correctly.
         if (payload && payload.results && payload.results.length > 0) {
-          const allCorrect = payload.results.every(r => r.status === 'correct');
-          const hasPending = payload.results.some(r => r.status === 'pending');
-          if (allCorrect && !hasPending) {
+          const { smartAnchorHit, preBlockAccuracy } = payload;
+          
+          if (preBlockAccuracy >= thresholdRef.current && smartAnchorHit) {
             if (silenceTimerRef.current) {
               clearTimeout(silenceTimerRef.current);
               silenceTimerRef.current = null;
