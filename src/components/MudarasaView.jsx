@@ -27,6 +27,7 @@ const MudarasaView = ({
   onFinishedTurn,
   onClearResults,
   quranSimple,        // plain text for error detection comparison
+  targetAccuracy,     // threshold percentage
 }) => {
 
   // Derive overlay mode from live results for hands-free feedback
@@ -332,7 +333,7 @@ const MudarasaView = ({
                       Tap to finish early
                     </button>
                     {liveResults?.preBlockAccuracy !== undefined && (
-                      <span style={{ color: 'var(--accent-gold)', opacity: 0.8, fontWeight: '800', fontSize: '0.65rem' }}>• {liveResults.preBlockAccuracy}%</span>
+                      <span style={{ color: 'var(--accent-gold)', opacity: 0.8, fontWeight: '800', fontSize: '0.65rem' }}>• {liveResults.preBlockAccuracy}% / {targetAccuracy}%</span>
                     )}
                   </div>
                   {transcript && (

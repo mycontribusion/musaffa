@@ -258,6 +258,7 @@ const PartnerSession = ({
       transcript={transcript}
       onFinishedTurn={handleFinishedTurn}
       quranSimple={quranSimple}
+      targetAccuracy={params.errorThreshold ?? 100}
     />
   );
 
