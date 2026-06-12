@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Layers, FileText, LayoutGrid, Mic, MicOff, Settings2, AlertCircle, Download, CheckCircle, Loader, BrainCircuit } from 'lucide-react';
+import { Layers, FileText, LayoutGrid, Mic, MicOff, Settings2, AlertCircle, Download, CheckCircle, Loader, BrainCircuit, Hand } from 'lucide-react';
 import { RECITERS } from '../utils/quranUtils';
 
 const PartnerConfig = ({
@@ -142,133 +142,129 @@ const PartnerConfig = ({
           </div>
         </div>
 
-        {/* ── Session Mode ── */}
+        {/* ── Unified Session Mode ── */}
         <div>
           <div style={sectionLabel}>Session Mode</div>
-          <button onClick={() => onChange('autoNext', !params.autoNext)}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '0.9rem 1rem', borderRadius: 'var(--radius-lg)', cursor: 'pointer',
-              background: params.autoNext ? 'var(--accent-gold-soft)' : 'var(--bg-accent)',
-              border: '1px solid', borderColor: params.autoNext ? 'var(--accent-gold)' : 'var(--glass-border)',
-            }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <div style={{
-                width: '32px', height: '32px', borderRadius: '8px', display: 'flex',
-                alignItems: 'center', justifyContent: 'center',
-                background: params.autoNext ? 'var(--accent-gold)' : 'rgba(255,255,255,0.05)',
-                color: params.autoNext ? '#000' : 'var(--text-muted)'
-              }}>
-                {params.autoNext ? <Mic size={16} /> : <MicOff size={16} />}
-              </div>
-              <div style={{ textAlign: 'left' }}>
-                <p style={{ fontWeight: '800', fontSize: '0.8rem', color: params.autoNext ? 'var(--accent-gold)' : 'var(--text-primary)' }}>
-                  Hands-Free Mode
-                </p>
-                <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Auto-switch turns using microphone.</p>
-              </div>
-            </div>
-            <div style={{
-              width: '38px', height: '20px', borderRadius: '10px', flexShrink: 0,
-              background: params.autoNext ? 'var(--accent-gold)' : 'rgba(255,255,255,0.1)', position: 'relative'
-            }}>
-              <motion.div animate={{ x: params.autoNext ? 20 : 2 }}
-                style={{
-                  width: '16px', height: '16px', borderRadius: '50%', position: 'absolute', top: '2px',
-                  background: params.autoNext ? '#000' : 'var(--text-muted)'
-                }} />
-            </div>
-          </button>
-
-          {params.autoNext && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+          <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {/* 1. Manual Mode */}
+            <button onClick={() => { onChange('autoNext', false); onChange('errorDetection', false); }}
               style={{
-                marginTop: '0.5rem', background: 'var(--bg-accent)', padding: '1rem',
-                borderRadius: 'var(--radius-lg)', border: '1px solid var(--glass-border)',
-                display: 'flex', flexDirection: 'column', gap: '0.75rem'
-              }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Settings2 size={12} style={{ color: 'var(--accent-gold)' }} />
-                  <span style={{ fontSize: '0.65rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Mic Sensitivity</span>
-                </div>
-                <span style={{
-                  fontSize: '0.65rem', fontWeight: '700',
-                  color: currentVolume > params.micSensitivity ? 'var(--accent-emerald)' : 'var(--text-muted)'
-                }}>
-                  {currentVolume > params.micSensitivity ? '● SPEECH' : '○ SILENCE'}
-                </span>
-              </div>
-              <input type="range" min="5" max="40"
-                value={45 - params.micSensitivity}
-                onChange={e => onChange('micSensitivity', 45 - Number(e.target.value))}
-                style={{ width: '100%', accentColor: 'var(--accent-gold)', height: '4px' }} />
-              <div style={{ height: '6px', width: '100%', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden', position: 'relative' }}>
-                <motion.div style={{
-                  height: '100%', opacity: 0.6,
-                  background: currentVolume > params.micSensitivity ? 'var(--accent-emerald)' : 'var(--text-muted)'
-                }}
-                  animate={{ width: `${(currentVolume / 100) * 100}%` }} />
-                <div style={{
-                  position: 'absolute', top: 0, bottom: 0,
-                  left: `${(params.micSensitivity / 40) * 100}%`, width: '2px', background: 'var(--accent-gold)'
-                }} />
-              </div>
-            </motion.div>
-          )}
-        </div>
-
-        {/* ── Smart Error Detection ── */}
-        {sttSupported && (
-          <div>
-            <div style={sectionLabel}>Error Detection (Requires Internet)</div>
-            <button onClick={() => onChange('errorDetection', !params.errorDetection)}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                minWidth: '240px', flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: '0.6rem',
                 padding: '0.9rem 1rem', borderRadius: 'var(--radius-lg)', cursor: 'pointer',
-                background: params.errorDetection ? 'rgba(99,102,241,0.1)' : 'var(--bg-accent)',
-                border: '1px solid', borderColor: params.errorDetection ? 'rgba(99,102,241,0.5)' : 'var(--glass-border)',
+                background: (!params.autoNext && !params.errorDetection) ? 'var(--accent-gold-soft)' : 'var(--bg-accent)',
+                border: '1px solid', borderColor: (!params.autoNext && !params.errorDetection) ? 'var(--accent-gold)' : 'var(--glass-border)',
+                textAlign: 'left'
               }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <div style={{
-                  width: '32px', height: '32px', borderRadius: '8px', display: 'flex',
-                  alignItems: 'center', justifyContent: 'center',
-                  background: params.errorDetection ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.05)',
-                  color: params.errorDetection ? '#818cf8' : 'var(--text-muted)'
-                }}>
-                  <BrainCircuit size={16} />
-                </div>
-                <div style={{ textAlign: 'left' }}>
-                  <p style={{ fontWeight: '800', fontSize: '0.8rem', color: params.errorDetection ? '#818cf8' : 'var(--text-primary)' }}>
-                    Smart Error Detection
-                  </p>
-                  <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Listens and checks recitation accuracy after each turn.</p>
-                </div>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: (!params.autoNext && !params.errorDetection) ? 'var(--accent-gold)' : 'rgba(255,255,255,0.05)', color: (!params.autoNext && !params.errorDetection) ? '#000' : 'var(--text-muted)' }}>
+                <Hand size={16} />
               </div>
-              <div style={{
-                width: '38px', height: '20px', borderRadius: '10px', flexShrink: 0,
-                background: params.errorDetection ? '#6366f1' : 'rgba(255,255,255,0.1)', position: 'relative'
-              }}>
-                <motion.div animate={{ x: params.errorDetection ? 20 : 2 }}
-                  style={{
-                    width: '16px', height: '16px', borderRadius: '50%', position: 'absolute', top: '2px',
-                    background: params.errorDetection ? '#fff' : 'var(--text-muted)'
-                  }} />
+              <div style={{ flex: 1 }}>
+                <p style={{ fontWeight: '800', fontSize: '0.8rem', color: (!params.autoNext && !params.errorDetection) ? 'var(--accent-gold)' : 'var(--text-primary)' }}>Manual Tap</p>
+                <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Advance turns manually.</p>
+              </div>
+              <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid', borderColor: (!params.autoNext && !params.errorDetection) ? 'var(--accent-gold)' : 'var(--glass-border)', background: (!params.autoNext && !params.errorDetection) ? 'var(--accent-gold)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {(!params.autoNext && !params.errorDetection) && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#000' }} />}
               </div>
             </button>
-          {/* Accuracy Threshold Slider (Visible only when Error Detection is ON) */}
+
+            {/* 2. Hands-Free Mode */}
+            <button onClick={() => { onChange('autoNext', true); onChange('errorDetection', false); }}
+              style={{
+                minWidth: '240px', flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: '0.6rem',
+                padding: '0.9rem 1rem', borderRadius: 'var(--radius-lg)', cursor: 'pointer',
+                background: (params.autoNext && !params.errorDetection) ? 'var(--accent-gold-soft)' : 'var(--bg-accent)',
+                border: '1px solid', borderColor: (params.autoNext && !params.errorDetection) ? 'var(--accent-gold)' : 'var(--glass-border)',
+                textAlign: 'left'
+              }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: (params.autoNext && !params.errorDetection) ? 'var(--accent-gold)' : 'rgba(255,255,255,0.05)', color: (params.autoNext && !params.errorDetection) ? '#000' : 'var(--text-muted)' }}>
+                <Mic size={16} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontWeight: '800', fontSize: '0.8rem', color: (params.autoNext && !params.errorDetection) ? 'var(--accent-gold)' : 'var(--text-primary)' }}>Hands-Free</p>
+                <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Auto-advance using mic (Silence).</p>
+              </div>
+              <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid', borderColor: (params.autoNext && !params.errorDetection) ? 'var(--accent-gold)' : 'var(--glass-border)', background: (params.autoNext && !params.errorDetection) ? 'var(--accent-gold)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {(params.autoNext && !params.errorDetection) && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#000' }} />}
+              </div>
+            </button>
+
+            {/* 3. Smart Mode */}
+            {sttSupported && (
+              <button onClick={() => { onChange('autoNext', true); onChange('errorDetection', true); }}
+                style={{
+                  minWidth: '240px', flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: '0.6rem',
+                  padding: '0.9rem 1rem', borderRadius: 'var(--radius-lg)', cursor: 'pointer',
+                  background: (params.autoNext && params.errorDetection) ? 'rgba(99,102,241,0.1)' : 'var(--bg-accent)',
+                  border: '1px solid', borderColor: (params.autoNext && params.errorDetection) ? 'rgba(99,102,241,0.5)' : 'var(--glass-border)',
+                  textAlign: 'left'
+                }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: (params.autoNext && params.errorDetection) ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.05)', color: (params.autoNext && params.errorDetection) ? '#818cf8' : 'var(--text-muted)' }}>
+                  <BrainCircuit size={16} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: '800', fontSize: '0.8rem', color: (params.autoNext && params.errorDetection) ? '#818cf8' : 'var(--text-primary)' }}>Smart Detection</p>
+                  <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Auto-advance + check accuracy.</p>
+                </div>
+                <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid', borderColor: (params.autoNext && params.errorDetection) ? '#818cf8' : 'var(--glass-border)', background: (params.autoNext && params.errorDetection) ? '#818cf8' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {(params.autoNext && params.errorDetection) && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#000' }} />}
+                </div>
+              </button>
+            )}
+          </div>
+
           <AnimatePresence>
-            {params.errorDetection && (
-              <motion.div
-                initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                animate={{ opacity: 1, height: 'auto', marginTop: '1rem' }}
-                exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                style={{ overflow: 'hidden' }}
-              >
-                <div style={{ padding: '0 0.5rem' }}>
+            {/* Sub-settings: Mic Sensitivity for Hands-Free */}
+            {(params.autoNext && !params.errorDetection) && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                style={{ overflow: 'hidden' }}>
+                <div style={{
+                  marginTop: '0.75rem', background: 'var(--bg-accent)', padding: '1rem',
+                  borderRadius: 'var(--radius-lg)', border: '1px solid var(--glass-border)',
+                  display: 'flex', flexDirection: 'column', gap: '0.75rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Settings2 size={12} style={{ color: 'var(--accent-gold)' }} />
+                      <span style={{ fontSize: '0.65rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Mic Sensitivity</span>
+                    </div>
+                    <span style={{
+                      fontSize: '0.65rem', fontWeight: '700',
+                      color: currentVolume > params.micSensitivity ? 'var(--accent-emerald)' : 'var(--text-muted)'
+                    }}>
+                      {currentVolume > params.micSensitivity ? '● SPEECH' : '○ SILENCE'}
+                    </span>
+                  </div>
+                  <input type="range" min="5" max="40"
+                    value={45 - params.micSensitivity}
+                    onChange={e => onChange('micSensitivity', 45 - Number(e.target.value))}
+                    style={{ width: '100%', accentColor: 'var(--accent-gold)', height: '4px' }} />
+                  <div style={{ height: '6px', width: '100%', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden', position: 'relative' }}>
+                    <motion.div style={{
+                      height: '100%', opacity: 0.6,
+                      background: currentVolume > params.micSensitivity ? 'var(--accent-emerald)' : 'var(--text-muted)'
+                    }}
+                      animate={{ width: `${(currentVolume / 100) * 100}%` }} />
+                    <div style={{
+                      position: 'absolute', top: 0, bottom: 0,
+                      left: `${(params.micSensitivity / 40) * 100}%`, width: '2px', background: 'var(--accent-gold)'
+                    }} />
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Sub-settings: Threshold for Smart Detection */}
+            {(params.autoNext && params.errorDetection) && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                style={{ overflow: 'hidden' }}>
+                <div style={{
+                  marginTop: '0.75rem', background: 'var(--bg-accent)', padding: '1rem',
+                  borderRadius: 'var(--radius-lg)', border: '1px solid rgba(99,102,241,0.2)',
+                  display: 'flex', flexDirection: 'column', gap: '0.75rem'
+                }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                     <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-secondary)' }}>Accuracy Threshold</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--accent-gold)' }}>{params.errorThreshold ?? 55}%</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#818cf8' }}>{params.errorThreshold ?? 55}%</span>
                   </div>
                   <input
                     type="range"
@@ -286,8 +282,7 @@ const PartnerConfig = ({
               </motion.div>
             )}
           </AnimatePresence>
-          </div>
-        )}
+        </div>
 
         <div>
           <div style={sectionLabel}>Who Starts?</div>

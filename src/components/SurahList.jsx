@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Search, Download, CheckCircle, Loader } from 'lucide-react';
+import { Search, Download, CheckCircle, Loader, BrainCircuit, Zap } from 'lucide-react';
 
 const SurahList = ({
   surahs,
@@ -10,7 +10,10 @@ const SurahList = ({
   audioDownloadControls,
   savedMusaffaSession,
   resumeMusaffaSession,
-  clearMusaffaSession
+  clearMusaffaSession,
+  startQuiz,
+  setPartnerSubView,
+  setMusaffaParams
 }) => {
   const [searchQuery, setSearchQuery] = React.useState('');
 
@@ -35,17 +38,51 @@ const SurahList = ({
       exit={{ opacity: 0 }}
       style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', paddingBottom: '3rem', paddingTop: '1.5rem' }}
     >
+      {/* Quick Actions */}
+      <div style={{ maxWidth: '600px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', width: '100%', padding: '0 0.5rem' }}>
+        <button
+          onClick={() => { 
+            setMusaffaParams(prev => ({ ...prev, autoNext: true, errorDetection: true }));
+            setView('partner'); 
+            setPartnerSubView('config'); 
+          }}
+          className="glass-card hover-scale"
+          style={{ padding: '1.25rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', border: '1px solid var(--glass-border)' }}
+        >
+          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(212,175,55,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <BrainCircuit size={20} color="var(--accent-gold)" />
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-primary)', display: 'block' }}>Smart Musaffa</span>
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>AI Recitation Partner</span>
+          </div>
+        </button>
+        <button
+          onClick={() => setView('mutashabihat-selection')}
+          className="glass-card hover-scale"
+          style={{ padding: '1.25rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', border: '1px solid var(--glass-border)' }}
+        >
+          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(212,175,55,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Zap size={20} color="var(--accent-gold)" />
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-primary)', display: 'block' }}>Mutashabih Quiz</span>
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Global Challenge</span>
+          </div>
+        </button>
+      </div>
+
       {/* Search Section */}
-      <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+      <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', padding: '0 0.5rem' }}>
         <div className="search-input-wrapper" style={{ width: '100%' }}>
           <Search className="search-icon" size={18} strokeWidth={2} />
-        <input
-          type="text"
-          placeholder="Search Surah..."
-          className="search-input"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
+          <input
+            type="text"
+            placeholder="Search Surah..."
+            className="search-input"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
       </div>
 

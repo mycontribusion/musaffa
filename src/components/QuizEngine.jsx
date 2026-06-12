@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { CheckCircle2, XCircle, RotateCcw, ArrowRight, Trophy, Target, Sparkles } from 'lucide-react';
 
 const QuizEngine = ({
@@ -21,6 +21,13 @@ const QuizEngine = ({
     continue: 'Continuations',
     'which-surah': 'Surah Identification'
   };
+
+  const [selectedOpt, setSelectedOpt] = useState(null);
+
+  // Reset selected option when question changes
+  useEffect(() => {
+    setSelectedOpt(null);
+  }, [currentQuizIndex]);
 
   // Scroll to top whenever a new question appears
   useEffect(() => {
@@ -116,8 +123,11 @@ const QuizEngine = ({
           {/* Options Grid */}
           <div style={{ display: 'grid', gap: '1.5rem' }}>
             {currentQuestion.options.map((opt, i) => {
-              const isSelected = quizFeedback !== null;
+              const isAnswered = quizFeedback !== null;
+              const isThisSelected = selectedOpt === opt;
               const isCorrect = opt.isCorrect;
+              const showCorrect = isAnswered && isCorrect;
+              const showWrong = isAnswered && isThisSelected && !isCorrect;
               
               return (
                 <motion.button 
@@ -125,16 +135,16 @@ const QuizEngine = ({
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.1 }}
-                  disabled={isSelected}
-                  onClick={() => handleQuizAnswer(opt)} 
+                  disabled={isAnswered}
+                  onClick={() => { setSelectedOpt(opt); handleQuizAnswer(opt); }}
                   style={{
                     position: 'relative',
                     width: '100%',
                     padding: 'clamp(2rem, 6vw, 3rem)',
                     borderRadius: '2.5rem',
-                    border: isSelected && isCorrect ? '1px solid #34d399' : isSelected && !isCorrect ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(255, 255, 255, 0.07)',
-                    background: isSelected && isCorrect ? 'rgba(62, 211, 153, 0.2)' : isSelected && !isCorrect ? 'rgba(239, 68, 68, 0.06)' : 'rgba(255, 255, 255, 0.03)',
-                    cursor: isSelected ? 'default' : 'pointer',
+                    border: showCorrect ? '1px solid #34d399' : showWrong ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid var(--glass-border)',
+                    background: showCorrect ? 'rgba(62, 211, 153, 0.15)' : showWrong ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-accent)',
+                    cursor: isAnswered ? 'default' : 'pointer',
                     textAlign: 'right',
                     display: 'flex',
                     flexDirection: 'column',
@@ -143,7 +153,7 @@ const QuizEngine = ({
                     gap: '2rem',
                     overflow: 'hidden',
                     transition: 'all 0.5s',
-                    opacity: isSelected && !isCorrect ? 0.4 : 1,
+                    opacity: isAnswered && !isCorrect && !isThisSelected ? 0.5 : 1,
                   }}
                 >
                   {/* Subtle Background Particle */}
@@ -151,30 +161,30 @@ const QuizEngine = ({
 
                   {/* Identification Label (Revealed on selection) */}
                   <AnimatePresence>
-                    {isSelected && (
+                    {isAnswered && (
                       <motion.div 
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        style={{ position: 'absolute', top: '1.5rem', left: '2rem', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.2em', background: isCorrect ? 'var(--accent-emerald)' : 'rgba(239, 68, 68, 0.2)', color: isCorrect ? '#0a0a0f' : 'rgba(239, 68, 68, 0.6)' }}
+                        style={{ position: 'absolute', top: '1.5rem', left: '2rem', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.2em', background: isCorrect ? 'var(--accent-emerald)' : 'rgba(239, 68, 68, 0.2)', color: isCorrect ? '#0a0a0f' : 'rgba(239, 68, 68, 0.7)' }}
                       >
                         Surah {opt.surahName}
                       </motion.div>
                     )}
                   </AnimatePresence>
 
-                  <p className="arabic-text" style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', lineHeight: 2, textAlign: 'center', color: isCorrect || !isSelected ? 'var(--text-primary)' : 'rgba(255, 255, 255, 0.35)' }}>
+                  <p className="arabic-text" style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', lineHeight: 2, textAlign: 'center', color: showWrong ? 'var(--text-muted)' : 'var(--text-primary)' }}>
                     {opt.text}
                   </p>
 
                   {/* Status Icon */}
                   <div style={{ position: 'absolute', right: '2rem', top: '50%', transform: 'translateY(-50%)' }}>
-                    {isSelected && isCorrect && (
+                    {isAnswered && isCorrect && (
                       <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} style={{ color: 'var(--accent-emerald)', filter: 'drop-shadow(0 0 10px rgba(52, 211, 153, 0.5))' }}>
                         <CheckCircle2 size={48} />
                       </motion.div>
                     )}
-                    {isSelected && !isCorrect && (
-                      <XCircle size={32} style={{ color: 'rgba(255, 255, 255, 0.2)' }} />
+                    {showWrong && (
+                      <XCircle size={32} style={{ color: 'rgba(239, 68, 68, 0.5)' }} />
                     )}
                   </div>
                 </motion.button>

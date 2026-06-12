@@ -33,9 +33,79 @@ export const useQuiz = (mutashabihatData, quranAr, surahs, selectedSurah) => {
     setReciprocalData(expanded);
   }, [mutashabihatData, quranAr, surahs]);
 
-  const generateDynamicQuiz = () => {
-    if (!selectedSurah || !quranAr || !reciprocalData) return [];
+  const generateDynamicQuiz = (type = 'surah', customSurahs = []) => {
+    if (!quranAr || !reciprocalData) return [];
+    if (type === 'surah' && !selectedSurah) return [];
+    
     const questions = [];
+
+    if (type === 'global') {
+      const allEntries = [];
+      Object.keys(reciprocalData).forEach(sk => {
+        const surahNum = parseInt(sk) + 1;
+        const surahName = surahs[surahNum - 1]?.englishName || "Unknown";
+        reciprocalData[sk].forEach(entry => allEntries.push({...entry, surahNumber: surahNum, surahName}));
+      });
+      const shuffled = allEntries.sort(() => 0.5 - Math.random()).slice(0, 10);
+      
+      shuffled.forEach((entry, idx) => {
+        const srcText = getAyahTextByGlobal(entry.src.ayah, quranAr);
+        const allVersesInTrap = [
+          { ayah: entry.src.ayah, info: getAyahByGlobal(entry.src.ayah, quranAr, surahs), text: srcText },
+          ...entry.muts.map(m => ({ ayah: m.ayah, info: getAyahByGlobal(m.ayah, quranAr, surahs), text: getAyahTextByGlobal(m.ayah, quranAr) }))
+        ];
+        
+        questions.push({
+          id: `global-waqar-${idx}`, type: 'identify',
+          question: `Which of these verses belongs to Surah ${entry.surahName}?`,
+          options: allVersesInTrap.map(v => ({ 
+            text: v.text, 
+            surahName: v.info?.surahName || "Other", 
+            isCorrect: JSON.stringify(v.ayah) === JSON.stringify(entry.src.ayah),
+            globalId: Array.isArray(v.ayah) ? v.ayah[0] : v.ayah
+          })).sort(() => 0.5 - Math.random()),
+          correctText: srcText,
+          explanation: `Global Challenge: Identifying subtle differences between similar verses.`
+        });
+      });
+      return questions;
+    }
+
+    if (type === 'custom') {
+      const customEntries = [];
+      Object.keys(reciprocalData).forEach(sk => {
+        const surahNum = parseInt(sk) + 1;
+        if (customSurahs.includes(surahNum)) {
+          const surahName = surahs[surahNum - 1]?.englishName || "Unknown";
+          reciprocalData[sk].forEach(entry => customEntries.push({...entry, surahNumber: surahNum, surahName}));
+        }
+      });
+      
+      const shuffled = customEntries.sort(() => 0.5 - Math.random()).slice(0, 15);
+      
+      shuffled.forEach((entry, idx) => {
+        const srcText = getAyahTextByGlobal(entry.src.ayah, quranAr);
+        const allVersesInTrap = [
+          { ayah: entry.src.ayah, info: getAyahByGlobal(entry.src.ayah, quranAr, surahs), text: srcText },
+          ...entry.muts.map(m => ({ ayah: m.ayah, info: getAyahByGlobal(m.ayah, quranAr, surahs), text: getAyahTextByGlobal(m.ayah, quranAr) }))
+        ];
+        
+        questions.push({
+          id: `custom-waqar-${idx}`, type: 'identify',
+          question: `Which of these verses belongs to Surah ${entry.surahName}?`,
+          options: allVersesInTrap.map(v => ({ 
+            text: v.text, 
+            surahName: v.info?.surahName || "Other", 
+            isCorrect: JSON.stringify(v.ayah) === JSON.stringify(entry.src.ayah),
+            globalId: Array.isArray(v.ayah) ? v.ayah[0] : v.ayah
+          })).sort(() => 0.5 - Math.random()),
+          correctText: srcText,
+          explanation: `Custom Challenge: Identifying subtle differences between similar verses.`
+        });
+      });
+      return questions;
+    }
+
     const surahKey = (selectedSurah.number - 1).toString();
     const surahEntries = reciprocalData[surahKey] || [];
     

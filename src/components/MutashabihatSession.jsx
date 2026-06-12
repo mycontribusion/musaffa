@@ -58,7 +58,8 @@ const OptionBtn = ({ opt, answered, selected, onClick }) => {
   );
 };
 
-const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose }) => {
+// multiSurahData: optional array of { surahNum, entries } for cross-surah sessions
+const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose, multiSurahData }) => {
   const [sessionKey, setSessionKey] = useState(0);
   const [idx, setIdx] = useState(0);
   const [answered, setAnswered] = useState(false);
@@ -67,10 +68,21 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose 
   const [done, setDone] = useState(false);
 
   const cards = useMemo(() => {
-    if (!quranAr || !surahs || !allSurahEntries?.length) return [];
+    if (!quranAr || !surahs) return [];
+    if (multiSurahData?.length) {
+      // Build cards per surah then shuffle all together
+      const all = [];
+      multiSurahData.forEach(({ surahNum, entries }) => {
+        if (entries?.length) {
+          all.push(...buildSessionCards(entries, surahNum, quranAr, surahs));
+        }
+      });
+      return all.sort(() => Math.random() - 0.5);
+    }
+    if (!allSurahEntries?.length) return [];
     return buildSessionCards(allSurahEntries, surah.number, quranAr, surahs);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allSurahEntries, surah.number, quranAr, surahs, sessionKey]);
+  }, [allSurahEntries, surah?.number, quranAr, surahs, sessionKey, multiSurahData]);
 
   const card = cards[idx];
   const total = cards.length;
@@ -95,7 +107,13 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose 
     setSelected(null); setScore(0); setDone(false);
   };
 
-  // ── Done screen ──────────────────────────────────────────────────────────
+  const displayTitle = multiSurahData
+    ? `${multiSurahData.length} Surahs · Mutashabihat`
+    : `${surah?.englishName} · Mutashabihat`;
+
+  // Done screen uses displayTitle for accuracy label
+  const accuracyLabel = multiSurahData ? `${multiSurahData.length} Surahs` : surah?.englishName;
+
   if (done) return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
       style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', padding: '2rem' }}>
@@ -112,7 +130,7 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose 
           {score >= Math.ceil(total * 0.8) ? 'Mastery Achieved' : 'Keep Revising'}
         </h2>
         <p style={{ color: 'var(--text-muted)', marginBottom: '2.5rem', lineHeight: 1.6 }}>
-          <strong style={{ color: 'var(--text-primary)' }}>{Math.round(score / total * 100)}%</strong> accuracy on {surah.englishName} Mutashabihat
+          <strong style={{ color: 'var(--text-primary)' }}>{Math.round(score / total * 100)}%</strong> accuracy on {accuracyLabel} Mutashabihat
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <button onClick={restart} style={{
@@ -129,7 +147,7 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose 
             color: 'var(--text-muted)', fontWeight: 800, fontSize: '0.7rem',
             textTransform: 'uppercase', letterSpacing: '0.15em', cursor: 'pointer',
           }}>
-            Back to Surah
+            {multiSurahData ? 'Back to Selection' : 'Back to Surah'}
           </button>
         </div>
         
@@ -151,9 +169,10 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose 
     </motion.div>
   );
 
+
   if (!card) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', flexDirection: 'column', gap: 16 }}>
-      <p style={{ color: 'var(--text-muted)' }}>No questions generated for {surah.englishName}.</p>
+      <p style={{ color: 'var(--text-muted)' }}>No questions generated for {displayTitle}.</p>
       <button onClick={onClose} style={{ color: 'var(--accent-gold)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>← Go Back</button>
     </div>
   );
@@ -180,7 +199,7 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose 
           </button>
           <div style={{ flex: 1 }}>
             <h1 style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
-              {surah.englishName} · Mutashabihat
+              {displayTitle}
             </h1>
             <p style={{ fontSize: '0.5rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em', color: 'var(--accent-gold)', opacity: 0.65, margin: 0 }}>
               {idx + 1} / {total}

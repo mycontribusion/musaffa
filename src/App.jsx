@@ -5,6 +5,7 @@ import SurahList from './components/SurahList';
 import SurahDetail from './components/SurahDetail';
 import PartnerSession from './components/PartnerSession';
 import MutashabihatSession from './components/MutashabihatSession';
+import MutashabihSelection from './components/MutashabihSelection';
 import { useQuranData } from './hooks/useQuranData';
 import { useMusaffa } from './hooks/useMusaffa';
 import { useQuiz } from './hooks/useQuiz';
@@ -17,6 +18,7 @@ const App = () => {
   const [partnerSubView, setPartnerSubView] = useState('config');
   const [activeQuizType, setActiveQuizType] = useState('all');
   const [musaffaParams, setMusaffaParams] = useState({ startSurah: 1, startAyah: 1, endSurah: 1, endAyah: 7, portion: 'page', whoStarts: 'app', autoNext: false, micSensitivity: 15, errorDetection: false });
+  const [multiSurahSession, setMultiSurahSession] = useState(null);
   const [reciter, setReciter] = useState(() => localStorage.getItem('quran_reciter') || 'ar.saoodshuraym');
   const [stumbles, setStumbles] = useState(() => JSON.parse(localStorage.getItem('quran_stumbles') || '[]'));
   const [recentSurahs, setRecentSurahs] = useState(() => JSON.parse(localStorage.getItem('quran_recent') || '[]'));
@@ -64,7 +66,7 @@ const App = () => {
 
   const { surahs, quranAr, quranEn, mutashabihatData, waqarData, quranSimple, loading, error } = useQuranData(syncStateWithURL);
    const { chunks, currentChunkIndex, currentAyahNumber, mudarasaTurn, isPaused, audioError, setAudioError, startMusaffa, handleNextTurnManual, pauseMusaffa, resumeMusaffa, stopMusaffa } = useMusaffa(quranAr, musaffaParams, setPartnerSubView, reciter);
-  const { dynamicMutashabihat, setDynamicMutashabihat, currentQuizIndex, setCurrentQuizIndex, quizScore, setQuizScore, generateDynamicQuiz, handleQuizAnswer } = useQuiz(mutashabihatData, quranAr, surahs, selectedSurah);
+  const { dynamicMutashabihat, setDynamicMutashabihat, currentQuizIndex, setCurrentQuizIndex, quizScore, setQuizScore, quizFeedback, setQuizFeedback, generateDynamicQuiz, handleQuizAnswer } = useQuiz(mutashabihatData, quranAr, surahs, selectedSurah);
   const audioDownloadControls = useAudioDownload(quranAr, reciter);
 
   useEffect(() => { document.documentElement.setAttribute('data-theme', theme); }, [theme]);
@@ -207,11 +209,12 @@ const App = () => {
        }
      }, [savedMusaffaSession, resumeMusaffaSession]);
 
-  const startQuiz = (type) => {
+  const startQuiz = (type, customSurahs = []) => {
     setActiveQuizType(type);
-    const q = generateDynamicQuiz(type);
+    setQuizFeedback(null);
+    const q = generateDynamicQuiz(type, customSurahs);
     if (q.length) { setDynamicMutashabihat(q); setCurrentQuizIndex(0); setQuizScore(0); setPartnerSubView('quiz'); setView('partner'); }
-    else alert(`No mutashabihat found for this Surah.`);
+    else alert(`No mutashabihat found for this selection.`);
   };
 
   const logStumble = (ayah) => {
@@ -260,7 +263,17 @@ const App = () => {
       <div className="app-container">
         <main className="pb-24">
           <AnimatePresence mode="wait">
-            {view === 'list' && <SurahList surahs={surahs} recentSurahs={recentSurahs} handleSelectSurah={handleSelectSurah} setView={setView} audioDownloadControls={audioDownloadControls} savedMusaffaSession={savedMusaffaSession} resumeMusaffaSession={resumeMusaffaSession} clearMusaffaSession={clearMusaffaSession} />}
+            {view === 'list' && <SurahList surahs={surahs} recentSurahs={recentSurahs} handleSelectSurah={handleSelectSurah} setView={setView} audioDownloadControls={audioDownloadControls} savedMusaffaSession={savedMusaffaSession} resumeMusaffaSession={resumeMusaffaSession} clearMusaffaSession={clearMusaffaSession} startQuiz={startQuiz} setPartnerSubView={setPartnerSubView} setMusaffaParams={setMusaffaParams} />}
+            {view === 'mutashabihat-selection' && <MutashabihSelection surahs={surahs} waqarData={waqarData} setView={setView} setMultiSurahSession={setMultiSurahSession} />}
+            {view === 'mutashabihat-multi-session' && multiSurahSession && (
+              <MutashabihatSession
+                key="multi-session"
+                multiSurahData={multiSurahSession}
+                quranAr={quranAr}
+                surahs={surahs}
+                onClose={() => setView('mutashabihat-selection')}
+              />
+            )}
             {view === 'detail' && selectedSurah && <SurahDetail selectedSurah={selectedSurah} surahs={surahs} handleSelectSurah={handleSelectSurah} quranAr={quranAr} quranEn={quranEn} setView={setView} openMusaffaConfig={(s) => { handleSelectSurah(s); setPartnerSubView('config'); setView('partner'); }} startQuiz={startQuiz} waqarData={waqarData} lastRead={lastRead} setLastRead={setLastRead} reciter={reciter} audioDownloadControls={audioDownloadControls} />}
              {view === 'partner' && (
                 <PartnerSession
@@ -281,6 +294,7 @@ const App = () => {
                   setView={setView}
                   questions={dynamicMutashabihat}
                   quizScore={quizScore}
+                  quizFeedback={quizFeedback}
                   handleQuizAnswer={(a) => handleQuizAnswer(a, () => setPartnerSubView('quiz-result'))}
                   currentQuizIndex={currentQuizIndex}
                   reciter={reciter}
