@@ -1,3 +1,4 @@
+import { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Layers, FileText, LayoutGrid, Mic, MicOff, Settings2, AlertCircle, Download, CheckCircle, Loader, BrainCircuit, Hand } from 'lucide-react';
 import { RECITERS } from '../utils/quranUtils';
@@ -13,6 +14,22 @@ const PartnerConfig = ({
   const isRangeValid = () =>
     params.startSurah < params.endSurah ||
     (params.startSurah === params.endSurah && params.startAyah <= params.endAyah);
+
+  const portionRef = useRef(null);
+  const reciterRef = useRef(null);
+  const modeRef = useRef(null);
+
+  useEffect(() => {
+    if (portionRef.current) portionRef.current.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, [params.portion]);
+
+  useEffect(() => {
+    if (reciterRef.current) reciterRef.current.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, [reciter]);
+
+  useEffect(() => {
+    if (modeRef.current) modeRef.current.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, [params.autoNext, params.errorDetection]);
 
   const PORTIONS = [
     { id: 'verse', label: 'Single Verse', icon: <FileText size={13} /> },
@@ -100,7 +117,7 @@ const PartnerConfig = ({
             scrollbarWidth: 'none', msOverflowStyle: 'none'
           }}>
             {PORTIONS.map(p => (
-              <button key={p.id} onClick={() => onChange('portion', p.id)}
+              <button key={p.id} ref={params.portion === p.id ? portionRef : null} onClick={() => onChange('portion', p.id)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0,
                   padding: '0.55rem 1rem', borderRadius: '999px', whiteSpace: 'nowrap',
@@ -124,7 +141,7 @@ const PartnerConfig = ({
             scrollbarWidth: 'none', msOverflowStyle: 'none'
           }}>
             {RECITERS.map(r => (
-              <button key={r.id} onClick={() => setReciter(r.id)}
+              <button key={r.id} ref={reciter === r.id ? reciterRef : null} onClick={() => setReciter(r.id)}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0,
                   padding: '0.55rem 0.9rem', borderRadius: 'var(--radius-md)', cursor: 'pointer',
@@ -147,7 +164,7 @@ const PartnerConfig = ({
           <div style={sectionLabel}>Session Mode</div>
           <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             {/* 1. Manual Mode */}
-            <button onClick={() => { onChange('autoNext', false); onChange('errorDetection', false); }}
+            <button ref={(!params.autoNext && !params.errorDetection) ? modeRef : null} onClick={() => { onChange('autoNext', false); onChange('errorDetection', false); }}
               style={{
                 minWidth: '240px', flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: '0.6rem',
                 padding: '0.9rem 1rem', borderRadius: 'var(--radius-lg)', cursor: 'pointer',
@@ -168,7 +185,7 @@ const PartnerConfig = ({
             </button>
 
             {/* 2. Hands-Free Mode */}
-            <button onClick={() => { onChange('autoNext', true); onChange('errorDetection', false); }}
+            <button ref={(params.autoNext && !params.errorDetection) ? modeRef : null} onClick={() => { onChange('autoNext', true); onChange('errorDetection', false); }}
               style={{
                 minWidth: '240px', flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: '0.6rem',
                 padding: '0.9rem 1rem', borderRadius: 'var(--radius-lg)', cursor: 'pointer',
@@ -188,9 +205,9 @@ const PartnerConfig = ({
               </div>
             </button>
 
-            {/* 3. Smart Mode */}
+            {/* 3. Smart Detection Mode */}
             {sttSupported && (
-              <button onClick={() => { onChange('autoNext', true); onChange('errorDetection', true); }}
+              <button ref={(params.autoNext && params.errorDetection) ? modeRef : null} onClick={() => { onChange('autoNext', true); onChange('errorDetection', true); }}
                 style={{
                   minWidth: '240px', flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: '0.6rem',
                   padding: '0.9rem 1rem', borderRadius: 'var(--radius-lg)', cursor: 'pointer',
