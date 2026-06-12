@@ -20,10 +20,10 @@ const OptionBtn = ({ opt, answered, selected, onClick }) => {
         borderRadius: '1.25rem',
         border: correct ? '1px solid #34d399'
           : wrong ? '1px solid rgba(239,68,68,0.4)'
-            : '1px solid rgba(255,255,255,0.07)',
+            : '1px solid var(--glass-border)',
         background: correct ? 'rgba(52,211,153,0.1)'
           : wrong ? 'rgba(239,68,68,0.06)'
-            : 'rgba(255,255,255,0.03)',
+            : 'var(--bg-accent)',
         cursor: answered ? 'default' : 'pointer',
         textAlign: 'right',
         position: 'relative',
@@ -41,8 +41,8 @@ const OptionBtn = ({ opt, answered, selected, onClick }) => {
       </span>
       <p className="arabic-text" style={{
         fontSize: 'clamp(1.3rem, 3.8vw, 1.9rem)',
-        lineHeight: 1.85, color: correct ? '#fff'
-          : wrong ? 'rgba(255,255,255,0.35)' : 'var(--text-primary)',
+        lineHeight: 1.85, color: correct ? 'var(--text-primary)'
+          : wrong ? 'var(--text-muted)' : 'var(--text-primary)',
         margin: 0,
       }}>
         {opt.text}
@@ -183,12 +183,12 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
                         <div key={j} style={{
                           display: 'flex', alignItems: 'center', gap: '0.5rem',
                           padding: '0.75rem', borderRadius: '0.5rem',
-                          background: isCorrect ? 'rgba(52,211,153,0.1)' : (isChosen && !isCorrect ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.02)'),
+                          background: isCorrect ? 'rgba(52,211,153,0.1)' : (isChosen && !isCorrect ? 'rgba(239,68,68,0.1)' : 'var(--bg-accent)'),
                           border: isCorrect ? '1px solid rgba(52,211,153,0.3)' : (isChosen && !isCorrect ? '1px solid rgba(239,68,68,0.3)' : '1px solid transparent')
                         }}>
                           {isCorrect ? <CheckCircle2 size={16} color="#34d399" /> : (isChosen && !isCorrect ? <XCircle size={16} color="#ef4444" /> : <div style={{width: 16}} />)}
                           <div style={{ flex: 1 }}>
-                            <p className="arabic-text" style={{ fontSize: '1.1rem', textAlign: 'right', margin: 0, color: isCorrect ? '#fff' : 'var(--text-secondary)' }}>
+                            <p className="arabic-text" style={{ fontSize: '1.1rem', textAlign: 'right', margin: 0, color: isCorrect ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                               {o.text}
                             </p>
                             <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', margin: 0, marginTop: '0.2rem', textAlign: 'left' }}>

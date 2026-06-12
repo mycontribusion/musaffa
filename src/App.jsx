@@ -54,6 +54,9 @@ const App = () => {
       } else if (parts[0] === 'partner' && parts[1]) {
         v = 'partner';
         pv = parts[1];
+      } else if (parts[0] === 'mutashabihat') {
+        if (parts[1] === 'custom') v = 'mutashabihat-selection';
+        else if (parts[1] === 'session') v = 'mutashabihat-multi-session';
       }
     } else if (!p.get('view')) {
       v = 'list';
@@ -90,6 +93,10 @@ const App = () => {
       newPath = selectedSurah ? `/surah/${selectedSurah.number}/partner/${partnerSubView}` : `/partner/${partnerSubView}`;
     } else if (view === 'mutashabihat-session' && selectedSurah) {
       newPath = `/surah/${selectedSurah.number}/mutashabihat`;
+    } else if (view === 'mutashabihat-selection') {
+      newPath = `/mutashabihat/custom`;
+    } else if (view === 'mutashabihat-multi-session') {
+      newPath = `/mutashabihat/session`;
     }
 
     const currentPath = window.location.pathname;
