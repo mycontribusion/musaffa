@@ -264,7 +264,7 @@ const App = () => {
         <main className="pb-24">
           <AnimatePresence mode="wait">
             {view === 'list' && <SurahList surahs={surahs} recentSurahs={recentSurahs} handleSelectSurah={handleSelectSurah} setView={setView} audioDownloadControls={audioDownloadControls} savedMusaffaSession={savedMusaffaSession} resumeMusaffaSession={resumeMusaffaSession} clearMusaffaSession={clearMusaffaSession} startQuiz={startQuiz} setPartnerSubView={setPartnerSubView} setMusaffaParams={setMusaffaParams} />}
-            {view === 'mutashabihat-selection' && <MutashabihSelection surahs={surahs} waqarData={waqarData} setView={setView} setMultiSurahSession={setMultiSurahSession} />}
+            {view === 'mutashabihat-selection' && <MutashabihSelection surahs={surahs} waqarData={waqarData} quranAr={quranAr} setView={setView} setMultiSurahSession={setMultiSurahSession} />}
             {view === 'mutashabihat-multi-session' && multiSurahSession && (
               <MutashabihatSession
                 key="multi-session"

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, CheckCircle2, XCircle, RotateCcw } from 'lucide-react';
+import { ChevronLeft, CheckCircle2, XCircle, RotateCcw, SquareSquare } from 'lucide-react';
 import { buildSessionCards } from '../utils/mutashabihatParser';
 
 const OptionBtn = ({ opt, answered, selected, onClick }) => {
@@ -66,6 +66,7 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
   const [selected, setSelected] = useState(null);
   const [score, setScore] = useState(0);
   const [done, setDone] = useState(false);
+  const [answersHistory, setAnswersHistory] = useState([]);
 
   const cards = useMemo(() => {
     if (!quranAr || !surahs) return [];
@@ -92,7 +93,11 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
     if (answered) return;
     setAnswered(true);
     setSelected(opt);
-    if (opt.isCorrect) setScore(s => s + 1);
+    const isCorrect = opt.isCorrect;
+    if (isCorrect) setScore(s => s + 1);
+    
+    setAnswersHistory(prev => [...prev, { card: cards[idx], selectedOpt: opt, isCorrect }]);
+
     setTimeout(() => {
       if (idx + 1 >= total) { setDone(true); return; }
       setIdx(i => i + 1);
@@ -105,6 +110,7 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
     setSessionKey(k => k + 1);
     setIdx(0); setAnswered(false);
     setSelected(null); setScore(0); setDone(false);
+    setAnswersHistory([]);
   };
 
   const displayTitle = multiSurahData
@@ -150,6 +156,54 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
             {multiSurahData ? 'Back to Selection' : 'Back to Surah'}
           </button>
         </div>
+
+        {/* History Breakdown */}
+        {answersHistory.length > 0 && (
+          <div style={{ marginTop: '3rem', textAlign: 'left' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '1.5rem', textAlign: 'center' }}>
+              Quiz Review
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {answersHistory.map((hist, i) => (
+                <div key={i} style={{
+                  background: 'var(--glass-bg)', border: '1px solid var(--glass-border)',
+                  borderRadius: '1rem', padding: '1.25rem'
+                }}>
+                  <p style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+                    Q{i + 1}: {hist.card.question}
+                  </p>
+                  <p className="arabic-text" style={{ fontSize: '1.2rem', textAlign: 'right', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                    {hist.card.contextVerse.text}
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {hist.card.options.map((o, j) => {
+                      const isChosen = hist.selectedOpt.surah === o.surah && hist.selectedOpt.ayah === o.ayah;
+                      const isCorrect = o.isCorrect;
+                      return (
+                        <div key={j} style={{
+                          display: 'flex', alignItems: 'center', gap: '0.5rem',
+                          padding: '0.75rem', borderRadius: '0.5rem',
+                          background: isCorrect ? 'rgba(52,211,153,0.1)' : (isChosen && !isCorrect ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.02)'),
+                          border: isCorrect ? '1px solid rgba(52,211,153,0.3)' : (isChosen && !isCorrect ? '1px solid rgba(239,68,68,0.3)' : '1px solid transparent')
+                        }}>
+                          {isCorrect ? <CheckCircle2 size={16} color="#34d399" /> : (isChosen && !isCorrect ? <XCircle size={16} color="#ef4444" /> : <div style={{width: 16}} />)}
+                          <div style={{ flex: 1 }}>
+                            <p className="arabic-text" style={{ fontSize: '1.1rem', textAlign: 'right', margin: 0, color: isCorrect ? '#fff' : 'var(--text-secondary)' }}>
+                              {o.text}
+                            </p>
+                            <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', margin: 0, marginTop: '0.2rem', textAlign: 'left' }}>
+                              {o.surahName} · {o.surah}:{o.ayah}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         
         {/* Attribution Footer */}
         <div style={{ marginTop: '2.5rem', opacity: 0.6 }}>
@@ -212,6 +266,14 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <RotateCcw size={14} />
+          </button>
+          <button onClick={() => setDone(true)} title="End Quiz Early" style={{
+            width: 36, height: 36, borderRadius: '10px',
+            border: '1px solid var(--glass-border)', background: 'var(--glass-bg)',
+            color: 'var(--text-muted)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <SquareSquare size={14} />
           </button>
           <div style={{
             padding: '4px 14px', borderRadius: '8px',

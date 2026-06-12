@@ -1,15 +1,26 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, Check, CheckSquare, Square, Zap } from 'lucide-react';
+import { buildSessionCards } from '../utils/mutashabihatParser';
 
-const MutashabihSelection = ({ surahs, waqarData, setView, setMultiSurahSession }) => {
+const MutashabihSelection = ({ surahs, waqarData, quranAr, setView, setMultiSurahSession }) => {
   const [selectedSurahs, setSelectedSurahs] = useState(new Set());
 
-  // Filter surahs that actually have Mutashabihat data
   const availableSurahs = useMemo(() => {
     if (!surahs || !waqarData) return [];
     return surahs.filter(s => waqarData[s.number] && waqarData[s.number].length > 0);
   }, [surahs, waqarData]);
+
+  // Precompute the true number of valid questions for each available surah
+  const questionCounts = useMemo(() => {
+    if (!quranAr || !surahs || availableSurahs.length === 0) return {};
+    const counts = {};
+    availableSurahs.forEach(s => {
+      const cards = buildSessionCards(waqarData[s.number], s.number, quranAr, surahs);
+      counts[s.number] = cards.length;
+    });
+    return counts;
+  }, [availableSurahs, waqarData, quranAr, surahs]);
 
   const handleToggle = (surahNum) => {
     const newSet = new Set(selectedSurahs);
@@ -41,6 +52,14 @@ const MutashabihSelection = ({ surahs, waqarData, setView, setMultiSurahSession 
   };
 
   const allSelected = availableSurahs.length > 0 && selectedSurahs.size === availableSurahs.length;
+  
+  const totalQuestionsSelected = useMemo(() => {
+    let total = 0;
+    selectedSurahs.forEach(num => {
+      if (questionCounts[num]) total += questionCounts[num];
+    });
+    return total;
+  }, [selectedSurahs, questionCounts]);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -112,7 +131,19 @@ const MutashabihSelection = ({ surahs, waqarData, setView, setMultiSurahSession 
                     </p>
                   </div>
                 </div>
-                {isSelected && <Check size={18} color="var(--accent-gold)" />}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{ 
+                    fontSize: '0.65rem', 
+                    fontWeight: 700, 
+                    color: isSelected ? 'var(--accent-gold)' : 'var(--text-muted)',
+                    background: isSelected ? 'rgba(212,175,55,0.1)' : 'var(--bg-primary)',
+                    padding: '0.2rem 0.5rem',
+                    borderRadius: '99px'
+                  }}>
+                    {questionCounts[s.number] || 0} Qs
+                  </span>
+                  {isSelected && <Check size={18} color="var(--accent-gold)" />}
+                </div>
               </button>
             );
           })}
@@ -143,6 +174,13 @@ const MutashabihSelection = ({ surahs, waqarData, setView, setMultiSurahSession 
             <Zap size={18} />
             Start Quiz ({selectedSurahs.size} Selected)
           </button>
+          {selectedSurahs.size > 1 && (
+            <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                Total: {totalQuestionsSelected} Questions
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

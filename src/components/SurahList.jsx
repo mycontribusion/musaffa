@@ -41,10 +41,10 @@ const SurahList = ({
       {/* Quick Actions */}
       <div style={{ maxWidth: '600px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', width: '100%', padding: '0 0.5rem' }}>
         <button
-          onClick={() => { 
+          onClick={() => {
             setMusaffaParams(prev => ({ ...prev, autoNext: true, errorDetection: true }));
-            setView('partner'); 
-            setPartnerSubView('config'); 
+            setView('partner');
+            setPartnerSubView('config');
           }}
           className="glass-card hover-scale"
           style={{ padding: '1.25rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', border: '1px solid var(--glass-border)' }}
@@ -95,7 +95,7 @@ const SurahList = ({
           margin: '0 0.5rem',
         }}>
           <div>
-            <p style={{ fontWeight: '800', fontSize: '0.9rem', color: 'var(--accent-gold)' }}>Active Mudarasa Session</p>
+            <p style={{ fontWeight: '800', fontSize: '0.9rem', color: 'var(--accent-gold)' }}>Active Musaffa Session</p>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
               {savedMusaffaSession.surahNumber
                 ? `Surah ${savedMusaffaSession.surahNumber} · Chunk ${savedMusaffaSession.chunkIndex + 1}`
