@@ -93,11 +93,18 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accurac
         setLiveResults(payload);
 
         // Smart auto-finish: evaluate if the user has completed the turn.
-        // We require BOTH the accuracy to meet the threshold AND the last word to be spoken correctly.
+        // Requirements (Smart Musaffa mode):
+        //   1. All words must be read  — no 'pending' words remain
+        //   2. The configured accuracy threshold must be met (slider min is 50%, so
+        //      a 50% floor is already enforced by the UI — no separate check needed)
+        //   3. The last word of the chunk must be correct (smart anchor)
         if (payload && payload.results && payload.results.length > 0) {
-          const { smartAnchorHit, preBlockAccuracy } = payload;
+          const { smartAnchorHit, preBlockAccuracy, preBlockHasPending } = payload;
           
-          if (preBlockAccuracy >= thresholdRef.current && smartAnchorHit) {
+          const allWordsRead   = !preBlockHasPending;                       // every word attempted
+          const meetsThreshold = preBlockAccuracy >= thresholdRef.current;  // user's chosen %
+
+          if (allWordsRead && meetsThreshold && smartAnchorHit) {
             if (silenceTimerRef.current) {
               clearTimeout(silenceTimerRef.current);
               silenceTimerRef.current = null;

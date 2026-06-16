@@ -239,27 +239,9 @@ const compareRecitation = (expectedText, spokenText) => {
     else if (r.status === 'omission') omissions++;
   }
 
-  // ── Strict sequential blocking ───────────────────────────────────────────
-  // No word can be 'correct' if there's an unresolved error before it.
-  // Any 'correct' word appearing after the first error is reset to 'pending'
-  // so the user must fix errors in order before the system advances.
-  let firstErrorIdx = -1;
-  for (let idx = 0; idx < results.length; idx++) {
-    if (results[idx].status === 'omission' || results[idx].status === 'substitution') {
-      firstErrorIdx = idx;
-      break;
-    }
-  }
-  if (firstErrorIdx !== -1) {
-    for (let idx = firstErrorIdx + 1; idx < results.length; idx++) {
-      if (results[idx].status === 'correct' || results[idx].status === 'substitution') {
-        results[idx] = { ...results[idx], status: 'pending' };
-      }
-    }
-    // Recount correct words after blocking
-    correct = results.filter(r => r.status === 'correct').length;
-  }
-
+  // Sequential blocking removed: DP alignment is global and accurate, so
+  // words matched correctly after an error are genuinely correct and should
+  // be shown as green. preBlockAccuracy (used for auto-advance) is unaffected.
   const accuracy = Math.round((correct / expWords.length) * 100);
 
   return {
