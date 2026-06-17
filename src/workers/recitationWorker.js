@@ -95,7 +95,7 @@ const fuzzyMatch = (a, b) => {
   return levenshtein(a, b) <= tol;
 };
 
-const compareRecitation = (expectedText, spokenText) => {
+const compareRecitation = (expectedText, spokenText, ayahWordCounts = []) => {
   // Strip tashkeel from expected text only — STT output typically lacks harakat,
   // so we normalise the reference to plain letters for a fair word-level comparison.
   const expNorm = expectedText.replace(/[\u064B-\u065F]/g, '');
@@ -244,6 +244,25 @@ const compareRecitation = (expectedText, spokenText) => {
   // be shown as green. preBlockAccuracy (used for auto-advance) is unaffected.
   const accuracy = Math.round((correct / expWords.length) * 100);
 
+  // ── Per-verse minimum accuracy (each ayah must be ≥50% correct) ───────────
+  // Only meaningful for multi-ayah chunks; single-ayah chunks trivially pass
+  // since the overall accuracy check already covers them.
+  let perVerseMinMet = true;
+  if (ayahWordCounts && ayahWordCounts.length > 1) {
+    let wordIdx = 0;
+    for (const count of ayahWordCounts) {
+      if (count === 0) { continue; }
+      const verseSlice  = results.slice(wordIdx, wordIdx + count);
+      const verseCorrect = verseSlice.filter(r => r.status === 'correct').length;
+      const verseAccuracy = (verseCorrect / count) * 100;
+      if (verseAccuracy < 50) {
+        perVerseMinMet = false;
+        break;
+      }
+      wordIdx += count;
+    }
+  }
+
   return {
     results,
     insertions,
@@ -251,15 +270,16 @@ const compareRecitation = (expectedText, spokenText) => {
     breakdown: { correct, omissions, substitutions, insertions: insertions.length },
     smartAnchorHit,
     preBlockHasPending,
-    preBlockAccuracy
+    preBlockAccuracy,
+    perVerseMinMet,
   };
 };
 
 // ── Message handler ───────────────────────────────────────────────────────────
 self.onmessage = (event) => {
-  const { type, expected, spoken, id } = event.data;
+  const { type, expected, spoken, id, ayahWordCounts } = event.data;
   if (type === 'COMPARE') {
-    const payload = compareRecitation(expected, spoken);
+    const payload = compareRecitation(expected, spoken, ayahWordCounts || []);
     self.postMessage({ type: 'RESULT', payload, id });
   }
 };

@@ -56,7 +56,7 @@ const LIVE_DEBOUNCE = 350;
  *   stopAndCheck()  — stop recognition and run final comparison
  *   clearResults()  — reset for next turn
  */
-export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accuracyThreshold = 100) => {
+export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accuracyThreshold = 100, ayahWordCounts = []) => {
   const SR = getSpeechRecognition();
   const isSupported = !!SR;
 
@@ -80,6 +80,8 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accurac
   useEffect(() => { expectedRef.current = expectedText; }, [expectedText]);
   useEffect(() => { onAutoFinishRef.current = onAutoFinish; }, [onAutoFinish]);
   useEffect(() => { thresholdRef.current = accuracyThreshold; }, [accuracyThreshold]);
+  const ayahWordCountsRef = useRef(ayahWordCounts);
+  useEffect(() => { ayahWordCountsRef.current = ayahWordCounts; }, [ayahWordCounts]);
 
   // ── Web Worker lifecycle ────────────────────────────────────────────────────
   useEffect(() => {
@@ -99,12 +101,13 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accurac
         //      a 50% floor is already enforced by the UI — no separate check needed)
         //   3. The last word of the chunk must be correct (smart anchor)
         if (payload && payload.results && payload.results.length > 0) {
-          const { smartAnchorHit, preBlockAccuracy, preBlockHasPending } = payload;
+          const { smartAnchorHit, preBlockAccuracy, preBlockHasPending, perVerseMinMet } = payload;
           
           const allWordsRead   = !preBlockHasPending;                       // every word attempted
           const meetsThreshold = preBlockAccuracy >= thresholdRef.current;  // user's chosen %
+          const verseFloorMet  = perVerseMinMet !== false;                  // each ayah ≥50% correct
 
-          if (allWordsRead && meetsThreshold && smartAnchorHit) {
+          if (allWordsRead && meetsThreshold && smartAnchorHit && verseFloorMet) {
             if (silenceTimerRef.current) {
               clearTimeout(silenceTimerRef.current);
               silenceTimerRef.current = null;
@@ -137,6 +140,7 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accurac
         expected: expectedRef.current,
         spoken,
         id,
+        ayahWordCounts: ayahWordCountsRef.current,
       });
     }, LIVE_DEBOUNCE);
   }, []);

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import RecitationStatusOverlay from './RedBlinkOverlay';
-import { ChevronLeft, Mic, WifiOff, RefreshCw, FastForward, BrainCircuit, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, Mic, WifiOff, RefreshCw, FastForward, BrainCircuit, AlertTriangle, CheckCircle2, BookOpen, BookX } from 'lucide-react';
 
 const MudarasaView = ({
   chunks,
@@ -31,7 +31,10 @@ const MudarasaView = ({
   targetAccuracy,     // threshold percentage
 }) => {
 
-  // ── Retry prompt state ─────────────────────────────────────────────────────
+  // ── Text visibility toggle (applies to both turns) ──────────────────────
+  const [showText, setShowText] = useState(true);
+
+  // ── Retry prompt state ───────────────────────────────────────────────
   // null = hidden; object = visible with failure reasons
   const [retryPrompt, setRetryPrompt] = useState(null);
 
@@ -61,6 +64,8 @@ const MudarasaView = ({
       reasons.push(`Below your accuracy goal (${preBlockAccuracy}% — need ${targetAccuracy}%)`);
     if (!smartAnchorHit)
       reasons.push('The last word of the verse was not recited correctly');
+    if (liveResults.perVerseMinMet === false)
+      reasons.push('At least one verse had less than 50% accuracy');
 
     if (reasons.length > 0) {
       setRetryPrompt({ reasons, accuracy: preBlockAccuracy });
@@ -68,6 +73,20 @@ const MudarasaView = ({
       onFinishedTurn();
     }
   };
+
+  // ── Inline criteria-failed detection ─────────────────────────────────
+  // When the user has attempted all words but still fails the criteria,
+  // replace the 'Tap to finish early' link with inline Try Again / Skip Anyway.
+  const allWordsAttempted = !!(
+    enableErrorDetection && isSttListening &&
+    liveResults?.results?.length > 0 &&
+    !liveResults.preBlockHasPending
+  );
+  const criteriaFailed = allWordsAttempted && (
+    !liveResults.smartAnchorHit ||
+    (liveResults.preBlockAccuracy ?? 0) < targetAccuracy ||
+    liveResults.perVerseMinMet === false
+  );
 
   // Derive overlay mode from live results for hands-free feedback
   // Only show overlay during user's recitation turn, not when app is playing
@@ -151,7 +170,32 @@ const MudarasaView = ({
               <p style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-primary)' }}>Portion {currentChunkIndex + 1} of {chunks.length}</p>
             </div>
           </div>
-           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+             {/* Text visibility toggle — hide/show Quran text on both turns */}
+             <button
+               onClick={() => setShowText(v => !v)}
+               title={showText ? 'Hide text' : 'Show text'}
+               style={{
+                 display: 'flex', alignItems: 'center', gap: '0.3rem',
+                 padding: '0.2rem 0.55rem 0.2rem 0.4rem',
+                 borderRadius: '999px', cursor: 'pointer',
+                 border: `1px solid ${showText ? 'var(--glass-border)' : 'rgba(212,175,55,0.4)'}`,
+                 background: showText ? 'transparent' : 'rgba(212,175,55,0.08)',
+                 transition: 'all 0.2s',
+               }}
+             >
+               {showText
+                 ? <BookOpen size={12} color="var(--text-muted)" />
+                 : <BookX size={12} color="var(--accent-gold)" />}
+               <span style={{
+                 fontSize: '0.5rem', fontWeight: '800', letterSpacing: '0.08em',
+                 textTransform: 'uppercase',
+                 color: showText ? 'var(--text-muted)' : 'var(--accent-gold)',
+                 transition: 'color 0.2s',
+               }}>
+                 Text
+               </span>
+             </button>
              {/* Error detection indicator badge */}
              {enableErrorDetection && mudarasaTurn === 'user' && (
                <div style={{
@@ -295,7 +339,7 @@ const MudarasaView = ({
 
               return (
                 <div key={ayah.number} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                  {isFirstAyahOfSurah && (
+                  {isFirstAyahOfSurah && showText && (
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1, scale: currentAyahNumber === `bismillah-${ayah.number}` ? 1.02 : 1 }}
@@ -322,7 +366,8 @@ const MudarasaView = ({
                       transition: '0.4s'
                     }}
                   >
-                    {showLiveOverlay ? (
+                    {showText ? (
+                      showLiveOverlay ? (
                         <LiveTextOverlay
                           plainText={displayText}
                           results={liveResults.results}
@@ -330,10 +375,16 @@ const MudarasaView = ({
                           wordOffset={currentOffset}
                         />
                       ) : (
-                       <p className="arabic-text" style={{ fontSize: '2.2rem', color: ayah.number === currentAyahNumber ? 'var(--accent-gold)' : 'var(--text-primary)' }}>
-                         {displayText} <span style={{ fontSize: '1.2rem', color: 'var(--accent-gold)', opacity: 0.5, marginRight: '0.5rem' }}>﴿{ayah.numberInSurah}﴾</span>
-                       </p>
-                     )}
+                        <p className="arabic-text" style={{ fontSize: '2.2rem', color: ayah.number === currentAyahNumber ? 'var(--accent-gold)' : 'var(--text-primary)' }}>
+                          {displayText} <span style={{ fontSize: '1.2rem', color: 'var(--accent-gold)', opacity: 0.5, marginRight: '0.5rem' }}>﴿{ayah.numberInSurah}﴾</span>
+                        </p>
+                      )
+                    ) : (
+                      /* Text hidden — show verse number only as a placeholder */
+                      <p style={{ fontSize: '1rem', color: 'var(--text-muted)', opacity: 0.4, textAlign: 'center', fontWeight: '700', letterSpacing: '0.1em' }}>
+                        — {ayah.numberInSurah} —
+                      </p>
+                    )}
                   </motion.div>
                 </div>
               );
@@ -349,30 +400,50 @@ const MudarasaView = ({
             <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
 
               {enableErrorDetection && isSttListening ? (
-                // ── Auto-detect mode: static listening pill (no green animation) ──
+                // ── Auto-detect mode: just the action row + accuracy ──
                 <>
-                  <div
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '0.75rem',
-                      padding: '1rem 2rem', borderRadius: '999px',
-                      background: 'rgba(16,185,129,0.12)',
-                      border: '1px solid rgba(16,185,129,0.4)',
-                      color: 'var(--accent-emerald)',
-                    }}
-                  >
-                    <Mic size={16} />
-                    <span style={{ fontWeight: '800', fontSize: '0.8rem', letterSpacing: '0.05em' }}>Listening…</span>
-                    <span style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: '600' }}>Stops when you finish reading</span>
-                  </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
-                    <button
-                      onClick={handleManualFinish}
-                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', opacity: 0.5, fontWeight: '700', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer' }}
-                    >
-                      Tap to finish early
-                    </button>
+                    {criteriaFailed ? (
+                      // ── Criteria not met after all words attempted: show inline options ──
+                      <>
+                        <button
+                          onClick={() => { if (onRetryTurn) onRetryTurn(); }}
+                          style={{
+                            padding: '0.4rem 1rem', borderRadius: '999px', cursor: 'pointer',
+                            border: '1px solid rgba(212,175,55,0.5)',
+                            background: 'rgba(212,175,55,0.12)',
+                            color: 'var(--accent-gold)', fontWeight: '800', fontSize: '0.65rem',
+                            textTransform: 'uppercase', letterSpacing: '0.1em',
+                            display: 'flex', alignItems: 'center', gap: '0.35rem',
+                          }}
+                        >
+                          <RefreshCw size={10} /> Try Again
+                        </button>
+                        <button
+                          onClick={onFinishedTurn}
+                          style={{
+                            padding: '0.4rem 0.75rem', borderRadius: '999px', cursor: 'pointer',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            background: 'transparent',
+                            color: 'var(--text-muted)', fontWeight: '600', fontSize: '0.6rem',
+                            textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.6,
+                            display: 'flex', alignItems: 'center', gap: '0.35rem',
+                          }}
+                        >
+                          <FastForward size={10} /> Skip
+                        </button>
+                      </>
+                    ) : (
+                      // ── Still reciting or criteria met: show standard tap-to-finish ──
+                      <button
+                        onClick={handleManualFinish}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', opacity: 0.5, fontWeight: '700', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer' }}
+                      >
+                        Tap to finish early
+                      </button>
+                    )}
                     {liveResults?.preBlockAccuracy !== undefined && (
-                      <span style={{ color: 'var(--accent-gold)', opacity: 0.8, fontWeight: '800', fontSize: '0.65rem' }}>• {liveResults.preBlockAccuracy}% / {targetAccuracy}%</span>
+                      <span style={{ color: criteriaFailed ? 'rgba(245,158,11,0.8)' : 'var(--accent-gold)', opacity: 0.8, fontWeight: '800', fontSize: '0.65rem' }}>• {liveResults.preBlockAccuracy}% / {targetAccuracy}%</span>
                     )}
                   </div>
                   {transcript && (

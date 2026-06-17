@@ -29,6 +29,25 @@ const buildExpectedText = (chunk, quranSimple) => {
   }).join(' ');
 };
 
+/**
+ * Returns the number of words each ayah contributes to the expected text,
+ * using the same text source as buildExpectedText. Used by the worker to
+ * check per-verse minimum accuracy (each ayah must be ≥50% correct).
+ */
+const buildAyahWordCounts = (chunk, quranSimple) => {
+  if (!chunk || chunk.length === 0) return [];
+  return chunk.map(ayah => {
+    let text;
+    if (quranSimple) {
+      const key = `${ayah.surahNumber}|${ayah.numberInSurah}`;
+      const simpleText = quranSimple[key];
+      if (simpleText) text = removeTashkeel(simpleText);
+    }
+    if (!text) text = removeTashkeel(ayah.text || '');
+    return text.trim().split(/\s+/).filter(Boolean).length;
+  });
+};
+
 const PartnerSession = ({
   subView,
   surahs,
@@ -88,6 +107,7 @@ const PartnerSession = ({
   // Build expected text for the current chunk
   const currentChunk = chunks[currentChunkIndex] || null;
   const expectedText = currentChunk ? buildExpectedText(currentChunk, quranSimple) : '';
+  const ayahWordCounts = currentChunk ? buildAyahWordCounts(currentChunk, quranSimple) : [];
 
   // Declare handleFinishedTurn BEFORE useRecitationCheck so it can be passed as onAutoFinish.
   // We use a ref to avoid stale closure issues with the initial callback registration.
@@ -108,7 +128,8 @@ const PartnerSession = ({
     sttActive,
     expectedText,
     useCallback(() => { handleFinishedTurnRef.current?.(); }, []),
-    params.errorThreshold ?? 55
+    params.errorThreshold ?? 55,
+    ayahWordCounts,
   );
 
   const autoAdvanceTimerRef = useRef(null);
