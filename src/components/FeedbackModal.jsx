@@ -57,7 +57,11 @@ export default function FeedbackModal({ onClose }) {
                 </div>
 
                 <p className="modal-note">
-                   May Allah accept it from us
+                    <strong>Data Sources:</strong><br />
+                    <a href="https://api.alquran.cloud/v1/quran/quran-uthmani-quran-academy" target="_blank" rel="noopener noreferrer">quran-ar.json</a> - Al Quran Cloud (Quran Academy Uthmani)<br />
+                    <a href="https://api.alquran.cloud/v1/quran/en.sahih" target="_blank" rel="noopener noreferrer">quran-en.json</a> - Al Quran Cloud (Saheeh International)<br />
+                    <a href="https://tanzil.net" target="_blank" rel="noopener noreferrer">quran-simple.txt</a> - Tanzil Project<br />
+                    <a href="https://github.com/Waqar144/Quran_Mutashabihat_Data" target="_blank" rel="noopener noreferrer">waqar114</a> - Waqar144 Mutashabihat Dataset
                 </p>
             </div>
         </div>
