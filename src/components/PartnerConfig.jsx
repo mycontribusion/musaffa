@@ -6,7 +6,8 @@ import { RECITERS } from '../utils/quranUtils';
 const PartnerConfig = ({
   surahs, params, onChange, onStart,
   currentVolume, reciter, setReciter,
-  audioDownloadControls, sttSupported
+  audioDownloadControls, sttSupported,
+  presetEditingIndex, onSavePreset
 }) => {
   const getAyahCount = (n) => (surahs.find(x => x.number === n)?.numberOfAyahs || 0);
   const startAyahCount = getAyahCount(params.startSurah);
@@ -61,7 +62,7 @@ const PartnerConfig = ({
           fontSize: 'clamp(1.5rem, 5vw, 2rem)', fontWeight: '900',
           color: 'var(--text-primary)', letterSpacing: '-0.02em'
         }}>
-          Musaffa Session
+          {presetEditingIndex !== null ? `Edit Preset ${presetEditingIndex + 1}` : 'Musaffa Session'}
         </h2>
       </div>
 
@@ -323,14 +324,42 @@ const PartnerConfig = ({
           </div>
         </div>
 
-        {/* ── Start Button ── */}
-        <button onClick={onStart} disabled={!isRangeValid()} className="btn-primary"
-          style={{
-            width: '100%', padding: '1.1rem', fontSize: '0.9rem',
-            opacity: isRangeValid() ? 1 : 0.3, cursor: isRangeValid() ? 'pointer' : 'not-allowed'
-          }}>
-          Start Musaffa Session
-        </button>
+        {/* ── Preset name input (only in edit mode) ── */}
+        {presetEditingIndex !== null && (
+          <div>
+            <div style={sectionLabel}>Preset Name</div>
+            <input
+              value={params.label || ''}
+              onChange={e => onChange('label', e.target.value)}
+              placeholder="e.g. Juz Amma"
+              style={{
+                width: '100%', padding: '0.75rem 1rem', outline: 'none',
+                background: 'var(--bg-accent)', color: 'var(--text-primary)',
+                border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-md)',
+                fontSize: '0.85rem',
+              }}
+            />
+          </div>
+        )}
+
+        {/* ── Start / Save Button ── */}
+        {presetEditingIndex !== null ? (
+          <button
+            onClick={() => onSavePreset && onSavePreset({ ...params })}
+            className="btn-primary"
+            style={{ width: '100%', padding: '1.1rem', fontSize: '0.9rem', background: 'var(--accent-emerald)', color: '#000' }}
+          >
+            Save Preset
+          </button>
+        ) : (
+          <button onClick={onStart} disabled={!isRangeValid()} className="btn-primary"
+            style={{
+              width: '100%', padding: '1.1rem', fontSize: '0.9rem',
+              opacity: isRangeValid() ? 1 : 0.3, cursor: isRangeValid() ? 'pointer' : 'not-allowed'
+            }}>
+            Start Musaffa Session
+          </button>
+        )}
 
       </div>
     </motion.div>

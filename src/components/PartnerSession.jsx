@@ -85,6 +85,8 @@ const PartnerSession = ({
   audioDownloadControls,
   enableErrorDetection,
   quranSimple,
+  presetEditingIndex,
+  onSavePreset,
 }) => {
   // Auto-scroll: fire whenever the active ayah changes (only set during app playback)
   useEffect(() => {
@@ -205,8 +207,8 @@ const PartnerSession = ({
   // Dispatcher
   if (subView === 'config') return (
     <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0.5rem 0.5rem 6rem' }}>
-      {/* Resume Session Banner */}
-      {savedMusaffaSession && (
+      {/* Resume Session Banner — hidden when editing a preset */}
+      {savedMusaffaSession && !presetEditingIndex && (
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)',
@@ -251,6 +253,8 @@ const PartnerSession = ({
         setReciter={setReciter}
         audioDownloadControls={audioDownloadControls}
         sttSupported={sttSupported}
+        presetEditingIndex={presetEditingIndex}
+        onSavePreset={onSavePreset}
       />
     </div>
   );

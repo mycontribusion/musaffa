@@ -32,6 +32,16 @@ const App = () => {
     try { return JSON.parse(localStorage.getItem('quran_musaffa_session') || 'null'); } catch { return null; }
   });
 
+  const DEFAULT_PRESETS = [
+    { label: 'Juz Amma', startSurah: 78, startAyah: 1, endSurah: 114, endAyah: 6, portion: 'page', whoStarts: 'app', autoNext: true, micSensitivity: 15, errorDetection: false },
+    { label: 'Al-Baqarah', startSurah: 2, startAyah: 1, endSurah: 2, endAyah: 286, portion: 'half', whoStarts: 'app', autoNext: true, micSensitivity: 15, errorDetection: true },
+    { label: 'Al-Kahf', startSurah: 18, startAyah: 1, endSurah: 18, endAyah: 110, portion: 'page', whoStarts: 'app', autoNext: true, micSensitivity: 15, errorDetection: false },
+  ];
+  const [musaffaPresets, setMusaffaPresets] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('quran_musaffa_presets') || 'null') || DEFAULT_PRESETS; } catch { return DEFAULT_PRESETS; }
+  });
+  const [presetEditingIndex, setPresetEditingIndex] = useState(null);
+
   const syncStateWithURL = (sList) => {
     const path = window.location.pathname;
     const parts = path.split('/').filter(Boolean);
@@ -122,6 +132,7 @@ const App = () => {
   useEffect(() => { localStorage.setItem('quran_stumbles', JSON.stringify(stumbles)); }, [stumbles]);
   useEffect(() => { localStorage.setItem('quran_recent', JSON.stringify(recentSurahs)); }, [recentSurahs]);
   useEffect(() => { localStorage.setItem('quran_reciter', reciter); }, [reciter]);
+  useEffect(() => { localStorage.setItem('quran_musaffa_presets', JSON.stringify(musaffaPresets)); }, [musaffaPresets]);
   // Feature 3: Persist last-read ayah
   useEffect(() => {
     if (lastRead) localStorage.setItem('quran_last_read', JSON.stringify(lastRead));
@@ -221,6 +232,34 @@ const App = () => {
        }
      }, [savedMusaffaSession, resumeMusaffaSession]);
 
+  // Launch Musaffa directly from a preset (bypasses config screen)
+  const startMusaffaFromPreset = useCallback((preset) => {
+    setMusaffaParams(preset);
+    setTimeout(() => {
+      startMusaffa(null, 0, preset.whoStarts === 'user' ? 'user' : 'app', preset);
+    }, 0);
+    setView('partner');
+  }, [startMusaffa, setView]);
+
+  // Open config page in preset-edit mode
+  const editPreset = useCallback((index) => {
+    setPresetEditingIndex(index);
+    setMusaffaParams(musaffaPresets[index]);
+    setView('partner');
+    setPartnerSubView('config');
+  }, [musaffaPresets, setView]);
+
+  // Save edited preset and return home
+  const handleSavePreset = useCallback((updatedParams) => {
+    setMusaffaPresets(prev => {
+      const next = [...prev];
+      next[presetEditingIndex] = updatedParams;
+      return next;
+    });
+    setPresetEditingIndex(null);
+    setView('list');
+  }, [presetEditingIndex, setView]);
+
   const startQuiz = (type, customSurahs = []) => {
     setActiveQuizType(type);
     setQuizFeedback(null);
@@ -275,7 +314,7 @@ const App = () => {
       <div className="app-container">
         <main className="pb-24">
           <AnimatePresence mode="wait">
-            {view === 'list' && <SurahList surahs={surahs} recentSurahs={recentSurahs} handleSelectSurah={handleSelectSurah} setView={setView} audioDownloadControls={audioDownloadControls} savedMusaffaSession={savedMusaffaSession} resumeMusaffaSession={resumeMusaffaSession} clearMusaffaSession={clearMusaffaSession} startQuiz={startQuiz} setPartnerSubView={setPartnerSubView} setMusaffaParams={setMusaffaParams} />}
+            {view === 'list' && <SurahList surahs={surahs} recentSurahs={recentSurahs} handleSelectSurah={handleSelectSurah} setView={setView} audioDownloadControls={audioDownloadControls} savedMusaffaSession={savedMusaffaSession} resumeMusaffaSession={resumeMusaffaSession} clearMusaffaSession={clearMusaffaSession} startQuiz={startQuiz} setPartnerSubView={setPartnerSubView} setMusaffaParams={setMusaffaParams} musaffaPresets={musaffaPresets} setMusaffaPresets={setMusaffaPresets} startMusaffaFromPreset={startMusaffaFromPreset} editPreset={editPreset} />}
             {view === 'weaknesses' && <WeaknessTracker stumbles={stumbles} setStumbles={setStumbles} surahs={surahs} setView={setView} setPartnerSubView={setPartnerSubView} setMusaffaParams={setMusaffaParams} handleSelectSurah={handleSelectSurah} />}
             {view === 'mutashabihat-selection' && <MutashabihSelection surahs={surahs} waqarData={waqarData} quranAr={quranAr} setView={setView} setMultiSurahSession={setMultiSurahSession} />}
             {view === 'mutashabihat-multi-session' && multiSurahSession && (
@@ -327,6 +366,8 @@ const App = () => {
                   audioDownloadControls={audioDownloadControls}
                   enableErrorDetection={musaffaParams.errorDetection}
                   quranSimple={quranSimple}
+                  presetEditingIndex={presetEditingIndex}
+                  onSavePreset={handleSavePreset}
                 />
               )}
             {view === 'mutashabihat-session' && selectedSurah && waqarData && waqarData[selectedSurah.number] && (

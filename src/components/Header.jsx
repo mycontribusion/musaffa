@@ -60,7 +60,7 @@ const Header = ({ theme, setTheme, view, setView, setPartnerSubView, isInMusaffa
                   }}
                 >
                   <PlayCircle size={14} />
-                  <span>Resume Musaffa</span>
+                  <span>Musaffa</span>
                 </button>
               ) : (
                 <button
@@ -83,7 +83,7 @@ const Header = ({ theme, setTheme, view, setView, setPartnerSubView, isInMusaffa
                   }}
                 >
                   <Pause size={14} />
-                  <span>Pause Musaffa</span>
+                  <span>Musaffa</span>
                 </button>
               )
             ) : (
@@ -107,7 +107,7 @@ const Header = ({ theme, setTheme, view, setView, setPartnerSubView, isInMusaffa
                 }}
               >
                 <PlayCircle size={14} />
-                <span>Start Musaffa</span>
+                <span>Musaffa</span>
               </button>
             )}
 

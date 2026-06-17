@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Search, Download, CheckCircle, Loader, BrainCircuit, Zap } from 'lucide-react';
+import { Search, Download, CheckCircle, Loader, BrainCircuit, Zap, Pencil, Play, Mic, Hand } from 'lucide-react';
 
 const SurahList = ({
   surahs,
@@ -13,7 +13,11 @@ const SurahList = ({
   clearMusaffaSession,
   startQuiz,
   setPartnerSubView,
-  setMusaffaParams
+  setMusaffaParams,
+  musaffaPresets,
+  setMusaffaPresets,
+  startMusaffaFromPreset,
+  editPreset,
 }) => {
   const [searchQuery, setSearchQuery] = React.useState('');
 
@@ -30,6 +34,14 @@ const SurahList = ({
     const matchesSearch = s.englishName.toLowerCase().includes(searchQuery.toLowerCase()) || s.name.includes(searchQuery);
     return matchesSearch;
   });
+
+  const getModeLabel = (preset) => {
+    if (preset.errorDetection) return { label: 'Smart', color: '#818cf8', Icon: BrainCircuit };
+    if (preset.autoNext) return { label: 'Hands-Free', color: 'var(--accent-emerald)', Icon: Mic };
+    return { label: 'Manual', color: 'var(--accent-gold)', Icon: Hand };
+  };
+
+  const getSurahName = (num) => surahs.find(s => s.number === num)?.englishName || `Surah ${num}`;
 
   return (
     <motion.div
@@ -71,6 +83,79 @@ const SurahList = ({
           </div>
         </button>
       </div>
+
+      {/* Quick Start Presets */}
+      {musaffaPresets && musaffaPresets.length > 0 && (
+        <div style={{ maxWidth: '600px', margin: '0 auto', width: '100%', padding: '0 0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.75rem' }}>
+            <Play size={13} color="var(--accent-gold)" />
+            <span style={{ fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Quick Start Musaffa</span>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+            {musaffaPresets.map((preset, idx) => {
+              const mode = getModeLabel(preset);
+              const ModeIcon = mode.Icon;
+              const startName = getSurahName(preset.startSurah);
+              const endName = getSurahName(preset.endSurah);
+              const rangeLabel = preset.startSurah === preset.endSurah ? startName : `${startName} → ${endName}`;
+              return (
+                <div key={idx} style={{
+                  flexShrink: 0, minWidth: '200px', maxWidth: '220px',
+                  background: 'var(--glass-bg)', border: '1px solid var(--glass-border)',
+                  borderRadius: 'var(--radius-lg)', padding: '1rem',
+                  display: 'flex', flexDirection: 'column', gap: '0.75rem',
+                }}>
+                  {/* Card Header */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: '900', fontSize: '0.9rem', color: 'var(--text-primary)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {preset.label}
+                      </p>
+                      <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', margin: '0.2rem 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {rangeLabel}
+                      </p>
+                    </div>
+                    <button onClick={() => editPreset(idx)} style={{
+                      background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)',
+                      padding: '2px', flexShrink: 0, borderRadius: '6px',
+                    }} title="Edit preset">
+                      <Pencil size={14} />
+                    </button>
+                  </div>
+
+                  {/* Mode badge */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                      padding: '0.25rem 0.6rem', borderRadius: '999px',
+                      background: `${mode.color}18`, border: `1px solid ${mode.color}40`,
+                      fontSize: '0.6rem', fontWeight: '800', color: mode.color,
+                    }}>
+                      <ModeIcon size={10} /> {mode.label}
+                    </span>
+                    <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>{preset.portion === 'page' ? 'Full Pg' : preset.portion === 'half' ? '½ Pg' : preset.portion === 'verse' ? '1 Verse' : preset.portion}</span>
+                  </div>
+
+                  {/* Start button */}
+                  <button
+                    onClick={() => startMusaffaFromPreset(preset)}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+                      background: 'var(--accent-gold)', color: '#000',
+                      border: 'none', borderRadius: 'var(--radius-md)', padding: '0.6rem',
+                      fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer', width: '100%',
+                      transition: 'opacity 0.2s',
+                    }}
+                  >
+                    <Play size={13} /> Start
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
 
       {/* Search Section */}
       <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', padding: '0 0.5rem' }}>
