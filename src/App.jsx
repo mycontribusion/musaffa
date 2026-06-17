@@ -6,6 +6,7 @@ import SurahDetail from './components/SurahDetail';
 import PartnerSession from './components/PartnerSession';
 import MutashabihatSession from './components/MutashabihatSession';
 import MutashabihSelection from './components/MutashabihSelection';
+import WeaknessTracker from './components/WeaknessTracker';
 import { useQuranData } from './hooks/useQuranData';
 import { useMusaffa } from './hooks/useMusaffa';
 import { useQuiz } from './hooks/useQuiz';
@@ -17,7 +18,7 @@ const App = () => {
   const [selectedSurah, setSelectedSurah] = useState(null);
   const [partnerSubView, setPartnerSubView] = useState('config');
   const [activeQuizType, setActiveQuizType] = useState('all');
-  const [musaffaParams, setMusaffaParams] = useState({ startSurah: 1, startAyah: 1, endSurah: 2, endAyah: 286, portion: 'page', whoStarts: 'app', autoNext: false, micSensitivity: 15, errorDetection: false });
+  const [musaffaParams, setMusaffaParams] = useState({ startSurah: 1, startAyah: 1, endSurah: 2, endAyah: 286, portion: 'page', whoStarts: 'app', autoNext: true, micSensitivity: 15, errorDetection: false });
   const [multiSurahSession, setMultiSurahSession] = useState(null);
   const [reciter, setReciter] = useState(() => localStorage.getItem('quran_reciter') || 'ar.saoodshuraym');
   const [stumbles, setStumbles] = useState(() => JSON.parse(localStorage.getItem('quran_stumbles') || '[]'));
@@ -57,6 +58,8 @@ const App = () => {
       } else if (parts[0] === 'mutashabihat') {
         if (parts[1] === 'custom') v = 'mutashabihat-selection';
         else if (parts[1] === 'session') v = 'mutashabihat-multi-session';
+      } else if (parts[0] === 'weaknesses') {
+        v = 'weaknesses';
       }
     } else if (!p.get('view')) {
       v = 'list';
@@ -97,6 +100,8 @@ const App = () => {
       newPath = `/mutashabihat/custom`;
     } else if (view === 'mutashabihat-multi-session') {
       newPath = `/mutashabihat/session`;
+    } else if (view === 'weaknesses') {
+      newPath = `/weaknesses`;
     }
 
     const currentPath = window.location.pathname;
@@ -271,6 +276,7 @@ const App = () => {
         <main className="pb-24">
           <AnimatePresence mode="wait">
             {view === 'list' && <SurahList surahs={surahs} recentSurahs={recentSurahs} handleSelectSurah={handleSelectSurah} setView={setView} audioDownloadControls={audioDownloadControls} savedMusaffaSession={savedMusaffaSession} resumeMusaffaSession={resumeMusaffaSession} clearMusaffaSession={clearMusaffaSession} startQuiz={startQuiz} setPartnerSubView={setPartnerSubView} setMusaffaParams={setMusaffaParams} />}
+            {view === 'weaknesses' && <WeaknessTracker stumbles={stumbles} setStumbles={setStumbles} surahs={surahs} setView={setView} setPartnerSubView={setPartnerSubView} setMusaffaParams={setMusaffaParams} handleSelectSurah={handleSelectSurah} />}
             {view === 'mutashabihat-selection' && <MutashabihSelection surahs={surahs} waqarData={waqarData} quranAr={quranAr} setView={setView} setMultiSurahSession={setMultiSurahSession} />}
             {view === 'mutashabihat-multi-session' && multiSurahSession && (
               <MutashabihatSession

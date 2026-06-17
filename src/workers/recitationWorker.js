@@ -281,5 +281,8 @@ self.onmessage = (event) => {
   if (type === 'COMPARE') {
     const payload = compareRecitation(expected, spoken, ayahWordCounts || []);
     self.postMessage({ type: 'RESULT', payload, id });
+  } else if (type === 'COMPARE_FINAL') {
+    const payload = compareRecitation(expected, spoken, ayahWordCounts || []);
+    self.postMessage({ type: 'RESULT_FINAL', payload, id });
   }
 };

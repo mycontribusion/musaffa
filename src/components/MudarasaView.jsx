@@ -126,11 +126,14 @@ const MudarasaView = ({
     }
 
     prevErrorCountRef.current = currentErrors;
+  }, [liveResults, enableErrorDetection, mudarasaTurn]);
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
     return () => {
       if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
     };
-  }, [liveResults, enableErrorDetection, mudarasaTurn]);
+  }, []);
 
   // Derived mode for the RedBlinkOverlay
   const overlayMode = flashError ? 'error' : null;

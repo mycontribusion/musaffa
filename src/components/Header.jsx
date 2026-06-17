@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Moon, Sun, PlayCircle, Pause, User } from 'lucide-react';
+import { Moon, Sun, PlayCircle, Pause, User, BookOpen } from 'lucide-react';
 import { RECITERS } from '../utils/quranUtils';
 
 const Header = ({ theme, setTheme, view, setView, setPartnerSubView, isInMusaffaSession, isPaused, onPauseMusaffa, onResumeMusaffa, reciter, setReciter }) => {
@@ -110,6 +110,15 @@ const Header = ({ theme, setTheme, view, setView, setPartnerSubView, isInMusaffa
                 <span>Start Musaffa</span>
               </button>
             )}
+
+            <button
+              onClick={() => setView('weaknesses')}
+              className="icon-btn"
+              title="Mistake Book (Weaknesses)"
+              style={{ position: 'relative' }}
+            >
+              <BookOpen size={16} strokeWidth={2} />
+            </button>
 
             {/* Reciter Dropdown */}
             <div className="relative" ref={dropdownRef}>

@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { compareRecitation } from '../utils/quranUtils';
 
 const getSpeechRecognition = () =>
   typeof window !== 'undefined'
@@ -109,8 +108,8 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accurac
 
           if (allWordsRead && meetsThreshold && smartAnchorHit && verseFloorMet) {
             if (silenceTimerRef.current) {
-              clearTimeout(silenceTimerRef.current);
-              silenceTimerRef.current = null;
+               clearTimeout(silenceTimerRef.current);
+               silenceTimerRef.current = null;
             }
             // Short celebratory delay (300ms) so user sees the full green before turn switches
             silenceTimerRef.current = setTimeout(() => {
@@ -120,6 +119,9 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accurac
             }, 300);
           }
         }
+      } else if (type === 'RESULT_FINAL' && id === pendingIdRef.current) {
+        setResults(payload);
+        setLiveResults(payload);
       }
     };
     workerRef.current = worker;
@@ -236,20 +238,22 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accurac
       clearTimeout(liveDebounceRef.current);
       liveDebounceRef.current = null;
     }
-    pendingIdRef.current++; // Discard any pending worker messages
     recognitionRef.current._shouldRestart = false;
     try { recognitionRef.current.stop(); } catch (_) {}
     setIsListening(false);
 
-    // Final comparison: run on main thread (one-shot, not live) via setTimeout
-    // to let the UI update (mic stops) before the sync computation
-    setTimeout(() => {
-      const spoken = transcriptRef.current.trim();
-      const expected = expectedRef.current || '';
-      const comparison = compareRecitation(expected, spoken);
-      setResults(comparison);
-      setLiveResults(comparison); // Keep live overlay colored with final results during transition
-    }, 0);
+    // Final comparison: offloaded to the worker to ensure it uses the exact
+    // same DP math and threshold checks as the live overlay.
+    if (workerRef.current && expectedRef.current) {
+      const id = ++pendingIdRef.current;
+      workerRef.current.postMessage({
+        type: 'COMPARE_FINAL',
+        expected: expectedRef.current,
+        spoken: transcriptRef.current.trim(),
+        id,
+        ayahWordCounts: ayahWordCountsRef.current,
+      });
+    }
   }, []);
 
   // ── Clear for next turn ────────────────────────────────────────────────────
