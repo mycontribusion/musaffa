@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Moon, Sun, PlayCircle, Pause, User, BookOpen, Settings, X, MessageCircleQuestion } from 'lucide-react';
 import { RECITERS } from '../utils/quranUtils';
+import FeedbackModal from './FeedbackModal';
 
 const Header = ({ theme, setTheme, view, setView, setPartnerSubView, isInMusaffaSession, isPaused, onPauseMusaffa, onResumeMusaffa, reciter, setReciter }) => {
   const isDark = theme === 'dark';
@@ -170,68 +171,10 @@ const Header = ({ theme, setTheme, view, setView, setPartnerSubView, isInMusaffa
                 </button>
 
                 {feedbackOpen && (
-                  <div style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 0.5rem)',
-                    right: 0,
-                    width: '240px',
-                    padding: '0.75rem',
-                    background: 'var(--bg-primary)',
-                    border: '1px solid var(--glass-border)',
-                    borderRadius: 'var(--radius-md)',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-                    zIndex: 100
-                  }}>
-                    <p style={{ margin: '0 0 0.6rem', fontSize: '0.75rem', fontWeight: '900', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                      Feedback
-                    </p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      <a
-                        href="https://www.linkedin.com/in/ahmad-m-musa-b93587156/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          padding: '0.55rem 0.75rem',
-                          borderRadius: 'var(--radius-sm)',
-                          background: 'var(--accent-gold)',
-                          color: '#000',
-                          fontSize: '0.85rem',
-                          fontWeight: '900',
-                          textDecoration: 'none',
-                          transition: 'var(--transition-fast)'
-                        }}
-                        className="hover-scale"
-                      >
-                        LinkedIn
-                      </a>
-                      <a
-                        href="mailto:ahmadmusamuhd@gmail.com"
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          padding: '0.55rem 0.75rem',
-                          borderRadius: 'var(--radius-sm)',
-                          background: 'var(--glass-bg)',
-                          color: 'var(--text-primary)',
-                          border: '1px solid var(--glass-border)',
-                          fontSize: '0.85rem',
-                          fontWeight: '900',
-                          textDecoration: 'none',
-                          transition: 'var(--transition-fast)'
-                        }}
-                        className="hover-scale"
-                      >
-                        Email
-                      </a>
-                    </div>
-                    <p style={{ margin: '0.75rem 0 0', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                      Source: <a href="https://tanzil.net/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-gold)', textDecoration: 'none', fontWeight: '800' }}>Tanzil.net</a>
-                    </p>
-                  </div>
+                  <FeedbackModal onClose={() => {
+                    setFeedbackOpen(false);
+                    setPreviousPath('');
+                  }} />
                 )}
               </div>
             ) : (
