@@ -16,9 +16,9 @@ const RecitationStatusOverlay = ({ mode }) => {
         <motion.div
           key="error-overlay"
           initial={{ opacity: 0 }}
-          animate={{ opacity: [0.15, 0.45, 0.15] }}
-          exit={{ opacity: 0, transition: { duration: 0.3 } }}
-          transition={{ duration: 0.8, repeat: Infinity, ease: 'easeInOut' }}
+          animate={{ opacity: 0.2 }}
+          exit={{ opacity: 0, transition: { duration: 0.4 } }}
+          transition={{ duration: 0.2, ease: 'easeOut' }}
           style={{
             position: 'fixed',
             inset: 0,

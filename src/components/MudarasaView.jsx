@@ -88,35 +88,52 @@ const MudarasaView = ({
     liveResults.perVerseMinMet === false
   );
 
-  // Derive overlay mode from live results for hands-free feedback
-  // Only show overlay during user's recitation turn, not when app is playing
-  let overlayMode = null;
-  if (enableErrorDetection && mudarasaTurn === 'user' && isSttListening && liveResults?.results?.length > 0) {
-    const hasError = liveResults.results.some(
-      r => r.status === 'omission' || r.status === 'substitution'
-    );
-    if (hasError) {
-      overlayMode = 'error';
-    }
-  }
-
-  // Vibrate when a new error is detected
+  // ── Feedback Debounce (Vibration & Flash) ──────────────────────────────
+  // The Web Speech API sends interim results. If it guesses a wrong word initially
+  // but corrects it a moment later, we shouldn't punish the user with a vibrate/flash.
+  const [flashError, setFlashError] = useState(false);
   const prevErrorCountRef = useRef(0);
+  const errorTimeoutRef = useRef(null);
+
   useEffect(() => {
-    if (!enableErrorDetection || !liveResults?.results) {
+    if (!enableErrorDetection || !liveResults?.results || mudarasaTurn !== 'user') {
       prevErrorCountRef.current = 0;
+      setFlashError(false);
       return;
     }
+
     const currentErrors = liveResults.results.filter(
       r => r.status === 'omission' || r.status === 'substitution'
     ).length;
+
     if (currentErrors > prevErrorCountRef.current) {
-      if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        navigator.vibrate(200);
-      }
+      // New error detected. Instead of firing immediately, wait to see if STT corrects it.
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+      
+      errorTimeoutRef.current = setTimeout(() => {
+        // Still an error after settling time? Fire subtle feedback.
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          navigator.vibrate(50); // Crisp, short tap (not aggressive 200ms)
+        }
+        setFlashError(true);
+        // Fade the flash out quickly
+        setTimeout(() => setFlashError(false), 500);
+      }, 800); // 800ms grace period for STT to settle
+    } else if (currentErrors < prevErrorCountRef.current) {
+      // Error corrected itself! Cancel the pending flash/vibrate.
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+      setFlashError(false);
     }
+
     prevErrorCountRef.current = currentErrors;
-  }, [liveResults, enableErrorDetection]);
+
+    return () => {
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    };
+  }, [liveResults, enableErrorDetection, mudarasaTurn]);
+
+  // Derived mode for the RedBlinkOverlay
+  const overlayMode = flashError ? 'error' : null;
 
   // Transcript autoscroll ref
   const transcriptRef = useRef(null);
