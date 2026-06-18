@@ -139,12 +139,13 @@ const App = () => {
   }, [lastRead]);
     // Feature 2: Save/clear Musaffa session for pause & resume
     const saveMusaffaSession = useCallback(() => {
-      if (!selectedSurah) return;
+      const surahNum = selectedSurah?.number || musaffaParams.startSurah;
+      if (!surahNum) return;
       setSavedMusaffaSession({
         params: musaffaParams,
         chunkIndex: chunks.length > 0 ? currentChunkIndex : 0,
         turn: mudarasaTurn,
-        surahNumber: selectedSurah.number,
+        surahNumber: surahNum,
         savedAt: new Date().toISOString(),
       });
     }, [selectedSurah, musaffaParams, chunks.length, currentChunkIndex, mudarasaTurn]);

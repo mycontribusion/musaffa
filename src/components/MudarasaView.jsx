@@ -32,7 +32,14 @@ const MudarasaView = ({
 }) => {
 
   // ── Text visibility toggle (applies to both turns) ──────────────────────
-  const [showText, setShowText] = useState(true);
+  const [showText, setShowText] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('quran_musaffa_show_text') ?? 'true'); } catch { return true; }
+  });
+
+  // Persist text visibility preference
+  useEffect(() => {
+    localStorage.setItem('quran_musaffa_show_text', JSON.stringify(showText));
+  }, [showText]);
 
   // ── Retry prompt state ───────────────────────────────────────────────
   // null = hidden; object = visible with failure reasons
@@ -246,52 +253,90 @@ const MudarasaView = ({
         </div>
       </div>
 
-      {/* Audio Error Banner */}
-      {audioError && (
-        <div style={{ maxWidth: '800px', margin: '1rem auto', padding: '0 1rem', width: '100%' }}>
-          <div style={{
-            background: 'rgba(220, 38, 38, 0.1)',
-            border: '1px solid rgba(220, 38, 38, 0.3)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '1rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--accent-red)' }}>
-              <WifiOff size={24} />
-              <div>
-                <h3 style={{ fontSize: '0.85rem', fontWeight: '800', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Audio Missing Offline</h3>
-                <p style={{ fontSize: '0.75rem', margin: '0.25rem 0 0', opacity: 0.9 }}>
-                  Connect to the internet to stream, or manually skip the App's turn.
-                </p>
+      {/* Audio Error Modal Overlay */}
+      <AnimatePresence>
+        {audioError && (
+          <motion.div
+            key="audio-error-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 500,
+              background: 'rgba(0,0,0,0.65)',
+              backdropFilter: 'blur(10px)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '1.5rem',
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+              style={{
+                width: '100%', maxWidth: '22rem',
+                borderRadius: '2rem',
+                background: 'var(--bg-secondary, #111118)',
+                border: '1px solid rgba(220, 38, 38, 0.3)',
+                boxShadow: '0 8px 48px rgba(220,38,38,0.15), 0 4px 24px rgba(0,0,0,0.5)',
+                padding: '2rem 1.75rem',
+                display: 'flex', flexDirection: 'column', gap: '1.5rem',
+              }}
+            >
+              {/* Icon + Header */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', textAlign: 'center' }}>
+                <div style={{
+                  width: '3.5rem', height: '3.5rem', borderRadius: '1rem',
+                  background: 'rgba(220, 38, 38, 0.12)', border: '1px solid rgba(220, 38, 38, 0.3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <WifiOff size={22} color="rgba(220, 38, 38, 0.9)" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1rem', fontWeight: '900', margin: 0, color: 'var(--text-primary)' }}>Audio Unavailable</h3>
+                  <p style={{ fontSize: '0.8rem', margin: '0.4rem 0 0', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                    This surah's audio isn't downloaded. Connect to the internet to stream, or skip the app's turn.
+                  </p>
+                </div>
               </div>
-            </div>
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button
-                onClick={() => { setAudioError(false); onNext(); }}
-                style={{
-                  flex: 1, padding: '0.6rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-red)',
-                  background: 'var(--accent-red)', color: '#fff', fontSize: '0.75rem', fontWeight: '800',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem'
-                }}
-              >
-                <FastForward size={14} /> Skip Turn
-              </button>
-              <button
-                onClick={() => { setAudioError(false); onResume(); }}
-                style={{
-                  flex: 1, padding: '0.6rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)',
-                  background: 'rgba(0,0,0,0.2)', color: 'var(--text-primary)', fontSize: '0.75rem', fontWeight: '800',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem'
-                }}
-              >
-                <RefreshCw size={14} /> Retry
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
+              {/* Action buttons */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                <button
+                  onClick={() => { setAudioError(false); onResume(); }}
+                  style={{
+                    height: '3.25rem', borderRadius: '1rem', cursor: 'pointer',
+                    background: 'linear-gradient(135deg, rgba(212,175,55,0.2), rgba(16,185,129,0.15))',
+                    border: '1px solid rgba(212,175,55,0.4)',
+                    color: 'var(--text-primary)', fontWeight: '800', fontSize: '0.75rem',
+                    textTransform: 'uppercase', letterSpacing: '0.12em',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <RefreshCw size={14} /> Retry
+                </button>
+                <button
+                  onClick={() => { setAudioError(false); onNext(); }}
+                  style={{
+                    height: '2.75rem', borderRadius: '1rem', cursor: 'pointer',
+                    background: 'transparent',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    color: 'var(--text-muted)', fontWeight: '600', fontSize: '0.65rem',
+                    textTransform: 'uppercase', letterSpacing: '0.1em',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                    opacity: 0.6,
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <FastForward size={12} /> Skip App's Turn
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Recitation Content */}
       <div style={{ flex: 1, padding: '1rem 0 6rem 0' }}>
