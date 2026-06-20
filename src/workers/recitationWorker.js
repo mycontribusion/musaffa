@@ -24,43 +24,6 @@ const normalizeArabic = (text) => {
     .trim();
 };
 
-// Known Muqatta'at tokens as they appear in Quran text (after tashkeel removal)
-// Maps compressed form → expanded letter-name form
-const MUQATTAAT_EXPANSIONS = {
-  'الم':    'الف لام ميم',
-  'الر':    'الف لام را',
-  'المر':   'الف لام ميم را',
-  'المص':   'الف لام ميم صاد',
-  'كهيعص':  'كاف ها يا عين صاد',
-  'طه':     'طا ها',
-  'طسم':    'طا سين ميم',
-  'طس':     'طا سين',
-  'يس':     'يا سين',
-  'ص':      'صاد',
-  'حم':     'حا ميم',
-  'حمعسق':  'حا ميم عين سين قاف',
-  'ق':      'قاف',
-  'ن':      'نون',
-};
-
-/**
- * Expand Muqatta'at tokens in the expected text into their individual letter
- * name pronunciations. This allows the comparison to match the STT's natural
- * output of letter names (e.g. "الف لام ميم") word by word.
- * Applied to the expected text before comparison.
- */
-const expandMuqattaat = (text) => {
-  if (!text) return text;
-  let result = text;
-  // Replace longest matches first to avoid partial replacements
-  const sortedKeys = Object.keys(MUQATTAAT_EXPANSIONS).sort((a, b) => b.length - a.length);
-  for (const key of sortedKeys) {
-    // Only replace at word boundaries
-    const regex = new RegExp(`(^|\\s)${key}(\\s|$)`, 'g');
-    result = result.replace(regex, `$1${MUQATTAAT_EXPANSIONS[key]}$2`);
-  }
-  return result;
-};
 
 
 const levenshtein = (a, b) => {
@@ -106,10 +69,8 @@ const fuzzyMatch = (a, b) => {
 };
 
 const compareRecitation = (expectedText, spokenText, ayahWordCounts = []) => {
-  // Strip tashkeel and expand Muqatta'at into letter names before comparison.
-  // e.g. "الم" → "الف لام ميم" so each letter can be matched individually.
-  const expNorm = expandMuqattaat(expectedText.replace(/[\u064B-\u065F]/g, ''));
-  const expWords = normalizeArabic(expNorm).split(/\s+/).filter(Boolean);
+  // Expected text is already expanded by PartnerSession, just normalize it
+  const expWords = normalizeArabic(expectedText).split(/\s+/).filter(Boolean);
   
   // Normalize spoken text only — STT output naturally produces letter names
   // (e.g. "الف لام ميم"), which now match the expanded expected words directly.

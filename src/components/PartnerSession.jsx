@@ -4,7 +4,7 @@ import MudarasaView from './MudarasaView';
 import QuizEngine from './QuizEngine';
 import { useMic } from '../hooks/useMic';
 import { useRecitationCheck } from '../hooks/useRecitationCheck';
-import { removeTashkeel } from '../utils/quranUtils';
+import { removeTashkeel, normalizeArabic, expandMuqattaat } from '../utils/quranUtils';
 
 /**
  * Build expected text for the current chunk by concatenating ayah texts.
@@ -15,17 +15,14 @@ import { removeTashkeel } from '../utils/quranUtils';
 const buildExpectedText = (chunk, quranSimple) => {
   if (!chunk || chunk.length === 0) return '';
   return chunk.map(ayah => {
-    // Use quranSimple plain text for error detection if available
-    // This ensures Surah A Verse 1 of original text matches Surah A Verse 1 in plain text
+    let text = ayah.text || '';
     if (quranSimple) {
       const key = `${ayah.surahNumber}|${ayah.numberInSurah}`;
       const simpleText = quranSimple[key];
-      if (simpleText) {
-        return removeTashkeel(simpleText);
-      }
+      if (simpleText) text = simpleText;
     }
-    // Fallback to quranAr text
-    return removeTashkeel(ayah.text || '');
+    const clean = removeTashkeel(text);
+    return expandMuqattaat(normalizeArabic(clean));
   }).join(' ');
 };
 
@@ -37,14 +34,15 @@ const buildExpectedText = (chunk, quranSimple) => {
 const buildAyahWordCounts = (chunk, quranSimple) => {
   if (!chunk || chunk.length === 0) return [];
   return chunk.map(ayah => {
-    let text;
+    let text = ayah.text || '';
     if (quranSimple) {
       const key = `${ayah.surahNumber}|${ayah.numberInSurah}`;
       const simpleText = quranSimple[key];
-      if (simpleText) text = removeTashkeel(simpleText);
+      if (simpleText) text = simpleText;
     }
-    if (!text) text = removeTashkeel(ayah.text || '');
-    return text.trim().split(/\s+/).filter(Boolean).length;
+    const clean = removeTashkeel(text);
+    const expanded = expandMuqattaat(normalizeArabic(clean));
+    return expanded.trim().split(/\s+/).filter(Boolean).length;
   });
 };
 
