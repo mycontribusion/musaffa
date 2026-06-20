@@ -217,6 +217,31 @@ const compareRecitation = (expectedText, spokenText, ayahWordCounts = []) => {
     }
   }
 
+  // ── Enforce left-to-right order: any expected word whose matched spoken index
+  // is non-monotonic (i.e., the DP "skipped ahead") must be treated as pending.
+  // This prevents future words from showing green before they're recited.
+  let lastSpkIdx = -1;
+  const matchedSpkIdx = new Array(expLen).fill(-1);
+  for (const item of alignment) {
+    if (item.type === 'match') {
+      matchedSpkIdx[item.expIdx] = item.spkIdx;
+    }
+  }
+  for (let idx = 0; idx < expLen; idx++) {
+    const spkIdx = matchedSpkIdx[idx];
+    if (spkIdx === -1) {
+      // omission — keep as is (will be overridden to pending below if beyond lastMatchedExpIdx)
+      continue;
+    }
+    if (spkIdx > lastSpkIdx) {
+      lastSpkIdx = spkIdx;
+    } else {
+      // Out of order match — this word was matched to a spoken word that came
+      // before the previous match's spoken word. Demote to pending.
+      results[idx].status = 'pending';
+    }
+  }
+
   // Any expected words AFTER the last successful match are considered "pending" (not yet spoken)
   for (let idx = lastMatchedExpIdx + 1; idx < expLen; idx++) {
     results[idx].status = 'pending';
