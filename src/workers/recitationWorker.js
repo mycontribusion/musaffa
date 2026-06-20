@@ -24,32 +24,42 @@ const normalizeArabic = (text) => {
     .trim();
 };
 
-const replaceMuqattaat = (text) => {
-  if (!text) return text;
-  let res = text;
-  
-  const muqattaat = [
-    { p: /(^|\s)(الف لام ميم صاد|افلام ميم صاد|افلام لام ميم صاد)(?=\s|$)/g, r: '$1المص' },
-    { p: /(^|\s)(الف لام ميم را|افلام ميم را|افلام لام ميم را|الف لام ميم راء|افلام ميم راء|افلام لام ميم راء)(?=\s|$)/g, r: '$1المر' },
-    { p: /(^|\s)(الف لام ميم|افلام ميم|افلام لام ميم)(?=\s|$)/g, r: '$1الم' },
-    { p: /(^|\s)(الف لام را|افلام را|افلام لام را|الف لام راء|افلام راء|افلام لام راء)(?=\s|$)/g, r: '$1الر' },
-    { p: /(^|\s)(كاف ها يا عين صاد|كاف ها ياعين صاد)(?=\s|$)/g, r: '$1كهيعص' },
-    { p: /(^|\s)(حا ميم عين سين قاف|حاميم عين سين قاف|حا ميم عسق)(?=\s|$)/g, r: '$1حمعسق' },
-    { p: /(^|\s)(طا سين ميم|طاسين ميم)(?=\s|$)/g, r: '$1طسم' },
-    { p: /(^|\s)(طا ها|طاها)(?=\s|$)/g, r: '$1طه' },
-    { p: /(^|\s)(طا سين|طاسين)(?=\s|$)/g, r: '$1طس' },
-    { p: /(^|\s)(يا سين|ياسين)(?=\s|$)/g, r: '$1يس' },
-    { p: /(^|\s)(حا ميم|حاميم)(?=\s|$)/g, r: '$1حم' },
-    { p: /(^|\s)(صاد)(?=\s|$)/g, r: '$1ص' },
-    { p: /(^|\s)(قاف)(?=\s|$)/g, r: '$1ق' },
-    { p: /(^|\s)(نون)(?=\s|$)/g, r: '$1ن' },
-  ];
+// Known Muqatta'at tokens as they appear in Quran text (after tashkeel removal)
+// Maps compressed form → expanded letter-name form
+const MUQATTAAT_EXPANSIONS = {
+  'الم':    'الف لام ميم',
+  'الر':    'الف لام را',
+  'المر':   'الف لام ميم را',
+  'المص':   'الف لام ميم صاد',
+  'كهيعص':  'كاف ها يا عين صاد',
+  'طه':     'طا ها',
+  'طسم':    'طا سين ميم',
+  'طس':     'طا سين',
+  'يس':     'يا سين',
+  'ص':      'صاد',
+  'حم':     'حا ميم',
+  'حمعسق':  'حا ميم عين سين قاف',
+  'ق':      'قاف',
+  'ن':      'نون',
+};
 
-  muqattaat.forEach(({ p, r }) => {
-    res = res.replace(p, r);
-  });
-  
-  return res;
+/**
+ * Expand Muqatta'at tokens in the expected text into their individual letter
+ * name pronunciations. This allows the comparison to match the STT's natural
+ * output of letter names (e.g. "الف لام ميم") word by word.
+ * Applied to the expected text before comparison.
+ */
+const expandMuqattaat = (text) => {
+  if (!text) return text;
+  let result = text;
+  // Replace longest matches first to avoid partial replacements
+  const sortedKeys = Object.keys(MUQATTAAT_EXPANSIONS).sort((a, b) => b.length - a.length);
+  for (const key of sortedKeys) {
+    // Only replace at word boundaries
+    const regex = new RegExp(`(^|\\s)${key}(\\s|$)`, 'g');
+    result = result.replace(regex, `$1${MUQATTAAT_EXPANSIONS[key]}$2`);
+  }
+  return result;
 };
 
 
@@ -96,13 +106,14 @@ const fuzzyMatch = (a, b) => {
 };
 
 const compareRecitation = (expectedText, spokenText, ayahWordCounts = []) => {
-  // Strip tashkeel from expected text only — STT output typically lacks harakat,
-  // so we normalise the reference to plain letters for a fair word-level comparison.
-  const expNorm = expectedText.replace(/[\u064B-\u065F]/g, '');
+  // Strip tashkeel and expand Muqatta'at into letter names before comparison.
+  // e.g. "الم" → "الف لام ميم" so each letter can be matched individually.
+  const expNorm = expandMuqattaat(expectedText.replace(/[\u064B-\u065F]/g, ''));
   const expWords = normalizeArabic(expNorm).split(/\s+/).filter(Boolean);
   
-  // Normalize spoken text, then replace phonetic Muqatta'at, then split
-  const spkNorm = replaceMuqattaat(normalizeArabic(spokenText));
+  // Normalize spoken text only — STT output naturally produces letter names
+  // (e.g. "الف لام ميم"), which now match the expanded expected words directly.
+  const spkNorm = normalizeArabic(spokenText);
   const rawSpkWords = spkNorm.split(/\s+/).filter(Boolean);
 
   // Deduplicate consecutive identical words in spoken text.
