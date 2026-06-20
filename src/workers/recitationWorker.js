@@ -132,6 +132,14 @@ const compareRecitation = (expectedText, spokenText, ayahWordCounts = []) => {
         isMatch = true;
       }
 
+      // Tie-breaker: Prefer matching words that are closer in position.
+      // If a common word like "الله" or "و" appears multiple times, this forces
+      // the DP to match the one nearest to the current recitation position,
+      // preventing random noise from turning words green deep into the future.
+      if (isMatch) {
+        matchCost += Math.abs(i - j) * 0.001;
+      }
+
       const costSub = dp[i - 1][j - 1] + matchCost;
       const costInsert = dp[i][j - 1] + 1;
       const costOmit = dp[i - 1][j] + 1;
@@ -186,31 +194,6 @@ const compareRecitation = (expectedText, spokenText, ayahWordCounts = []) => {
       if (eIdx > lastMatchedExpIdx) lastMatchedExpIdx = eIdx;
     } else if (item.type === 'insertion') {
       insertions.push({ word: spkWords[item.spkIdx], status: 'insertion' });
-    }
-  }
-
-  // ── Enforce left-to-right order: any expected word whose matched spoken index
-  // is non-monotonic (i.e., the DP "skipped ahead") must be treated as pending.
-  // This prevents future words from showing green before they're recited.
-  let lastSpkIdx = -1;
-  const matchedSpkIdx = new Array(expLen).fill(-1);
-  for (const item of alignment) {
-    if (item.type === 'match') {
-      matchedSpkIdx[item.expIdx] = item.spkIdx;
-    }
-  }
-  for (let idx = 0; idx < expLen; idx++) {
-    const spkIdx = matchedSpkIdx[idx];
-    if (spkIdx === -1) {
-      // omission — keep as is (will be overridden to pending below if beyond lastMatchedExpIdx)
-      continue;
-    }
-    if (spkIdx > lastSpkIdx) {
-      lastSpkIdx = spkIdx;
-    } else {
-      // Out of order match — this word was matched to a spoken word that came
-      // before the previous match's spoken word. Demote to pending.
-      results[idx].status = 'pending';
     }
   }
 
