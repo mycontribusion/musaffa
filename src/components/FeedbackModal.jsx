@@ -1,69 +1,198 @@
-import { X } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Mail, Link, Database } from 'lucide-react';
 
 export default function FeedbackModal({ onClose }) {
-    return (
-        <div
-            className="modal-backdrop"
-            onClick={(e) => e.target === e.currentTarget && onClose()}
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="feedback-overlay"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={(e) => e.target === e.currentTarget && onClose()}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '1.5rem',
+          background: 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+        }}
+      >
+        <motion.div
+          initial={{ scale: 0.92, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.92, opacity: 0, y: 20 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="feedback-title"
+          style={{
+            width: '100%', maxWidth: '26rem',
+            borderRadius: '2rem',
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--glass-border)',
+            borderTop: '3px solid var(--accent-gold)',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.35), 0 0 0 1px var(--accent-gold-soft)',
+            padding: '1.75rem',
+            display: 'flex', flexDirection: 'column', gap: '1.5rem',
+          }}
         >
-            <div className="modal-box" role="dialog" aria-modal="true" aria-labelledby="feedback-title">
-                <div className="modal-header">
-                    <div>
-                        <h2 id="feedback-title" className="modal-title">Feedback & Suggestions</h2>
-                        <p className="modal-subtitle">We'd love to hear from you</p>
-                    </div>
-                    <button
-                        onClick={onClose}
-                        className="modal-close"
-                        aria-label="Close"
-                    >
-                        <X size={20} />
-                    </button>
-                </div>
-
-                <div className="modal-links">
-                    <a
-                        href="mailto:ahmadmusamuhd@gmail.com"
-                        className="feedback-card feedback-card-email"
-                    >
-                        <div className="feedback-icon feedback-icon-email">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <rect width="20" height="16" x="2" y="4" rx="2" />
-                                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-                            </svg>
-                        </div>
-                        <div className="feedback-copy">
-                            <span className="feedback-label feedback-label-email">Email</span>
-                            <span className="feedback-text">Send an Email</span>
-                        </div>
-                    </a>
-
-                    <a
-                        href="https://www.linkedin.com/in/ahmad-m-musa-b93587156/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="feedback-card feedback-card-linkedin"
-                    >
-                        <div className="feedback-icon feedback-icon-linkedin">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-                            </svg>
-                        </div>
-                        <div className="feedback-copy">
-                            <span className="feedback-label feedback-label-linkedin">LinkedIn</span>
-                            <span className="feedback-text">Send a DM</span>
-                        </div>
-                    </a>
-                </div>
-
-                <p className="modal-note">
-                    <strong>Data Sources:</strong><br />
-                    <a href="https://api.alquran.cloud/v1/quran/quran-uthmani-quran-academy" target="_blank" rel="noopener noreferrer">quran-ar.json</a> - Al Quran Cloud (Quran Academy Uthmani)<br />
-                    <a href="https://api.alquran.cloud/v1/quran/en.sahih" target="_blank" rel="noopener noreferrer">quran-en.json</a> - Al Quran Cloud (Saheeh International)<br />
-                    <a href="https://tanzil.net" target="_blank" rel="noopener noreferrer">quran-simple.txt</a> - Tanzil Project<br />
-                    <a href="https://github.com/Waqar144/Quran_Mutashabihat_Data" target="_blank" rel="noopener noreferrer">waqar114</a> - Waqar144 Mutashabihat Dataset
-                </p>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
+            <div>
+              <h2 id="feedback-title" style={{
+                fontSize: '1.15rem', fontWeight: '900', letterSpacing: '-0.02em',
+                color: 'var(--text-primary)', margin: 0, lineHeight: 1.2,
+              }}>
+                Feedback & Suggestions
+              </h2>
+              <p style={{ marginTop: '0.3rem', fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '500' }}>
+                We'd love to hear from you
+              </p>
             </div>
-        </div>
-    )
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              style={{
+                width: '2.25rem', height: '2.25rem', flexShrink: 0,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                borderRadius: '999px',
+                border: '1px solid var(--glass-border)',
+                background: 'var(--glass-bg)',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Contact Cards */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {/* Email Card */}
+            <a
+              href="mailto:ahmadmusamuhd@gmail.com"
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.9rem',
+                padding: '1rem',
+                borderRadius: 'var(--radius-lg)',
+                textDecoration: 'none',
+                background: 'var(--accent-gold-soft)',
+                border: '1px solid rgba(251,191,36,0.2)',
+                transition: 'all 0.2s',
+              }}
+            >
+              <div style={{
+                width: '2.75rem', height: '2.75rem', flexShrink: 0,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                borderRadius: '0.875rem',
+                background: 'linear-gradient(135deg, var(--accent-gold), #2563eb)',
+                color: '#fff',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18), 0 6px 16px rgba(0,0,0,0.15)',
+              }}>
+                <Mail size={18} />
+              </div>
+              <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+                <span style={{
+                  fontSize: '0.65rem', fontWeight: '900',
+                  letterSpacing: '0.12em', textTransform: 'uppercase',
+                  color: 'var(--accent-gold)',
+                }}>
+                  Email
+                </span>
+                <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+                  Send an Email
+                </span>
+              </div>
+            </a>
+
+            {/* LinkedIn Card */}
+            <a
+              href="https://www.linkedin.com/in/ahmad-m-musa-b93587156/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.9rem',
+                padding: '1rem',
+                borderRadius: 'var(--radius-lg)',
+                textDecoration: 'none',
+                background: 'var(--accent-gold-soft)',
+                border: '1px solid rgba(251,191,36,0.2)',
+                transition: 'all 0.2s',
+              }}
+            >
+              <div style={{
+                width: '2.75rem', height: '2.75rem', flexShrink: 0,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                borderRadius: '0.875rem',
+                background: 'linear-gradient(135deg, var(--accent-gold), #0284c7)',
+                color: '#fff',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18), 0 6px 16px rgba(0,0,0,0.15)',
+              }}>
+                <Link size={18} />
+              </div>
+              <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+                <span style={{
+                  fontSize: '0.65rem', fontWeight: '900',
+                  letterSpacing: '0.12em', textTransform: 'uppercase',
+                  color: 'var(--accent-gold)',
+                }}>
+                  LinkedIn
+                </span>
+                <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+                  Send a DM
+                </span>
+              </div>
+            </a>
+          </div>
+
+          {/* Data Sources */}
+          <div style={{
+            padding: '1rem',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--glass-bg)',
+            border: '1px solid var(--glass-border)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.6rem' }}>
+              <Database size={12} color="var(--accent-gold)" />
+              <span style={{
+                fontSize: '0.6rem', fontWeight: '900',
+                textTransform: 'uppercase', letterSpacing: '0.12em',
+                color: 'var(--text-muted)',
+              }}>
+                Data Sources
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              {[
+                { href: 'https://api.alquran.cloud/v1/quran/quran-uthmani-quran-academy', label: 'quran-ar.json', desc: 'Al Quran Cloud (Uthmani)' },
+                { href: 'https://api.alquran.cloud/v1/quran/en.sahih', label: 'quran-en.json', desc: 'Saheeh International' },
+                { href: 'https://tanzil.net', label: 'quran-simple.txt', desc: 'Tanzil Project' },
+                { href: 'https://github.com/Waqar144/Quran_Mutashabihat_Data', label: 'waqar114', desc: 'Mutashabihat Dataset' },
+              ].map((src) => (
+                <a
+                  key={src.label}
+                  href={src.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                    fontSize: '0.7rem', textDecoration: 'none',
+                    color: 'var(--text-secondary)',
+                    transition: 'color 0.2s',
+                  }}
+                >
+                  <span style={{ color: 'var(--accent-gold)', fontWeight: '700' }}>{src.label}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>—</span>
+                  <span>{src.desc}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
 }

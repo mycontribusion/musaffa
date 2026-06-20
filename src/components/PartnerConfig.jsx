@@ -294,7 +294,7 @@ const PartnerConfig = ({
                     style={{ width: '100%', accentColor: '#6366f1' }}
                   />
                   <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.5rem', lineHeight: '1.4' }}>
-                    Auto-advances when you hit the <strong style={{color: '#818cf8'}}>last word anchor</strong> AND your overall accuracy is at least {params.errorThreshold ?? 55}%.
+                    Auto-advances only when <strong style={{color: '#818cf8'}}>every verse</strong> individually meets the {params.errorThreshold ?? 55}% accuracy target with no unread words remaining.
                   </p>
                 </div>
               </motion.div>

@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import PartnerConfig from './PartnerConfig';
 import MudarasaView from './MudarasaView';
 import QuizEngine from './QuizEngine';
@@ -106,10 +106,18 @@ const PartnerSession = ({
     subView === 'mudarasa' && turn === 'user' ? handleNextTurn : null
   );
 
-  // Build expected text for the current chunk
+  const [retryStartIndex, setRetryStartIndex] = useState(0);
+
+  // Reset retryStartIndex on chunk index change
+  useEffect(() => {
+    setRetryStartIndex(0);
+  }, [currentChunkIndex]);
+
+  // Build expected text for the current chunk (sliced by retryStartIndex)
   const currentChunk = chunks[currentChunkIndex] || null;
-  const expectedText = currentChunk ? buildExpectedText(currentChunk, quranSimple) : '';
-  const ayahWordCounts = currentChunk ? buildAyahWordCounts(currentChunk, quranSimple) : [];
+  const activeChunkSlice = currentChunk ? currentChunk.slice(retryStartIndex) : [];
+  const expectedText = activeChunkSlice.length > 0 ? buildExpectedText(activeChunkSlice, quranSimple) : '';
+  const ayahWordCounts = activeChunkSlice.length > 0 ? buildAyahWordCounts(activeChunkSlice, quranSimple) : [];
 
   // Declare handleFinishedTurn BEFORE useRecitationCheck so it can be passed as onAutoFinish.
   // We use a ref to avoid stale closure issues with the initial callback registration.
@@ -285,6 +293,8 @@ const PartnerSession = ({
       onRetryTurn={clearResults}
       quranSimple={quranSimple}
       targetAccuracy={params.errorThreshold ?? 55}
+      retryStartIndex={retryStartIndex}
+      setRetryStartIndex={setRetryStartIndex}
     />
   );
 

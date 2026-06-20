@@ -244,22 +244,42 @@ const compareRecitation = (expectedText, spokenText, ayahWordCounts = []) => {
   // be shown as green. preBlockAccuracy (used for auto-advance) is unaffected.
   const accuracy = Math.round((correct / expWords.length) * 100);
 
-  // ── Per-verse minimum accuracy (each ayah must be ≥50% correct) ───────────
-  // Only meaningful for multi-ayah chunks; single-ayah chunks trivially pass
-  // since the overall accuracy check already covers them.
-  let perVerseMinMet = true;
-  if (ayahWordCounts && ayahWordCounts.length > 1) {
+  // ── Per-verse statistics ──────────────────────────────────────────────────
+  const verseStats = [];
+  if (ayahWordCounts && ayahWordCounts.length > 0) {
     let wordIdx = 0;
-    for (const count of ayahWordCounts) {
-      if (count === 0) { continue; }
-      const verseSlice  = results.slice(wordIdx, wordIdx + count);
-      const verseCorrect = verseSlice.filter(r => r.status === 'correct').length;
-      const verseAccuracy = (verseCorrect / count) * 100;
-      if (verseAccuracy < 50) {
-        perVerseMinMet = false;
-        break;
+    for (let idx = 0; idx < ayahWordCounts.length; idx++) {
+      const count = ayahWordCounts[idx];
+      if (count === 0) {
+        verseStats.push({ index: idx, accuracy: 0, hasPending: false });
+        continue;
       }
+      const verseSlice = results.slice(wordIdx, wordIdx + count);
+      const verseCorrect = verseSlice.filter(r => r.status === 'correct').length;
+      const verseAccuracy = Math.round((verseCorrect / count) * 100);
+      const hasPending = verseSlice.some(r => r.status === 'pending');
+      
+      verseStats.push({
+        index: idx,
+        accuracy: verseAccuracy,
+        hasPending
+      });
       wordIdx += count;
+    }
+  } else {
+    const hasPending = results.some(r => r.status === 'pending');
+    verseStats.push({
+      index: 0,
+      accuracy: accuracy,
+      hasPending
+    });
+  }
+
+  let perVerseMinMet = true;
+  for (const stat of verseStats) {
+    if (stat.accuracy < 50) {
+      perVerseMinMet = false;
+      break;
     }
   }
 
@@ -272,6 +292,7 @@ const compareRecitation = (expectedText, spokenText, ayahWordCounts = []) => {
     preBlockHasPending,
     preBlockAccuracy,
     perVerseMinMet,
+    verseStats,
   };
 };
 

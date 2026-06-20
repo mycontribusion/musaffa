@@ -29,6 +29,8 @@ const MudarasaView = ({
   onClearResults,
   quranSimple,        // plain text for error detection comparison
   targetAccuracy,     // threshold percentage
+  retryStartIndex = 0,
+  setRetryStartIndex,
 }) => {
 
   // ── Text visibility toggle (applies to both turns) ──────────────────────
@@ -41,59 +43,116 @@ const MudarasaView = ({
     localStorage.setItem('quran_musaffa_show_text', JSON.stringify(showText));
   }, [showText]);
 
+  // ── Find active verse index and its word offset ─────────────────────
+  let sliceActiveAyahIndex = 0;
+  if (enableErrorDetection && liveResults && liveResults.verseStats) {
+    for (let i = 0; i < liveResults.verseStats.length; i++) {
+      const stat = liveResults.verseStats[i];
+      if (stat.accuracy >= targetAccuracy && !stat.hasPending) {
+        sliceActiveAyahIndex = i + 1;
+      } else {
+        sliceActiveAyahIndex = i;
+        break;
+      }
+    }
+    if (sliceActiveAyahIndex >= liveResults.verseStats.length) {
+      sliceActiveAyahIndex = liveResults.verseStats.length - 1;
+    }
+  }
+  const activeAyahIndex = retryStartIndex + sliceActiveAyahIndex;
+
+  let activeVerseWordOffset = 0;
+  if (enableErrorDetection && liveResults && liveResults.verseStats && chunks[currentChunkIndex]) {
+    const sliceActiveIdx = activeAyahIndex - retryStartIndex;
+    const sliceChunk = chunks[currentChunkIndex].slice(retryStartIndex);
+    for (let i = 0; i < sliceActiveIdx; i++) {
+      const ayah = sliceChunk[i];
+      if (!ayah) continue;
+      let txt = ayah.text || '';
+      if (quranSimple) {
+        const key = `${ayah.surahNumber}|${ayah.numberInSurah}`;
+        const simpleText = quranSimple[key];
+        if (simpleText) txt = simpleText;
+      }
+      if (ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9) {
+        const cleanText = txt.replace(/\uFEFF/g, '');
+        const bEnd = "ٱلرَّحِيمِ";
+        const bEndPlain = "بسم الله الرحمن الرحيم";
+        const bIdx = cleanText.indexOf(bEnd);
+        const bIdxPlain = cleanText.indexOf(bEndPlain);
+        let dText = txt;
+        if (bIdx !== -1 && bIdx < 50) {
+          dText = cleanText.substring(bIdx + bEnd.length).trim().replace(/^[\u200B-\u200D\uFEFF]+/, '');
+        } else if (bIdxPlain !== -1 && bIdxPlain < 50) {
+          dText = cleanText.substring(bIdxPlain + bEndPlain.length).trim();
+        }
+        activeVerseWordOffset += dText.split(/\s+/).filter(Boolean).length;
+      } else {
+        activeVerseWordOffset += txt.split(/\s+/).filter(Boolean).length;
+      }
+    }
+  }
+
   // ── Retry prompt state ───────────────────────────────────────────────
   // null = hidden; object = visible with failure reasons
   const [retryPrompt, setRetryPrompt] = useState(null);
 
+  const handleRetryVerse = () => {
+    setRetryPrompt(null);
+    setRetryStartIndex(activeAyahIndex);
+    onRetryTurn();
+  };
+
+  const handleMarkSatisfied = () => {
+    setRetryPrompt(null);
+    if (activeAyahIndex < chunks[currentChunkIndex].length - 1) {
+      setRetryStartIndex(activeAyahIndex + 1);
+      onRetryTurn();
+    } else {
+      onFinishedTurn();
+    }
+  };
+
   // Called by both "Finished Reciting" and "Tap to finish early" buttons.
-  // If error detection is on and criteria aren't met, show the retry prompt
-  // instead of advancing. If all criteria pass, proceed immediately.
   const handleManualFinish = () => {
     if (!enableErrorDetection) {
       onFinishedTurn();
       return;
     }
 
-    // No STT data at all — user tapped before speaking
-    if (!liveResults || !liveResults.results || liveResults.results.length === 0) {
+    if (!liveResults || !liveResults.verseStats || liveResults.verseStats.length === 0) {
       setRetryPrompt({ reasons: ['No recitation was detected — please recite the verse.'], accuracy: null });
       return;
     }
 
-    const { preBlockHasPending, preBlockAccuracy, smartAnchorHit } = liveResults;
+    const activeStat = liveResults.verseStats[sliceActiveAyahIndex];
     const reasons = [];
 
-    if (preBlockHasPending)
-      reasons.push('Not all words were read — continue to the end of the verse');
-    if (preBlockAccuracy < 50)
-      reasons.push(`Accuracy too low (${preBlockAccuracy}% — minimum 50% required)`);
-    else if (preBlockAccuracy < targetAccuracy)
-      reasons.push(`Below your accuracy goal (${preBlockAccuracy}% — need ${targetAccuracy}%)`);
-    if (!smartAnchorHit)
-      reasons.push('The last word of the verse was not recited correctly');
-    if (liveResults.perVerseMinMet === false)
-      reasons.push('At least one verse had less than 50% accuracy');
+    if (!activeStat) {
+      reasons.push('Please recite the current verse.');
+    } else {
+      if (activeStat.hasPending) {
+        reasons.push('Not all words of the current verse were read.');
+      }
+      if (activeStat.accuracy < targetAccuracy) {
+        reasons.push(`Accuracy for the current verse is below target (${activeStat.accuracy}% / ${targetAccuracy}%)`);
+      }
+    }
 
     if (reasons.length > 0) {
-      setRetryPrompt({ reasons, accuracy: preBlockAccuracy });
+      setRetryPrompt({ reasons, accuracy: activeStat ? activeStat.accuracy : null });
     } else {
-      onFinishedTurn();
+      handleMarkSatisfied();
     }
   };
 
   // ── Inline criteria-failed detection ─────────────────────────────────
-  // When the user has attempted all words but still fails the criteria,
-  // replace the 'Tap to finish early' link with inline Try Again / Skip Anyway.
+  const activeStat = liveResults?.verseStats?.[sliceActiveAyahIndex];
   const allWordsAttempted = !!(
     enableErrorDetection && isSttListening &&
-    liveResults?.results?.length > 0 &&
-    !liveResults.preBlockHasPending
+    activeStat && !activeStat.hasPending
   );
-  const criteriaFailed = allWordsAttempted && (
-    !liveResults.smartAnchorHit ||
-    (liveResults.preBlockAccuracy ?? 0) < targetAccuracy ||
-    liveResults.perVerseMinMet === false
-  );
+  const criteriaFailed = allWordsAttempted && activeStat && activeStat.accuracy < targetAccuracy;
 
   // ── Feedback Debounce (Vibration & Flash) ──────────────────────────────
   // The Web Speech API sends interim results. If it guesses a wrong word initially
@@ -116,7 +175,7 @@ const MudarasaView = ({
     if (currentErrors > prevErrorCountRef.current) {
       // New error detected. Instead of firing immediately, wait to see if STT corrects it.
       if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
-      
+
       errorTimeoutRef.current = setTimeout(() => {
         // Still an error after settling time? Fire subtle feedback.
         if (typeof navigator !== 'undefined' && navigator.vibrate) {
@@ -186,382 +245,417 @@ const MudarasaView = ({
       )}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', minHeight: '80vh' }}>
         {/* Dynamic Header */}
-      <div style={{ position: 'sticky', top: '70px', zIndex: 90, padding: '1rem 0' }}>
-        <div className="glass-card" style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--glass-bg)', backdropFilter: 'blur(20px)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <button onClick={onBack} className="icon-btn" style={{ width: '32px', height: '32px' }}><ChevronLeft size={16} /></button>
-            <div>
-              <span style={{ fontSize: '0.55rem', fontWeight: '900', color: mudarasaTurn === 'app' ? 'var(--accent-gold)' : 'var(--accent-emerald)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                {mudarasaTurn === 'app' ? 'Listening to Partner' : 'Your Turn to Recite'}
-              </span>
-              <p style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-primary)' }}>Portion {currentChunkIndex + 1} of {chunks.length}</p>
+        <div style={{ position: 'sticky', top: '70px', zIndex: 90, padding: '1rem 0' }}>
+          <div className="glass-card" style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--glass-bg)', backdropFilter: 'blur(20px)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <button onClick={onBack} className="icon-btn" style={{ width: '32px', height: '32px' }}><ChevronLeft size={16} /></button>
+              <div>
+                <span style={{ fontSize: '0.55rem', fontWeight: '900', color: mudarasaTurn === 'app' ? 'var(--accent-gold)' : 'var(--accent-emerald)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  {mudarasaTurn === 'app' ? 'Listen' : 'Recite'}
+                </span>
+                <p style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-primary)' }}>Portion {currentChunkIndex + 1} of {chunks.length}</p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              {/* Text visibility toggle — hide/show Quran text on both turns */}
+              <button
+                onClick={() => setShowText(v => !v)}
+                title={showText ? 'Hide text' : 'Show text'}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.3rem',
+                  padding: '0.2rem 0.55rem 0.2rem 0.4rem',
+                  borderRadius: '999px', cursor: 'pointer',
+                  border: `1px solid ${showText ? 'var(--glass-border)' : 'rgba(212,175,55,0.4)'}`,
+                  background: showText ? 'transparent' : 'rgba(212,175,55,0.08)',
+                  transition: 'all 0.2s',
+                }}
+              >
+                {showText
+                  ? <BookOpen size={12} color="var(--text-muted)" />
+                  : <BookX size={12} color="var(--accent-gold)" />}
+                <span style={{
+                  fontSize: '0.5rem', fontWeight: '800', letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: showText ? 'var(--text-muted)' : 'var(--accent-gold)',
+                  transition: 'color 0.2s',
+                }}>
+                  Text
+                </span>
+              </button>
+              {/* Error detection indicator badge */}
+              {enableErrorDetection && mudarasaTurn === 'user' && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '0.3rem',
+                  padding: '0.25rem 0.5rem', borderRadius: '999px',
+                  background: isSttListening ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.05)',
+                  border: `1px solid ${isSttListening ? 'rgba(16,185,129,0.4)' : 'var(--glass-border)'}`,
+                  transition: 'all 0.3s',
+                }}>
+                  <BrainCircuit size={10} color={isSttListening ? 'var(--accent-emerald)' : 'var(--text-muted)'} />
+                  <span style={{ fontSize: '0.5rem', fontWeight: '800', color: isSttListening ? 'var(--accent-emerald)' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    {isSttListening ? 'Checking' : 'Ready'}
+                  </span>
+                </div>
+              )}
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: mudarasaTurn === 'app' ? 'var(--accent-gold)' : 'var(--bg-accent)', boxShadow: mudarasaTurn === 'app' ? '0 0 10px var(--accent-gold)' : 'none' }} />
+              <div style={{
+                width: '8px', height: '8px', borderRadius: '50%',
+                background: mudarasaTurn === 'user'
+                  ? (isListening ? (currentVolume > sensitivity ? 'var(--accent-emerald)' : 'rgba(255,255,255,0.15)') : 'var(--accent-emerald)')
+                  : 'var(--bg-accent)',
+                boxShadow: mudarasaTurn === 'user'
+                  ? (isListening ? (currentVolume > sensitivity ? '0 0 10px var(--accent-emerald)' : 'none') : '0 0 10px var(--accent-emerald)')
+                  : 'none',
+                transition: 'all 0.1s'
+              }} />
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-             {/* Text visibility toggle — hide/show Quran text on both turns */}
-             <button
-               onClick={() => setShowText(v => !v)}
-               title={showText ? 'Hide text' : 'Show text'}
-               style={{
-                 display: 'flex', alignItems: 'center', gap: '0.3rem',
-                 padding: '0.2rem 0.55rem 0.2rem 0.4rem',
-                 borderRadius: '999px', cursor: 'pointer',
-                 border: `1px solid ${showText ? 'var(--glass-border)' : 'rgba(212,175,55,0.4)'}`,
-                 background: showText ? 'transparent' : 'rgba(212,175,55,0.08)',
-                 transition: 'all 0.2s',
-               }}
-             >
-               {showText
-                 ? <BookOpen size={12} color="var(--text-muted)" />
-                 : <BookX size={12} color="var(--accent-gold)" />}
-               <span style={{
-                 fontSize: '0.5rem', fontWeight: '800', letterSpacing: '0.08em',
-                 textTransform: 'uppercase',
-                 color: showText ? 'var(--text-muted)' : 'var(--accent-gold)',
-                 transition: 'color 0.2s',
-               }}>
-                 Text
-               </span>
-             </button>
-             {/* Error detection indicator badge */}
-             {enableErrorDetection && mudarasaTurn === 'user' && (
-               <div style={{
-                 display: 'flex', alignItems: 'center', gap: '0.3rem',
-                 padding: '0.25rem 0.5rem', borderRadius: '999px',
-                 background: isSttListening ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.05)',
-                 border: `1px solid ${isSttListening ? 'rgba(16,185,129,0.4)' : 'var(--glass-border)'}`,
-                 transition: 'all 0.3s',
-               }}>
-                 <BrainCircuit size={10} color={isSttListening ? 'var(--accent-emerald)' : 'var(--text-muted)'} />
-                 <span style={{ fontSize: '0.5rem', fontWeight: '800', color: isSttListening ? 'var(--accent-emerald)' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                   {isSttListening ? 'Checking' : 'Ready'}
-                 </span>
-               </div>
-             )}
-             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: mudarasaTurn === 'app' ? 'var(--accent-gold)' : 'var(--bg-accent)', boxShadow: mudarasaTurn === 'app' ? '0 0 10px var(--accent-gold)' : 'none' }} />
-             <div style={{ 
-               width: '8px', height: '8px', borderRadius: '50%', 
-               background: mudarasaTurn === 'user' 
-                 ? (isListening ? (currentVolume > sensitivity ? 'var(--accent-emerald)' : 'rgba(255,255,255,0.15)') : 'var(--accent-emerald)') 
-                 : 'var(--bg-accent)', 
-               boxShadow: mudarasaTurn === 'user' 
-                 ? (isListening ? (currentVolume > sensitivity ? '0 0 10px var(--accent-emerald)' : 'none') : '0 0 10px var(--accent-emerald)') 
-                 : 'none',
-               transition: 'all 0.1s'
-             }} />
-           </div>
         </div>
-      </div>
 
-      {/* Audio Error Modal Overlay */}
-      <AnimatePresence>
-        {audioError && (
-          <motion.div
-            key="audio-error-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{
-              position: 'fixed', inset: 0, zIndex: 500,
-              background: 'rgba(0,0,0,0.65)',
-              backdropFilter: 'blur(10px)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '1.5rem',
-            }}
-          >
+        {/* Audio Error Modal Overlay */}
+        <AnimatePresence>
+          {audioError && (
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+              key="audio-error-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               style={{
-                width: '100%', maxWidth: '22rem',
-                borderRadius: '2rem',
-                background: 'var(--bg-secondary, #111118)',
-                border: '1px solid rgba(220, 38, 38, 0.3)',
-                boxShadow: '0 8px 48px rgba(220,38,38,0.15), 0 4px 24px rgba(0,0,0,0.5)',
-                padding: '2rem 1.75rem',
-                display: 'flex', flexDirection: 'column', gap: '1.5rem',
+                position: 'fixed', inset: 0, zIndex: 500,
+                background: 'rgba(0,0,0,0.65)',
+                backdropFilter: 'blur(10px)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '1.5rem',
               }}
             >
-              {/* Icon + Header */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', textAlign: 'center' }}>
-                <div style={{
-                  width: '3.5rem', height: '3.5rem', borderRadius: '1rem',
-                  background: 'rgba(220, 38, 38, 0.12)', border: '1px solid rgba(220, 38, 38, 0.3)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <WifiOff size={22} color="rgba(220, 38, 38, 0.9)" />
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+                style={{
+                  width: '100%', maxWidth: '22rem',
+                  borderRadius: '2rem',
+                  background: 'var(--bg-secondary, #111118)',
+                  border: '1px solid rgba(220, 38, 38, 0.3)',
+                  boxShadow: '0 8px 48px rgba(220,38,38,0.15), 0 4px 24px rgba(0,0,0,0.5)',
+                  padding: '2rem 1.75rem',
+                  display: 'flex', flexDirection: 'column', gap: '1.5rem',
+                }}
+              >
+                {/* Icon + Header */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', textAlign: 'center' }}>
+                  <div style={{
+                    width: '3.5rem', height: '3.5rem', borderRadius: '1rem',
+                    background: 'rgba(220, 38, 38, 0.12)', border: '1px solid rgba(220, 38, 38, 0.3)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <WifiOff size={22} color="rgba(220, 38, 38, 0.9)" />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1rem', fontWeight: '900', margin: 0, color: 'var(--text-primary)' }}>Audio Unavailable</h3>
+                    <p style={{ fontSize: '0.8rem', margin: '0.4rem 0 0', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                      This surah's audio isn't downloaded. Connect to the internet to stream, or skip the app's turn.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 style={{ fontSize: '1rem', fontWeight: '900', margin: 0, color: 'var(--text-primary)' }}>Audio Unavailable</h3>
-                  <p style={{ fontSize: '0.8rem', margin: '0.4rem 0 0', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                    This surah's audio isn't downloaded. Connect to the internet to stream, or skip the app's turn.
-                  </p>
-                </div>
-              </div>
 
-              {/* Action buttons */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                <button
-                  onClick={() => { setAudioError(false); onResume(); }}
-                  style={{
-                    height: '3.25rem', borderRadius: '1rem', cursor: 'pointer',
-                    background: 'linear-gradient(135deg, rgba(212,175,55,0.2), rgba(16,185,129,0.15))',
-                    border: '1px solid rgba(212,175,55,0.4)',
-                    color: 'var(--text-primary)', fontWeight: '800', fontSize: '0.75rem',
-                    textTransform: 'uppercase', letterSpacing: '0.12em',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <RefreshCw size={14} /> Retry
-                </button>
-                <button
-                  onClick={() => { setAudioError(false); onNext(); }}
-                  style={{
-                    height: '2.75rem', borderRadius: '1rem', cursor: 'pointer',
-                    background: 'transparent',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    color: 'var(--text-muted)', fontWeight: '600', fontSize: '0.65rem',
-                    textTransform: 'uppercase', letterSpacing: '0.1em',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                    opacity: 0.6,
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <FastForward size={12} /> Skip App's Turn
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Recitation Content */}
-      <div style={{ flex: 1, padding: '1rem 0 6rem 0' }}>
-        <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '3rem' }}>
-          {(() => {
-            let lastSpokenIdx = -1;
-            if (enableErrorDetection && liveResults?.results) {
-              for (let i = liveResults.results.length - 1; i >= 0; i--) {
-                if (liveResults.results[i].status !== 'pending') {
-                  lastSpokenIdx = i;
-                  break;
-                }
-              }
-            }
-
-            let cumulativeWordCount = 0;
-            return chunks[currentChunkIndex].map((ayah) => {
-              // Use quranSimple plain text for error detection when available
-              let displayText = ayah.text;
-              if (enableErrorDetection && quranSimple) {
-                const key = `${ayah.surahNumber}|${ayah.numberInSurah}`;
-                const simpleText = quranSimple[key];
-                if (simpleText) {
-                  displayText = simpleText;
-                }
-              }
-              
-              if (ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9) {
-                const cleanText = displayText.replace(/\uFEFF/g, '');
-                const bismillahEnd = "ٱلرَّحِيمِ";
-                const plainBismillahEnd = "بسم الله الرحمن الرحيم";
-                
-                const bIndex = cleanText.indexOf(bismillahEnd);
-                const bIndexPlain = cleanText.indexOf(plainBismillahEnd);
-                
-                const originalWordCount = cleanText.split(/\s+/).filter(Boolean).length;
-                let stripped = false;
-                
-                if (bIndex !== -1 && bIndex < 50) {
-                  displayText = cleanText.substring(bIndex + bismillahEnd.length).trim();
-                  displayText = displayText.replace(/^[\u200B-\u200D\uFEFF]+/, '');
-                  stripped = true;
-                } else if (bIndexPlain !== -1 && bIndexPlain < 50) {
-                  displayText = cleanText.substring(bIndexPlain + plainBismillahEnd.length).trim();
-                  stripped = true;
-                }
-                
-                if (stripped) {
-                  const newWordCount = displayText.split(/\s+/).filter(Boolean).length;
-                  cumulativeWordCount += (originalWordCount - newWordCount);
-                }
-              }
-
-              const isFirstAyahOfSurah = ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9;
-              // Show live overlay when STT is active and we have live results for this ayah
-              const showLiveOverlay = enableErrorDetection && isSttListening && liveResults && mudarasaTurn === 'user';
-              
-              const currentOffset = cumulativeWordCount;
-              cumulativeWordCount += displayText.split(/\s+/).filter(Boolean).length;
-              
-              const isActiveAyah = enableErrorDetection && lastSpokenIdx >= currentOffset && lastSpokenIdx < cumulativeWordCount;
-              if (isActiveAyah) {
-                activeAyahIdRef.current = `mudarasa-ayah-${ayah.number}`;
-              }
-
-              return (
-                <div key={ayah.number} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                  {isFirstAyahOfSurah && showText && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1, scale: currentAyahNumber === `bismillah-${ayah.number}` ? 1.02 : 1 }}
-                      style={{
-                        textAlign: 'center',
-                        padding: '1.5rem',
-                        borderRadius: '1.5rem',
-                        background: currentAyahNumber === `bismillah-${ayah.number}` ? 'var(--accent-gold-soft)' : 'transparent',
-                        border: currentAyahNumber === `bismillah-${ayah.number}` ? '1px solid var(--accent-gold-soft)' : '1px solid transparent',
-                        transition: '0.4s'
-                      }}
-                    >
-                      <p className="arabic-text" style={{ fontSize: '2.5rem', color: currentAyahNumber === `bismillah-${ayah.number}` ? 'var(--accent-gold)' : 'var(--text-primary)', opacity: currentAyahNumber === `bismillah-${ayah.number}` ? 1 : 0.8 }}>بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</p>
-                    </motion.div>
-                  )}
-                  <motion.div
-                    id={`mudarasa-ayah-${ayah.number}`}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1, scale: ayah.number === currentAyahNumber ? 1.02 : 1 }}
+                {/* Action buttons */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                  <button
+                    onClick={() => { setAudioError(false); onResume(); }}
                     style={{
-                      textAlign: 'right', padding: '1.5rem', borderRadius: '1.5rem',
-                      background: ayah.number === currentAyahNumber ? 'var(--accent-gold-soft)' : 'transparent',
-                      border: ayah.number === currentAyahNumber ? '1px solid var(--accent-gold-soft)' : '1px solid transparent',
-                      transition: '0.4s'
+                      height: '3.25rem', borderRadius: '1rem', cursor: 'pointer',
+                      background: 'linear-gradient(135deg, rgba(212,175,55,0.2), rgba(16,185,129,0.15))',
+                      border: '1px solid rgba(212,175,55,0.4)',
+                      color: 'var(--text-primary)', fontWeight: '800', fontSize: '0.75rem',
+                      textTransform: 'uppercase', letterSpacing: '0.12em',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                      transition: 'all 0.2s',
                     }}
                   >
-                    {showText ? (
-                      showLiveOverlay ? (
-                        <LiveTextOverlay
-                          plainText={displayText}
-                          results={liveResults.results}
-                          numberInSurah={ayah.numberInSurah}
-                          wordOffset={currentOffset}
-                        />
-                      ) : (
-                        <p className="arabic-text" style={{ fontSize: '2.2rem', color: ayah.number === currentAyahNumber ? 'var(--accent-gold)' : 'var(--text-primary)' }}>
-                          {displayText} <span style={{ fontSize: '1.2rem', color: 'var(--accent-gold)', opacity: 0.5, marginRight: '0.5rem' }}>﴿{ayah.numberInSurah}﴾</span>
-                        </p>
-                      )
-                    ) : (
-                      /* Text hidden — show verse number only as a placeholder */
-                      <p style={{ fontSize: '1rem', color: 'var(--text-muted)', opacity: 0.4, textAlign: 'center', fontWeight: '700', letterSpacing: '0.1em' }}>
-                        — {ayah.numberInSurah} —
-                      </p>
-                    )}
-                  </motion.div>
-                </div>
-              );
-            });
-          })()}
-        </div>
-      </div>
-
-      {/* Control Bar */}
-      <div style={{ position: 'fixed', bottom: '2rem', left: '0', right: '0', zIndex: 100, display: 'flex', justifyContent: 'center' }}>
-        <AnimatePresence mode="wait">
-          {mudarasaTurn === 'user' && (
-            <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-
-              {enableErrorDetection && isSttListening ? (
-                // ── Auto-detect mode: just the action row + accuracy ──
-                <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
-                    {criteriaFailed ? (
-                      // ── Criteria not met after all words attempted: show inline options ──
-                      <>
-                        <button
-                          onClick={() => { if (onRetryTurn) onRetryTurn(); }}
-                          style={{
-                            padding: '0.4rem 1rem', borderRadius: '999px', cursor: 'pointer',
-                            border: '1px solid rgba(212,175,55,0.5)',
-                            background: 'rgba(212,175,55,0.12)',
-                            color: 'var(--accent-gold)', fontWeight: '800', fontSize: '0.65rem',
-                            textTransform: 'uppercase', letterSpacing: '0.1em',
-                            display: 'flex', alignItems: 'center', gap: '0.35rem',
-                          }}
-                        >
-                          <RefreshCw size={10} /> Try Again
-                        </button>
-                        <button
-                          onClick={onFinishedTurn}
-                          style={{
-                            padding: '0.4rem 0.75rem', borderRadius: '999px', cursor: 'pointer',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            background: 'transparent',
-                            color: 'var(--text-muted)', fontWeight: '600', fontSize: '0.6rem',
-                            textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.6,
-                            display: 'flex', alignItems: 'center', gap: '0.35rem',
-                          }}
-                        >
-                          <FastForward size={10} /> Skip
-                        </button>
-                      </>
-                    ) : (
-                      // ── Still reciting or criteria met: show standard tap-to-finish ──
-                      <button
-                        onClick={handleManualFinish}
-                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', opacity: 0.5, fontWeight: '700', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer' }}
-                      >
-                        Tap to finish early
-                      </button>
-                    )}
-                    {liveResults?.preBlockAccuracy !== undefined && (
-                      <span style={{ color: criteriaFailed ? 'rgba(245,158,11,0.8)' : 'var(--accent-gold)', opacity: 0.8, fontWeight: '800', fontSize: '0.65rem' }}>• {liveResults.preBlockAccuracy}% / {targetAccuracy}%</span>
-                    )}
-                  </div>
-                  {transcript && (
-                    <div
-                      ref={transcriptRef}
-                      style={{
-                        maxWidth: '90vw',
-                        maxHeight: '3.5rem',
-                        overflowY: 'auto',
-                        padding: '0.6rem 1rem',
-                        borderRadius: 'var(--radius-md)',
-                        background: 'rgba(16,185,129,0.15)',
-                        border: '1px solid rgba(16,185,129,0.4)',
-                        color: 'var(--text-primary)',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        textAlign: 'center',
-                        lineHeight: 1.5,
-                        wordBreak: 'break-word',
-                        backdropFilter: 'blur(8px)',
-                      }}
-                    >
-                      Hearing: {transcript}
-                    </div>
-                  )}
-                </>
-              ) : (
-                // ── Standard / fallback button ──
-                <>
-                  <button
-                    onClick={enableErrorDetection ? handleManualFinish : onNext}
-                    className="btn-primary"
-                    style={{ background: 'var(--accent-emerald)', padding: '1.25rem 2.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#fff', fontSize: '0.8rem', letterSpacing: '0.1em' }}
-                  >
-                    <span>{enableErrorDetection ? 'Finished Reciting' : 'Finished Portion'}</span>
+                    <RefreshCw size={14} /> Retry
                   </button>
-                  <button onClick={() => onLogStumble(chunks[currentChunkIndex][0])} style={{ background: 'none', border: 'none', color: 'var(--accent-red)', opacity: 0.5, fontWeight: '700', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer' }}>Log Stumble</button>
-                </>
-              )}
-
-              {isListening && !enableErrorDetection && (
-                <p style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: '600', letterSpacing: '0.05em', margin: 0 }}>
-                  <Mic size={10} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-                  LISTENING: TURN SWITCHES AFTER SILENCE
-                </p>
-              )}
+                  <button
+                    onClick={() => { setAudioError(false); onNext(); }}
+                    style={{
+                      height: '2.75rem', borderRadius: '1rem', cursor: 'pointer',
+                      background: 'transparent',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      color: 'var(--text-muted)', fontWeight: '600', fontSize: '0.65rem',
+                      textTransform: 'uppercase', letterSpacing: '0.1em',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                      opacity: 0.6,
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <FastForward size={12} /> Skip App's Turn
+                  </button>
+                </div>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
 
-      {/* Recitation Feedback Card — shown above the control bar */}
-    </motion.div>
+        {/* Recitation Content */}
+        <div style={{ flex: 1, padding: '1rem 0 6rem 0' }}>
+          <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '3rem' }}>
+            {(() => {
+              let lastSpokenIdx = -1;
+              if (enableErrorDetection && liveResults?.results) {
+                for (let i = liveResults.results.length - 1; i >= 0; i--) {
+                  if (liveResults.results[i].status !== 'pending') {
+                    lastSpokenIdx = i;
+                    break;
+                  }
+                }
+              }
+
+              return chunks[currentChunkIndex].map((ayah, idx) => {
+                // Use quranSimple plain text for error detection when available
+                let displayText = ayah.text;
+                if (enableErrorDetection && quranSimple) {
+                  const key = `${ayah.surahNumber}|${ayah.numberInSurah}`;
+                  const simpleText = quranSimple[key];
+                  if (simpleText) {
+                    displayText = simpleText;
+                  }
+                }
+
+                if (ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9) {
+                  const cleanText = displayText.replace(/\uFEFF/g, '');
+                  const bismillahEnd = "ٱلرَّحِيمِ";
+                  const plainBismillahEnd = "بسم الله الرحمن الرحيم";
+
+                  const bIndex = cleanText.indexOf(bismillahEnd);
+                  const bIndexPlain = cleanText.indexOf(plainBismillahEnd);
+
+                  const originalWordCount = cleanText.split(/\s+/).filter(Boolean).length;
+                  let stripped = false;
+
+                  if (bIndex !== -1 && bIndex < 50) {
+                    displayText = cleanText.substring(bIndex + bismillahEnd.length).trim();
+                    displayText = displayText.replace(/^[\u200B-\u200D\uFEFF]+/, '');
+                    stripped = true;
+                  } else if (bIndexPlain !== -1 && bIndexPlain < 50) {
+                    displayText = cleanText.substring(bIndexPlain + plainBismillahEnd.length).trim();
+                    stripped = true;
+                  }
+                }
+
+                const isFirstAyahOfSurah = ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9;
+                
+                const isCompleted = enableErrorDetection && idx < activeAyahIndex;
+                const isActive = !enableErrorDetection || idx === activeAyahIndex;
+                const isLocked = enableErrorDetection && idx > activeAyahIndex;
+
+                // Show live overlay only for the active verse
+                const showLiveOverlay = enableErrorDetection && isSttListening && liveResults && mudarasaTurn === 'user' && isActive;
+
+                if (isActive) {
+                  activeAyahIdRef.current = `mudarasa-ayah-${ayah.number}`;
+                }
+
+                return (
+                  <div 
+                    key={ayah.number} 
+                    style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '2rem',
+                      opacity: isLocked ? 0.2 : (isCompleted ? 0.8 : 1),
+                      pointerEvents: isLocked ? 'none' : 'auto',
+                      transition: 'all 0.4s ease',
+                    }}
+                  >
+                    {isFirstAyahOfSurah && showText && !isCompleted && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1, scale: currentAyahNumber === `bismillah-${ayah.number}` ? 1.02 : 1 }}
+                        style={{
+                          textAlign: 'center',
+                          padding: '1.5rem',
+                          borderRadius: '1.5rem',
+                          background: currentAyahNumber === `bismillah-${ayah.number}` ? 'var(--accent-gold-soft)' : 'transparent',
+                          border: currentAyahNumber === `bismillah-${ayah.number}` ? '1px solid var(--accent-gold-soft)' : '1px solid transparent',
+                          transition: '0.4s'
+                        }}
+                      >
+                        <p className="arabic-text" style={{ fontSize: '2.5rem', color: currentAyahNumber === `bismillah-${ayah.number}` ? 'var(--accent-gold)' : 'var(--text-primary)', opacity: currentAyahNumber === `bismillah-${ayah.number}` ? 1 : 0.8 }}>بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</p>
+                      </motion.div>
+                    )}
+                    <motion.div
+                      id={`mudarasa-ayah-${ayah.number}`}
+                      initial={{ opacity: 0 }}
+                      animate={{ 
+                        opacity: 1, 
+                        scale: (ayah.number === currentAyahNumber || isActive) ? 1.01 : 1 
+                      }}
+                      style={{
+                        textAlign: 'right', 
+                        padding: '1.5rem', 
+                        borderRadius: '1.5rem',
+                        background: (ayah.number === currentAyahNumber || (isActive && !isLocked && !isCompleted)) ? 'var(--accent-gold-soft)' : 'transparent',
+                        border: (ayah.number === currentAyahNumber || (isActive && !isLocked && !isCompleted)) ? '1px solid var(--accent-gold-soft)' : '1px solid transparent',
+                        transition: '0.4s'
+                      }}
+                    >
+                      {showText ? (
+                        showLiveOverlay ? (
+                          <LiveTextOverlay
+                            plainText={displayText}
+                            results={liveResults.results}
+                            numberInSurah={ayah.numberInSurah}
+                            wordOffset={activeVerseWordOffset}
+                          />
+                        ) : (
+                          <p 
+                            className="arabic-text" 
+                            style={{ 
+                              fontSize: '2.2rem', 
+                              color: isCompleted ? 'var(--accent-emerald)' : ((ayah.number === currentAyahNumber || isActive) ? 'var(--accent-gold)' : 'var(--text-primary)') 
+                            }}
+                          >
+                            {displayText}{' '}
+                            <span style={{ fontSize: '1.2rem', color: isCompleted ? 'var(--accent-emerald)' : 'var(--accent-gold)', opacity: 0.5, marginRight: '0.5rem' }}>
+                              ﴿{ayah.numberInSurah}﴾
+                            </span>
+                            {isCompleted && (
+                              <CheckCircle2 size={16} style={{ display: 'inline-block', marginRight: '0.5rem', color: 'var(--accent-emerald)', verticalAlign: 'middle' }} />
+                            )}
+                          </p>
+                        )
+                      ) : (
+                        /* Text hidden — show verse number only as a placeholder */
+                        <p style={{ fontSize: '1rem', color: isCompleted ? 'var(--accent-emerald)' : 'var(--text-muted)', opacity: isCompleted ? 0.8 : 0.4, textAlign: 'center', fontWeight: '700', letterSpacing: '0.1em' }}>
+                          {isCompleted ? (
+                            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+                              — {ayah.numberInSurah} — <CheckCircle2 size={12} />
+                            </span>
+                          ) : (
+                            `— ${ayah.numberInSurah} —`
+                          )}
+                        </p>
+                      )}
+                    </motion.div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+        </div>
+
+        {/* Control Bar */}
+        <div style={{ position: 'fixed', bottom: '2rem', left: '0', right: '0', zIndex: 100, display: 'flex', justifyContent: 'center' }}>
+          <AnimatePresence mode="wait">
+            {mudarasaTurn === 'user' && (
+              <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+
+                {enableErrorDetection && isSttListening ? (
+                  // ── Auto-detect mode: just the action row + accuracy ──
+                  <>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.6rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <button
+                          onClick={handleRetryVerse}
+                          style={{
+                            padding: '0.45rem 0.85rem', borderRadius: '999px', cursor: 'pointer',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            background: 'rgba(255,255,255,0.04)',
+                            color: 'var(--text-secondary)', fontWeight: '700', fontSize: '0.65rem',
+                            textTransform: 'uppercase', letterSpacing: '0.08em',
+                            display: 'flex', alignItems: 'center', gap: '0.35rem',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          <RefreshCw size={10} /> Retry Verse
+                        </button>
+                        <button
+                          onClick={handleMarkSatisfied}
+                          style={{
+                            padding: '0.45rem 0.85rem', borderRadius: '999px', cursor: 'pointer',
+                            border: '1px solid rgba(16,185,129,0.3)',
+                            background: 'rgba(16,185,129,0.08)',
+                            color: 'var(--accent-emerald)', fontWeight: '800', fontSize: '0.65rem',
+                            textTransform: 'uppercase', letterSpacing: '0.08em',
+                            display: 'flex', alignItems: 'center', gap: '0.35rem',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          <CheckCircle2 size={10} /> Mark Satisfied
+                        </button>
+                        <button
+                          onClick={handleManualFinish}
+                          style={{
+                            padding: '0.45rem 0.85rem', borderRadius: '999px', cursor: 'pointer',
+                            border: '1px solid rgba(212,175,55,0.3)',
+                            background: 'rgba(212,175,55,0.08)',
+                            color: 'var(--accent-gold)', fontWeight: '800', fontSize: '0.65rem',
+                            textTransform: 'uppercase', letterSpacing: '0.08em',
+                            display: 'flex', alignItems: 'center', gap: '0.35rem',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          <FastForward size={10} /> Finish Early
+                        </button>
+                      </div>
+                      {activeStat && (
+                        <span style={{ color: activeStat.accuracy < targetAccuracy ? 'rgba(245,158,11,0.8)' : 'var(--accent-emerald)', opacity: 0.9, fontWeight: '800', fontSize: '0.65rem' }}>
+                          Verse {chunks[currentChunkIndex]?.[activeAyahIndex]?.numberInSurah} Accuracy: {activeStat.accuracy}% / {targetAccuracy}%
+                        </span>
+                      )}
+                    </div>
+                    {transcript && (
+                      <div
+                        ref={transcriptRef}
+                        style={{
+                          maxWidth: '90vw',
+                          maxHeight: '3.5rem',
+                          overflowY: 'auto',
+                          padding: '0.6rem 1rem',
+                          borderRadius: 'var(--radius-md)',
+                          background: 'rgba(16,185,129,0.15)',
+                          border: '1px solid rgba(16,185,129,0.4)',
+                          color: 'var(--text-primary)',
+                          fontSize: '0.75rem',
+                          fontWeight: '600',
+                          textAlign: 'center',
+                          lineHeight: 1.5,
+                          wordBreak: 'break-word',
+                          backdropFilter: 'blur(8px)',
+                        }}
+                      >
+                        Hearing: {transcript}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  // ── Standard / fallback button ──
+                  <>
+                    <button
+                      onClick={enableErrorDetection ? handleManualFinish : onNext}
+                      className="btn-primary"
+                      style={{ background: 'var(--accent-emerald)', padding: '1.25rem 2.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#fff', fontSize: '0.8rem', letterSpacing: '0.1em' }}
+                    >
+                      <span>{enableErrorDetection ? 'Finished Reciting' : 'Finished Portion'}</span>
+                    </button>
+                    <button onClick={() => onLogStumble(chunks[currentChunkIndex][0])} style={{ background: 'none', border: 'none', color: 'var(--accent-red)', opacity: 0.5, fontWeight: '700', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer' }}>Log Stumble</button>
+                  </>
+                )}
+
+                {isListening && !enableErrorDetection && (
+                  <p style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: '600', letterSpacing: '0.05em', margin: 0 }}>
+                    <Mic size={10} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                    LISTENING: TURN SWITCHES AFTER SILENCE
+                  </p>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Recitation Feedback Card — shown above the control bar */}
+      </motion.div>
 
       {/* ── Retry Prompt Modal ────────────────────────────────────────────── */}
       <AnimatePresence>
@@ -632,10 +726,7 @@ const MudarasaView = ({
               {/* Action buttons */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                 <button
-                  onClick={() => {
-                    setRetryPrompt(null);
-                    if (onRetryTurn) onRetryTurn();
-                  }}
+                  onClick={handleRetryVerse}
                   style={{
                     height: '3.25rem', borderRadius: '1rem',
                     background: 'linear-gradient(135deg, rgba(212,175,55,0.2), rgba(16,185,129,0.2))',
@@ -650,10 +741,7 @@ const MudarasaView = ({
                   Try Again
                 </button>
                 <button
-                  onClick={() => {
-                    setRetryPrompt(null);
-                    onFinishedTurn();
-                  }}
+                  onClick={handleMarkSatisfied}
                   style={{
                     height: '2.75rem', borderRadius: '1rem',
                     background: 'transparent',
@@ -666,23 +754,23 @@ const MudarasaView = ({
                   }}
                 >
                   <FastForward size={12} />
-                  Skip Anyway
+                  Skip Verse
                 </button>
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-  </>
+    </>
   );
 };
 
 // ── Live word overlay ─────────────────────────────────────────────────────────
 const WORD_COLORS = {
-  correct:      { color: 'rgba(16,185,129,0.9)', bg: 'rgba(16,185,129,0.15)' },   // emerald
+  correct: { color: 'rgba(16,185,129,0.9)', bg: 'rgba(16,185,129,0.15)' },   // emerald
   substitution: { color: 'rgba(245,158,11,0.95)', bg: 'rgba(245,158,11,0.2)' },  // amber
-  omission:     { color: 'rgba(239,68,68,0.95)', bg: 'rgba(239,68,68,0.15)' },    // red
-  pending:      { color: 'rgba(255,255,255,0.3)', bg: 'transparent' },     // dim — not yet reached
+  omission: { color: 'rgba(239,68,68,0.95)', bg: 'rgba(239,68,68,0.15)' },    // red
+  pending: { color: 'rgba(255,255,255,0.3)', bg: 'transparent' },     // dim — not yet reached
 };
 
 /**
@@ -695,10 +783,10 @@ const WORD_COLORS = {
  */
 const LiveTextOverlay = ({ plainText, results, numberInSurah, wordOffset = 0 }) => {
   if (!plainText) return null;
-  
+
   // Split plain text into words - these are the words to display
   const plainWords = plainText.split(/\s+/).filter(Boolean);
-  
+
   // The results array has the same number of words as plainWords (minus insertions)
   // We need to map each result to its corresponding plain text word
   // Build a mapping: for each result, find the matching plain text word
@@ -707,13 +795,13 @@ const LiveTextOverlay = ({ plainText, results, numberInSurah, wordOffset = 0 }) 
     if (!results || globalIdx >= results.length) return 'pending';
     return results[globalIdx]?.status || 'pending';
   };
-  
+
   const getSpokenWord = (idx) => {
     const globalIdx = idx + wordOffset;
     if (!results || globalIdx >= results.length) return null;
     return results[globalIdx]?.spokenWord || null;
   };
-  
+
   return (
     <p
       className="arabic-text"
@@ -730,7 +818,7 @@ const LiveTextOverlay = ({ plainText, results, numberInSurah, wordOffset = 0 }) 
         const globalIdx = idx + wordOffset;
         const status = getWordStatus(idx);
         const cfg = WORD_COLORS[status] || WORD_COLORS.pending;
-        
+
         return (
           <span
             key={idx}
@@ -752,10 +840,10 @@ const LiveTextOverlay = ({ plainText, results, numberInSurah, wordOffset = 0 }) 
         );
       })}
       {numberInSurah && (
-        <span style={{ 
-          fontSize: '1.2rem', 
-          color: 'var(--accent-gold)', 
-          opacity: 0.5, 
+        <span style={{
+          fontSize: '1.2rem',
+          color: 'var(--accent-gold)',
+          opacity: 0.5,
           marginRight: '0.5rem',
           transition: 'opacity 0.2s'
         }}>

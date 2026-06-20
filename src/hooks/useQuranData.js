@@ -43,7 +43,7 @@ export const useQuranData = (syncStateWithURL) => {
       // Waqar114 — optional, loaded separately so it never blocks the app
       if (!hasError) {
         try {
-          const waqarRes = await fetch('/data/waqar114');
+          const waqarRes = await fetch('/data/waqar114.txt');
           if (!waqarRes.ok) throw new Error(`waqar114 fetch failed: ${waqarRes.status}`);
           const waqarTxt = await waqarRes.text();
           const parsed = groupMutashabihatBySurah(waqarTxt.split('\n').filter(l => l.trim()));

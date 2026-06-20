@@ -100,13 +100,13 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accurac
         //      a 50% floor is already enforced by the UI — no separate check needed)
         //   3. The last word of the chunk must be correct (smart anchor)
         if (payload && payload.results && payload.results.length > 0) {
-          const { smartAnchorHit, preBlockAccuracy, preBlockHasPending, perVerseMinMet } = payload;
+          const { verseStats } = payload;
           
-          const allWordsRead   = !preBlockHasPending;                       // every word attempted
-          const meetsThreshold = preBlockAccuracy >= thresholdRef.current;  // user's chosen %
-          const verseFloorMet  = perVerseMinMet !== false;                  // each ayah ≥50% correct
+          const allPassed = verseStats && verseStats.length > 0 && verseStats.every(stat => 
+            stat.accuracy >= thresholdRef.current && !stat.hasPending
+          );
 
-          if (allWordsRead && meetsThreshold && smartAnchorHit && verseFloorMet) {
+          if (allPassed) {
             if (silenceTimerRef.current) {
                clearTimeout(silenceTimerRef.current);
                silenceTimerRef.current = null;

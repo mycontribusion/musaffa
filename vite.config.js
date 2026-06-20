@@ -44,7 +44,7 @@ export default defineConfig({
           { url: '/data/quran-ar.json', revision: null },
           { url: '/data/quran-en.json', revision: null },
           { url: '/data/mutashabihat.json', revision: null },
-          { url: '/data/waqar114', revision: null },
+          { url: '/data/waqar114.txt', revision: null },
         ],
 
        runtimeCaching: [
