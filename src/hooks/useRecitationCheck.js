@@ -54,8 +54,21 @@ const LIVE_DEBOUNCE = 350;
  *   startListening()
  *   stopAndCheck()  — stop recognition and run final comparison
  *   clearResults()  — reset for next turn
+ *
+ * Optional hint playback controls:
+ *   isHintPlayingRef  — external ref set while a hint audio is playing
+ *   onUserSpeechAfterHint — called when the user speaks after a hint finishes
  */
-export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accuracyThreshold = 100, ayahWordCounts = [], onStuck = null) => {
+export const useRecitationCheck = (
+  isActive,
+  expectedText,
+  onAutoFinish,
+  accuracyThreshold = 100,
+  ayahWordCounts = [],
+  onStuck = null,
+  isHintPlayingRef = null,
+  onUserSpeechAfterHint = null,
+) => {
   const SR = getSpeechRecognition();
   const isSupported = !!SR;
 
@@ -79,11 +92,13 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accurac
   const stuckTimerRef = useRef(null);
   const latestVerseStatsRef = useRef(null);
   const onStuckRef = useRef(onStuck);
+  const onUserSpeechAfterHintRef = useRef(onUserSpeechAfterHint);
 
   // Keep refs in sync without restarting recognition
   useEffect(() => { expectedRef.current = expectedText; }, [expectedText]);
   useEffect(() => { onAutoFinishRef.current = onAutoFinish; }, [onAutoFinish]);
   useEffect(() => { onStuckRef.current = onStuck; }, [onStuck]);
+  useEffect(() => { onUserSpeechAfterHintRef.current = onUserSpeechAfterHint; }, [onUserSpeechAfterHint]);
   useEffect(() => { thresholdRef.current = accuracyThreshold; }, [accuracyThreshold]);
   const ayahWordCountsRef = useRef(ayahWordCounts);
   useEffect(() => { ayahWordCountsRef.current = ayahWordCounts; }, [ayahWordCounts]);
