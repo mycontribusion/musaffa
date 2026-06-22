@@ -238,20 +238,24 @@ const compareRecitation = (expectedText, spokenText, ayahWordCounts = []) => {
       const verseCorrect = verseSlice.filter(r => r.status === 'correct').length;
       const verseAccuracy = Math.round((verseCorrect / count) * 100);
       const hasPending = verseSlice.some(r => r.status === 'pending');
+      const hasStarted = verseSlice.some(r => r.status !== 'pending');
       
       verseStats.push({
         index: idx,
         accuracy: verseAccuracy,
-        hasPending
+        hasPending,
+        hasStarted
       });
       wordIdx += count;
     }
   } else {
     const hasPending = results.some(r => r.status === 'pending');
+    const hasStarted = results.some(r => r.status !== 'pending');
     verseStats.push({
       index: 0,
       accuracy: accuracy,
-      hasPending
+      hasPending,
+      hasStarted
     });
   }
 

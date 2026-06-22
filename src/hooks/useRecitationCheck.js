@@ -100,10 +100,27 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accurac
     stuckTimerRef.current = setTimeout(() => {
       const stats = latestVerseStatsRef.current;
       if (stats && stats.length > 0 && onStuckRef.current) {
-        // Find the first verse that is either pending or below threshold
-        const stuckIndex = stats.findIndex(stat => stat.hasPending || stat.accuracy < thresholdRef.current);
-        if (stuckIndex !== -1) {
-          onStuckRef.current(stuckIndex);
+        // Find the active verse: the highest index verse that has been started
+        let activeVerseIndex = 0;
+        for (let i = stats.length - 1; i >= 0; i--) {
+          const hasStarted = stats[i].hasStarted !== undefined 
+             ? stats[i].hasStarted 
+             : !stats[i].hasPending; // fallback if worker hasn't reloaded yet
+          if (hasStarted) {
+            activeVerseIndex = i;
+            break;
+          }
+        }
+
+        const activeStat = stats[activeVerseIndex];
+        
+        // "reader must be allowed to reach the end of that active verse first"
+        // If the active verse is fully recited (!hasPending), we can evaluate for hints
+        if (!activeStat.hasPending) {
+           const stuckIndex = stats.findIndex((stat, idx) => idx <= activeVerseIndex && stat.accuracy < thresholdRef.current);
+           if (stuckIndex !== -1) {
+             onStuckRef.current(stuckIndex);
+           }
         }
       }
     }, 2500); // 2.5 seconds of silence before playing hint
@@ -295,8 +312,6 @@ export const useRecitationCheck = (isActive, expectedText, onAutoFinish, accurac
     pendingIdRef.current++; // Discard any pending worker messages
     setResults(null);
     setLiveResults(null);
-    setTranscript('');
-    transcriptRef.current = '';
     clearStuckTimer();
   }, [clearStuckTimer]);
 
