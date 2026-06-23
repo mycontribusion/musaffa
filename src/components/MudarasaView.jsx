@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import RecitationStatusOverlay from './RedBlinkOverlay';
 import { ChevronLeft, Mic, WifiOff, RefreshCw, FastForward, BrainCircuit, AlertTriangle, CheckCircle2, BookOpen, BookX } from 'lucide-react';
+import { removeTashkeel, normalizeArabic, expandMuqattaat } from '../utils/quranUtils';
 
 const MudarasaView = ({
   chunks,
@@ -85,22 +86,11 @@ const MudarasaView = ({
         const simpleText = quranSimple[key];
         if (simpleText) txt = simpleText;
       }
-      if (ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9) {
-        const cleanText = txt.replace(/\uFEFF/g, '');
-        const bEnd = "ٱلرَّحِيمِ";
-        const bEndPlain = "بسم الله الرحمن الرحيم";
-        const bIdx = cleanText.indexOf(bEnd);
-        const bIdxPlain = cleanText.indexOf(bEndPlain);
-        let dText = txt;
-        if (bIdx !== -1 && bIdx < 50) {
-          dText = cleanText.substring(bIdx + bEnd.length).trim().replace(/^[\u200B-\u200D\uFEFF]+/, '');
-        } else if (bIdxPlain !== -1 && bIdxPlain < 50) {
-          dText = cleanText.substring(bIdxPlain + bEndPlain.length).trim();
-        }
-        activeVerseWordOffset += dText.split(/\s+/).filter(Boolean).length;
-      } else {
-        activeVerseWordOffset += txt.split(/\s+/).filter(Boolean).length;
-      }
+      // Use the same text processing as buildAyahWordCounts in PartnerSession.jsx
+      // to ensure word offset matches the expected text used by the worker
+      const clean = removeTashkeel(txt);
+      const expanded = expandMuqattaat(normalizeArabic(clean));
+      activeVerseWordOffset += expanded.trim().split(/\s+/).filter(Boolean).length;
     }
   }
 
@@ -436,6 +426,11 @@ const MudarasaView = ({
                   }
                 }
 
+                // Process the text the same way as word offset calculation
+                // to ensure word positions match the expected text used by the worker
+                const processedText = enableErrorDetection
+                  ? expandMuqattaat(normalizeArabic(removeTashkeel(displayText))).trim()
+                  : displayText;
 
                 const isFirstAyahOfSurah = ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9;
                 
@@ -497,7 +492,7 @@ const MudarasaView = ({
                       {showText ? (
                         showLiveOverlay ? (
                           <LiveTextOverlay
-                            plainText={displayText}
+                            plainText={processedText}
                             results={liveResults.results}
                             numberInSurah={ayah.numberInSurah}
                             wordOffset={activeVerseWordOffset}

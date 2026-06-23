@@ -42,6 +42,23 @@ export const getAyahTextByGlobal = (globalIndex, quranAr) => {
 
 export const removeTashkeel = (text) => text.replace(/[\u064B-\u065F]/g, "");
 
+export const stripBismillah = (text, surahNumber, numberInSurah) => {
+  if (!text) return '';
+  if (numberInSurah === 1 && surahNumber !== 1 && surahNumber !== 9) {
+    const cleanText = text.replace(/\uFEFF/g, '');
+    const bEnd = "ٱلرَّحِيمِ";
+    const bEndPlain = "بسم الله الرحمن الرحيم";
+    const bIdx = cleanText.indexOf(bEnd);
+    const bIdxPlain = cleanText.indexOf(bEndPlain);
+    if (bIdx !== -1 && bIdx < 50) {
+      return cleanText.substring(bIdx + bEnd.length).trim().replace(/^[\u200B-\u200D\uFEFF]+/, '');
+    } else if (bIdxPlain !== -1 && bIdxPlain < 50) {
+      return cleanText.substring(bIdxPlain + bEndPlain.length).trim();
+    }
+  }
+  return text;
+};
+
 /**
  * Normalise Arabic text for recitation comparison.
  *
