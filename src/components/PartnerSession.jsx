@@ -121,32 +121,27 @@ const PartnerSession = ({
   // We use a ref to avoid stale closure issues with the initial callback registration.
   const handleFinishedTurnRef = useRef(null);
 
-  const isHintPlayingRef = useRef(false);
+  // hintAudioRef doubles as the "is a hint playing?" guard:
+  // non-null means a hint is in progress; null means free to play another.
+  const hintAudioRef = useRef(null);
 
   const clearResultsRef = useRef(null);
 
   const handleStuck = useCallback((stuckIndex) => {
-    if (isHintPlayingRef.current || !activeChunkSlice[stuckIndex]) return;
-    
-    isHintPlayingRef.current = true;
-    const ayah = activeChunkSlice[stuckIndex];
-    // Default reciter is 'ar.alafasy' or user's selected reciter
-    const reciter = params.reciter || 'ar.alafasy';
-    const url = getAudioUrl(ayah.number, reciter, ayah.surahNumber, ayah.numberInSurah);
-    
-    const hintAudio = new Audio(url);
-    hintAudio.play().catch(e => console.warn('Failed to play hint audio:', e));
-    
+    // Guard: do not play a new hint if one is already playing
+    if (hintAudioRef.current || !activeChunkSlice[stuckIndex]) return;
 
-    // Play for exactly 3 seconds (3000ms) then pause
-    setTimeout(() => {
-      try {
-        hintAudio.pause();
-        hintAudio.currentTime = 0;
-      } catch (e) {}
-      // Reset after another 2 seconds to prevent spamming hints if they are still stuck
-      setTimeout(() => { isHintPlayingRef.current = false; }, 2000);
-    }, 3000);
+    const ayah = activeChunkSlice[stuckIndex];
+    const reciterSlug = params.reciter || 'ar.alafasy';
+    const url = getAudioUrl(ayah.number, reciterSlug, ayah.surahNumber, ayah.numberInSurah);
+
+    const hintAudio = new Audio(url);
+    hintAudioRef.current = hintAudio;
+    hintAudio.play().catch(e => console.warn('Failed to play hint audio:', e));
+
+    // When the full verse ends naturally, free the guard
+    hintAudio.onended = () => { hintAudioRef.current = null; };
+    hintAudio.onerror = () => { hintAudioRef.current = null; };
   }, [activeChunkSlice, params.reciter, retryStartIndex]);
 
   // STT error detection — active during user's recitation turn only
@@ -166,7 +161,8 @@ const PartnerSession = ({
     useCallback(() => { handleFinishedTurnRef.current?.(); }, []),
     params.errorThreshold ?? 55,
     ayahWordCounts,
-    handleStuck
+    handleStuck,
+    hintAudioRef    // interrupt hint audio the moment user starts speaking
   );
 
   useEffect(() => {

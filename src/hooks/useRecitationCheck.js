@@ -66,7 +66,7 @@ export const useRecitationCheck = (
   accuracyThreshold = 100,
   ayahWordCounts = [],
   onStuck = null,
-  isHintPlayingRef = null,
+  hintAudioRef = null,    // external ref to the playing hint Audio object; paused on speech start
   onUserSpeechAfterHint = null,
 ) => {
   const SR = getSpeechRecognition();
@@ -333,17 +333,25 @@ export const useRecitationCheck = (
 
       // Dispatch to worker for live word overlay — non-blocking
       if (combined) dispatchLiveCompare(combined);
-      
+
       restartStuckTimer();
     };
 
-    // ── Silence detection ──────────────────────────────────────────────────
+    // ── Silence detection ─────────────────────────────────────────────────────
     recognition.onspeechstart = () => {
       hasSpeechRef.current = true;
       clearStuckTimer();
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = null;
+      }
+      // ✔ Interrupt hint audio the instant the user begins speaking
+      if (hintAudioRef && hintAudioRef.current) {
+        try {
+          hintAudioRef.current.pause();
+          hintAudioRef.current.currentTime = 0;
+        } catch (_) {}
+        hintAudioRef.current = null;
       }
     };
 

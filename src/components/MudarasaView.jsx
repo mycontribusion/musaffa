@@ -44,17 +44,30 @@ const MudarasaView = ({
   }, [showText]);
 
   // ── Find active verse index and its word offset ─────────────────────
+  // sliceActiveAyahIndex: the verse currently being targeted for recitation.
+  // A verse is only considered "completed" (green) once confirmed passed AND
+  // the system has confirmed the user moved past it — we track this with
+  // confirmedPassedCountRef so the UI never anticipates progress.
+  const confirmedPassedCountRef = useRef(0);
+
   let sliceActiveAyahIndex = 0;
   if (enableErrorDetection && liveResults && liveResults.verseStats) {
+    // Count consecutive passing verses from the start
+    let passCount = 0;
     for (let i = 0; i < liveResults.verseStats.length; i++) {
       const stat = liveResults.verseStats[i];
-      if (stat.accuracy >= targetAccuracy && !stat.hasPending) {
-        sliceActiveAyahIndex = i + 1;
+      // A verse only counts as passed once ALL words are attempted AND accuracy met
+      if (stat.accuracy >= targetAccuracy && !stat.hasPending && !stat.hasPending) {
+        passCount = i + 1;
       } else {
-        sliceActiveAyahIndex = i;
         break;
       }
     }
+    // Only allow confirmed advances — never show a future verse as completed
+    if (passCount > confirmedPassedCountRef.current) {
+      confirmedPassedCountRef.current = passCount;
+    }
+    sliceActiveAyahIndex = confirmedPassedCountRef.current;
     if (sliceActiveAyahIndex >= liveResults.verseStats.length) {
       sliceActiveAyahIndex = liveResults.verseStats.length - 1;
     }
@@ -96,6 +109,11 @@ const MudarasaView = ({
   // ── Retry prompt state ───────────────────────────────────────────────
   // null = hidden; object = visible with failure reasons
   const [retryPrompt, setRetryPrompt] = useState(null);
+
+  // Reset confirmedPassedCount whenever retryStartIndex changes (new verse context)
+  useEffect(() => {
+    confirmedPassedCountRef.current = 0;
+  }, [retryStartIndex]);
 
   const handleRetryVerse = () => {
     setRetryPrompt(null);
@@ -149,9 +167,11 @@ const MudarasaView = ({
   // ── Inline criteria-failed detection ─────────────────────────────────
   const activeStat = liveResults?.verseStats?.[sliceActiveAyahIndex];
   const allWordsAttempted = !!(
-    enableErrorDetection && isSttListening &&
+    enableErrorDetection &&
     activeStat && !activeStat.hasPending
   );
+  // criteriaFailed: verse was attempted but below threshold.
+  // This is purely for display — the session always continues listening.
   const criteriaFailed = allWordsAttempted && activeStat && activeStat.accuracy < targetAccuracy;
 
   // ── Feedback Debounce (Vibration & Flash) ──────────────────────────────
