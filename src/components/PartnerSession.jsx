@@ -123,22 +123,13 @@ const PartnerSession = ({
 
   const isHintPlayingRef = useRef(false);
 
-  // Track which verses have already had their hint played (to prevent re-playing)
-  const hintedVersesRef = useRef(new Set());
-
   const clearResultsRef = useRef(null);
 
   const handleStuck = useCallback((stuckIndex) => {
     if (isHintPlayingRef.current || !activeChunkSlice[stuckIndex]) return;
     
-    const ayah = activeChunkSlice[stuckIndex];
-    const verseKey = `${ayah.surahNumber}|${ayah.numberInSurah}`;
-    
-    // Skip if this verse has already had its hint played
-    if (hintedVersesRef.current.has(verseKey)) return;
-    
     isHintPlayingRef.current = true;
-    hintedVersesRef.current.add(verseKey);
+    const ayah = activeChunkSlice[stuckIndex];
     // Default reciter is 'ar.alafasy' or user's selected reciter
     const reciter = params.reciter || 'ar.alafasy';
     const url = getAudioUrl(ayah.number, reciter, ayah.surahNumber, ayah.numberInSurah);
@@ -157,12 +148,6 @@ const PartnerSession = ({
       setTimeout(() => { isHintPlayingRef.current = false; }, 2000);
     }, 3000);
   }, [activeChunkSlice, params.reciter, retryStartIndex]);
-
-  // Clear hinted verses tracking when chunk or retry start changes
-  // (user gets a fresh chance to receive hints on retry)
-  useEffect(() => {
-    hintedVersesRef.current.clear();
-  }, [currentChunkIndex, retryStartIndex]);
 
   // STT error detection — active during user's recitation turn only
   // onAutoFinish fires automatically after silence, triggering handleFinishedTurn

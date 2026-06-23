@@ -94,6 +94,10 @@ export const useRecitationCheck = (
   const onStuckRef = useRef(onStuck);
   const onUserSpeechAfterHintRef = useRef(onUserSpeechAfterHint);
 
+  // Hint tracking refs — for resetting accuracy of a specific verse
+  const hintedVerseIndexRef = useRef(null);
+  const hintTranscriptSnapshotRef = useRef('');
+
   // Keep refs in sync without restarting recognition
   useEffect(() => { expectedRef.current = expectedText; }, [expectedText]);
   useEffect(() => { onAutoFinishRef.current = onAutoFinish; }, [onAutoFinish]);
@@ -115,11 +119,11 @@ export const useRecitationCheck = (
     stuckTimerRef.current = setTimeout(() => {
       const stats = latestVerseStatsRef.current;
       if (stats && stats.length > 0 && onStuckRef.current) {
-        // Find the active verse: the highest index verse that has been started
+        // Find the highest-index verse that has been started
         let activeVerseIndex = 0;
         for (let i = stats.length - 1; i >= 0; i--) {
-          const hasStarted = stats[i].hasStarted !== undefined 
-             ? stats[i].hasStarted 
+          const hasStarted = stats[i].hasStarted !== undefined
+             ? stats[i].hasStarted
              : !stats[i].hasPending; // fallback if worker hasn't reloaded yet
           if (hasStarted) {
             activeVerseIndex = i;
@@ -127,19 +131,83 @@ export const useRecitationCheck = (
           }
         }
 
-        const activeStat = stats[activeVerseIndex];
-        
-        // "reader must be allowed to reach the end of that active verse first"
-        // If the active verse is fully recited (!hasPending), we can evaluate for hints
-        if (!activeStat.hasPending) {
-           const stuckIndex = stats.findIndex((stat, idx) => idx <= activeVerseIndex && stat.accuracy < thresholdRef.current);
-           if (stuckIndex !== -1) {
-             onStuckRef.current(stuckIndex);
-           }
+        // Find the highest-index verse with accuracy below threshold.
+        // This covers both cases:
+        //   1. User is stuck on the active verse (activeVerseIndex has low accuracy)
+        //   2. User has moved to a later verse while a previous verse has low accuracy
+        let stuckIndex = -1;
+        for (let i = activeVerseIndex; i >= 0; i--) {
+          if (stats[i].accuracy < thresholdRef.current) {
+            stuckIndex = i;
+            break;
+          }
+        }
+
+        if (stuckIndex !== -1) {
+          // Track the hinted verse so its accuracy can be reset when user re-recites
+          hintedVerseIndexRef.current = stuckIndex;
+          hintTranscriptSnapshotRef.current = transcriptRef.current;
+          onStuckRef.current(stuckIndex);
         }
       }
     }, 2500); // 2.5 seconds of silence before playing hint
   }, [clearStuckTimer]);
+
+  // Helper: reset a specific verse's stats so its accuracy restarts from zero
+  const resetVerseInPayload = useCallback((payload, hintedVerseIndex, ayahWordCounts) => {
+    if (!payload || !payload.results || !ayahWordCounts || ayahWordCounts.length === 0) return payload;
+    
+    const newResults = [...payload.results];
+    
+    // Find word offset for the hinted verse
+    let wordOffset = 0;
+    for (let i = 0; i < hintedVerseIndex; i++) {
+      wordOffset += ayahWordCounts[i] || 0;
+    }
+    const verseWordCount = ayahWordCounts[hintedVerseIndex] || 0;
+    
+    // Set words in the hinted verse to 'pending' (restart from zero)
+    for (let i = wordOffset; i < wordOffset + verseWordCount && i < newResults.length; i++) {
+      newResults[i] = { ...newResults[i], status: 'pending', spokenWord: null };
+    }
+    
+    // Recalculate verseStats
+    let wordIdx = 0;
+    const newVerseStats = [];
+    for (let idx = 0; idx < ayahWordCounts.length; idx++) {
+      const count = ayahWordCounts[idx];
+      if (count === 0) {
+        newVerseStats.push({ index: idx, accuracy: 0, hasPending: false, hasStarted: false });
+        wordIdx += count;
+        continue;
+      }
+      const verseSlice = newResults.slice(wordIdx, wordIdx + count);
+      const verseCorrect = verseSlice.filter(r => r.status === 'correct').length;
+      const verseAccuracy = Math.round((verseCorrect / count) * 100);
+      const hasPending = verseSlice.some(r => r.status === 'pending');
+      const hasStarted = verseSlice.some(r => r.status !== 'pending');
+      
+      newVerseStats.push({
+        index: idx,
+        accuracy: verseAccuracy,
+        hasPending,
+        hasStarted
+      });
+      wordIdx += count;
+    }
+    
+    // Recalculate overall accuracy
+    const correct = newResults.filter(r => r.status === 'correct').length;
+    const total = newResults.length;
+    const accuracy = total > 0 ? Math.round((correct / total) * 100) : 100;
+    
+    return {
+      ...payload,
+      results: newResults,
+      verseStats: newVerseStats,
+      accuracy,
+    };
+  }, []);
 
   // ── Web Worker lifecycle ────────────────────────────────────────────────────
   useEffect(() => {
@@ -150,7 +218,23 @@ export const useRecitationCheck = (
     worker.onmessage = (event) => {
       const { type, payload, id } = event.data;
       if (type === 'RESULT' && id === pendingIdRef.current) {
-        setLiveResults(payload);
+        let processedPayload = payload;
+        
+        // If a hint was recently played for a verse, reset that verse's accuracy
+        if (hintedVerseIndexRef.current !== null && payload && payload.results) {
+          // Only reset if transcript has changed since hint was played
+          if (transcriptRef.current !== hintTranscriptSnapshotRef.current) {
+            processedPayload = resetVerseInPayload(
+              payload, 
+              hintedVerseIndexRef.current, 
+              ayahWordCountsRef.current
+            );
+            hintedVerseIndexRef.current = null;
+            hintTranscriptSnapshotRef.current = '';
+          }
+        }
+        
+        setLiveResults(processedPayload);
 
         // Smart auto-finish: evaluate if the user has completed the turn.
         // Requirements (Smart Musaffa mode):
@@ -158,8 +242,8 @@ export const useRecitationCheck = (
         //   2. The configured accuracy threshold must be met (slider min is 50%, so
         //      a 50% floor is already enforced by the UI — no separate check needed)
         //   3. The last word of the chunk must be correct (smart anchor)
-        if (payload && payload.results && payload.results.length > 0) {
-          const { verseStats } = payload;
+        if (processedPayload && processedPayload.results && processedPayload.results.length > 0) {
+          const { verseStats } = processedPayload;
           latestVerseStatsRef.current = verseStats;
           
           const allPassed = verseStats && verseStats.length > 0 && verseStats.every(stat => 
@@ -290,7 +374,7 @@ export const useRecitationCheck = (
     } catch (e) {
       console.warn('Could not start STT:', e);
     }
-  }, [isSupported, SR, dispatchLiveCompare]);
+  }, [isSupported, SR, dispatchLiveCompare, restartStuckTimer, clearStuckTimer]);
 
   // ── Stop & run final comparison ─────────────────────────────────────────────
   const stopAndCheck = useCallback(() => {
@@ -328,6 +412,12 @@ export const useRecitationCheck = (
     setResults(null);
     setLiveResults(null);
     clearStuckTimer();
+    // Clear hint tracking refs so a previous hint doesn't accidentally reset
+    // a verse on the next turn
+    hintedVerseIndexRef.current = null;
+    hintTranscriptSnapshotRef.current = '';
+    // NOTE: transcript is intentionally NOT cleared here — it persists across
+    // retries and mark-satisfied actions so the user can see what they've recited.
   }, [clearStuckTimer]);
 
   // ── Auto-start / stop based on isActive ────────────────────────────────────
@@ -360,5 +450,14 @@ export const useRecitationCheck = (
     };
   }, []);
 
-  return { isSupported, isListening, transcript, liveResults, results, startListening, stopAndCheck, clearResults };
+  return { 
+    isSupported, 
+    isListening, 
+    transcript, 
+    liveResults, 
+    results, 
+    startListening, 
+    stopAndCheck, 
+    clearResults 
+  };
 };

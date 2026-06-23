@@ -289,7 +289,7 @@ const PartnerConfig = ({
                     min="50"
                     max="100"
                     step="5"
-                    value={params.errorThreshold ?? 55}
+                    value={params.errorThreshold ?? 50}
                     onChange={(e) => onChange('errorThreshold', parseInt(e.target.value))}
                     style={{ width: '100%', accentColor: '#6366f1' }}
                   />
