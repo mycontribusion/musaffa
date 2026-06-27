@@ -289,6 +289,24 @@ export const useRecitationCheck = (
           onStuckRef.current(activeVerseIndex);
         }
 
+        // Immediate-fail detection: verse is fully attempted (no pending words)
+        // but accuracy is below threshold. Trigger the hint right away without
+        // waiting for the silence timer — whether the user is silent or speaking.
+        if (!plowedAhead && onStuckRef.current && hintedVerseIndexRef.current !== activeVerseIndex) {
+          const activeVerseStat = verseStats[activeVerseIndex];
+          if (
+            activeVerseStat &&
+            activeVerseStat.hasStarted &&
+            !activeVerseStat.hasPending &&
+            activeVerseStat.accuracy < thresholdRef.current
+          ) {
+            clearStuckTimer();
+            hintedVerseIndexRef.current = activeVerseIndex;
+            hintTranscriptSnapshotRef.current = transcriptRef.current;
+            onStuckRef.current(activeVerseIndex);
+          }
+        }
+
         // Smart auto-finish: evaluate if the user has completed the turn.
         // Requirements (Smart Musaffa mode):
         //   1. All words must be read  — no 'pending' words remain
