@@ -97,7 +97,6 @@ export const useRecitationCheck = (
   // Hint tracking refs — for resetting accuracy of a specific verse
   const hintedVerseIndexRef = useRef(null);
   const hintTranscriptSnapshotRef = useRef('');
-  const lastPlowedVerseIndexRef = useRef(-1);
 
   // Keep refs in sync without restarting recognition
   useEffect(() => { expectedRef.current = expectedText; }, [expectedText]);
@@ -264,19 +263,27 @@ export const useRecitationCheck = (
         if (activeVerseIndex >= verseStats.length) activeVerseIndex = verseStats.length - 1;
 
         if (activeVerseIndex < verseStats.length) {
-          for (let i = activeVerseIndex + 1; i < verseStats.length; i++) {
-            const stat = verseStats[i];
-            const hasStarted = stat.hasStarted !== undefined ? stat.hasStarted : !stat.hasPending;
-            if (hasStarted) {
-              plowedAhead = true;
-              break;
+          const activeVerseStat = verseStats[activeVerseIndex];
+          const activeHasPending = activeVerseStat?.hasPending ?? false;
+
+          // Only flag plow-ahead if the active verse still has UNSPOKEN words (pending).
+          // If the user has fully attempted the active verse (no pending words) but failed
+          // the threshold, that is NOT plow-ahead — the silence timer handles retry.
+          // This prevents false-positives when verses share identical words at their boundaries.
+          if (activeHasPending) {
+            for (let i = activeVerseIndex + 1; i < verseStats.length; i++) {
+              const stat = verseStats[i];
+              const hasStarted = stat.hasStarted !== undefined ? stat.hasStarted : !stat.hasPending;
+              if (hasStarted) {
+                plowedAhead = true;
+                break;
+              }
             }
           }
         }
 
-        if (plowedAhead && onStuckRef.current && lastPlowedVerseIndexRef.current !== activeVerseIndex) {
+        if (plowedAhead && onStuckRef.current && hintedVerseIndexRef.current !== activeVerseIndex) {
           clearStuckTimer();
-          lastPlowedVerseIndexRef.current = activeVerseIndex;
           hintedVerseIndexRef.current = activeVerseIndex;
           hintTranscriptSnapshotRef.current = transcriptRef.current;
           onStuckRef.current(activeVerseIndex);
