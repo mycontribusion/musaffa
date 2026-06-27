@@ -132,12 +132,12 @@ const compareRecitation = (expectedText, spokenText, ayahWordCounts = []) => {
         isMatch = true;
       }
 
-      // Tie-breaker: Prefer matching words that are closer in position.
-      // If a common word like "الله" or "و" appears multiple times, this forces
-      // the DP to match the one nearest to the current recitation position,
-      // preventing random noise from turning words green deep into the future.
+      // Tie-breaker: Prefer matching the EARLIEST possible word in the expected text.
+      // If a common word like "الله" or "كلا" appears multiple times, we want to 
+      // consume the first one rather than jumping ahead. By adding a tiny penalty 
+      // based on the expected index `i`, earlier words get a strictly lower cost.
       if (isMatch) {
-        matchCost += Math.abs(i - j) * 0.001;
+        matchCost += i * 0.0001;
       }
 
       const costSub = dp[i - 1][j - 1] + matchCost;

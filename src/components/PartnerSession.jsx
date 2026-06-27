@@ -159,7 +159,7 @@ const PartnerSession = ({
     sttActive,
     expectedText,
     useCallback(() => { handleFinishedTurnRef.current?.(); }, []),
-    params.errorThreshold ?? 55,
+    params.errorThreshold ?? 50,
     ayahWordCounts,
     handleStuck,
     hintAudioRef    // interrupt hint audio the moment user starts speaking
@@ -319,7 +319,7 @@ const PartnerSession = ({
       onFinishedTurn={handleFinishedTurn}
       onRetryTurn={clearResults}
       quranSimple={quranSimple}
-      targetAccuracy={params.errorThreshold ?? 55}
+      targetAccuracy={params.errorThreshold ?? 50}
       retryStartIndex={retryStartIndex}
       setRetryStartIndex={setRetryStartIndex}
     />

@@ -282,7 +282,7 @@ const PartnerConfig = ({
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                     <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-secondary)' }}>Accuracy Threshold</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#818cf8' }}>{params.errorThreshold ?? 55}%</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#818cf8' }}>{params.errorThreshold ?? 50}%</span>
                   </div>
                   <input
                     type="range"
@@ -294,7 +294,7 @@ const PartnerConfig = ({
                     style={{ width: '100%', accentColor: '#6366f1' }}
                   />
                   <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.5rem', lineHeight: '1.4' }}>
-                    Auto-advances only when <strong style={{color: '#818cf8'}}>every verse</strong> individually meets the {params.errorThreshold ?? 55}% accuracy target with no unread words remaining.
+                    Auto-advances only when <strong style={{color: '#818cf8'}}>every verse</strong> individually meets the {params.errorThreshold ?? 50}% accuracy target with no unread words remaining.
                   </p>
                 </div>
               </motion.div>
