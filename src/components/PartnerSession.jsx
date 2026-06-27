@@ -158,7 +158,7 @@ const PartnerSession = ({
       hintAudioRef.current = null;
       resumeRecognition();
     };
-  }, [activeChunkSlice, params.reciter, retryStartIndex, pauseRecognition, resumeRecognition]);
+  }, [activeChunkSlice, params.reciter]);
 
   // STT error detection — active during user's recitation turn only
   // onAutoFinish fires automatically after silence, triggering handleFinishedTurn
