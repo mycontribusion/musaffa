@@ -119,16 +119,24 @@ export const useRecitationCheck = (
     stuckTimerRef.current = setTimeout(() => {
       const stats = latestVerseStatsRef.current;
       if (stats && stats.length > 0 && onStuckRef.current) {
-        // Find the highest-index verse that has been started
+        // Find the active verse index using strict sequential progression,
+        // mirroring the logic in MudarasaView.jsx to prevent desyncs.
         let activeVerseIndex = 0;
-        for (let i = stats.length - 1; i >= 0; i--) {
-          const hasStarted = stats[i].hasStarted !== undefined
-             ? stats[i].hasStarted
-             : !stats[i].hasPending; // fallback if worker hasn't reloaded yet
-          if (hasStarted) {
+        for (let i = 0; i < stats.length; i++) {
+          const stat = stats[i];
+          const hasStarted = stat.hasStarted !== undefined
+             ? stat.hasStarted
+             : !stat.hasPending; // fallback if worker hasn't reloaded yet
+             
+          if (hasStarted && !stat.hasPending && stat.accuracy >= thresholdRef.current) {
+            activeVerseIndex = i + 1;
+          } else {
             activeVerseIndex = i;
             break;
           }
+        }
+        if (activeVerseIndex >= stats.length) {
+          activeVerseIndex = stats.length - 1;
         }
 
         // Find the highest-index verse with accuracy below threshold.
@@ -235,6 +243,42 @@ export const useRecitationCheck = (
         }
         
         setLiveResults(processedPayload);
+
+        // Plow-ahead detection: If the user starts reciting a future verse 
+        // without passing the active verse, immediately trigger the hint for the active verse.
+        let plowedAhead = false;
+        const verseStats = processedPayload?.verseStats || [];
+        
+        let activeVerseIndex = 0;
+        for (let i = 0; i < verseStats.length; i++) {
+          const stat = verseStats[i];
+          const hasStarted = stat.hasStarted !== undefined ? stat.hasStarted : !stat.hasPending;
+          if (hasStarted && !stat.hasPending && stat.accuracy >= thresholdRef.current) {
+            activeVerseIndex = i + 1;
+          } else {
+            activeVerseIndex = i;
+            break;
+          }
+        }
+        if (activeVerseIndex >= verseStats.length) activeVerseIndex = verseStats.length - 1;
+
+        if (activeVerseIndex < verseStats.length) {
+          for (let i = activeVerseIndex + 1; i < verseStats.length; i++) {
+            const stat = verseStats[i];
+            const hasStarted = stat.hasStarted !== undefined ? stat.hasStarted : !stat.hasPending;
+            if (hasStarted) {
+              plowedAhead = true;
+              break;
+            }
+          }
+        }
+
+        if (plowedAhead && onStuckRef.current && hintedVerseIndexRef.current !== activeVerseIndex) {
+          clearStuckTimer();
+          hintedVerseIndexRef.current = activeVerseIndex;
+          hintTranscriptSnapshotRef.current = transcriptRef.current;
+          onStuckRef.current(activeVerseIndex);
+        }
 
         // Smart auto-finish: evaluate if the user has completed the turn.
         // Requirements (Smart Musaffa mode):
