@@ -22,7 +22,7 @@ const buildExpectedText = (chunk, quranSimple) => {
       if (simpleText) text = simpleText;
     }
     const clean = removeTashkeel(text);
-    return expandMuqattaat(normalizeArabic(clean));
+    return normalizeArabic(expandMuqattaat(clean));
   }).join(' ');
 };
 
@@ -41,7 +41,7 @@ const buildAyahWordCounts = (chunk, quranSimple) => {
       if (simpleText) text = simpleText;
     }
     const clean = removeTashkeel(text);
-    const expanded = expandMuqattaat(normalizeArabic(clean));
+    const expanded = normalizeArabic(expandMuqattaat(clean));
     return expanded.trim().split(/\s+/).filter(Boolean).length;
   });
 };

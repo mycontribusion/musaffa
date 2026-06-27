@@ -89,7 +89,7 @@ const MudarasaView = ({
       // Use the same text processing as buildAyahWordCounts in PartnerSession.jsx
       // to ensure word offset matches the expected text used by the worker
       const clean = removeTashkeel(txt);
-      const expanded = expandMuqattaat(normalizeArabic(clean));
+      const expanded = normalizeArabic(expandMuqattaat(clean));
       activeVerseWordOffset += expanded.trim().split(/\s+/).filter(Boolean).length;
     }
   }
@@ -426,11 +426,7 @@ const MudarasaView = ({
                   }
                 }
 
-                // Process the text the same way as word offset calculation
-                // to ensure word positions match the expected text used by the worker
-                const processedText = enableErrorDetection
-                  ? expandMuqattaat(normalizeArabic(removeTashkeel(displayText))).trim()
-                  : displayText;
+
 
                 const isFirstAyahOfSurah = ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9;
                 
@@ -492,7 +488,7 @@ const MudarasaView = ({
                       {showText ? (
                         showLiveOverlay ? (
                           <LiveTextOverlay
-                            plainText={processedText}
+                            plainText={displayText}
                             results={liveResults.results}
                             numberInSurah={ayah.numberInSurah}
                             wordOffset={activeVerseWordOffset}
@@ -746,22 +742,45 @@ const WORD_COLORS = {
 const LiveTextOverlay = ({ plainText, results, numberInSurah, wordOffset = 0 }) => {
   if (!plainText) return null;
 
-  // Split plain text into words - these are the words to display
-  const plainWords = plainText.split(/\s+/).filter(Boolean);
+  // Build mapping: expand each original word to see how many worker-results it consumes
+  const originalWords = plainText.trim().split(/\s+/).filter(Boolean);
+  const wordMapping = [];
+  let currentIndex = 0;
+  
+  for (const origWord of originalWords) {
+    const clean = removeTashkeel(origWord);
+    const exp = normalizeArabic(expandMuqattaat(clean));
+    const count = exp.trim().split(/\s+/).filter(Boolean).length;
+    
+    wordMapping.push({
+      word: origWord,
+      startIdx: currentIndex,
+      count: count
+    });
+    currentIndex += count;
+  }
 
-  // The results array has the same number of words as plainWords (minus insertions)
-  // We need to map each result to its corresponding plain text word
-  // Build a mapping: for each result, find the matching plain text word
-  const getWordStatus = (idx) => {
-    const globalIdx = idx + wordOffset;
-    if (!results || globalIdx >= results.length) return 'pending';
-    return results[globalIdx]?.status || 'pending';
-  };
+  const getWordStatus = (mapping) => {
+    let hasPending = false;
+    let hasError = false;
+    let hasCorrect = false;
+    let spokenWord = null;
 
-  const getSpokenWord = (idx) => {
-    const globalIdx = idx + wordOffset;
-    if (!results || globalIdx >= results.length) return null;
-    return results[globalIdx]?.spokenWord || null;
+    for (let i = 0; i < mapping.count; i++) {
+      const globalIdx = mapping.startIdx + i + wordOffset;
+      const status = results && globalIdx < results.length ? results[globalIdx]?.status : 'pending';
+      const spk = results && globalIdx < results.length ? results[globalIdx]?.spokenWord : null;
+      if (spk) spokenWord = spk;
+
+      if (status === 'pending') hasPending = true;
+      else if (status === 'correct') hasCorrect = true;
+      else hasError = true;
+    }
+
+    if (hasPending && !hasError && !hasCorrect) return { status: 'pending', spokenWord: null };
+    if (hasError) return { status: 'omission', spokenWord }; // Use omission style for any error to show red wavy underline
+    if (hasPending && hasCorrect) return { status: 'pending', spokenWord: null }; // partially spoken
+    return { status: 'correct', spokenWord };
   };
 
   return (
@@ -776,9 +795,8 @@ const LiveTextOverlay = ({ plainText, results, numberInSurah, wordOffset = 0 }) 
         margin: 0,
       }}
     >
-      {plainWords.map((word, idx) => {
-        const globalIdx = idx + wordOffset;
-        const status = getWordStatus(idx);
+      {wordMapping.map((mapping, idx) => {
+        const { status, spokenWord } = getWordStatus(mapping);
         const cfg = WORD_COLORS[status] || WORD_COLORS.pending;
 
         return (
@@ -795,9 +813,9 @@ const LiveTextOverlay = ({ plainText, results, numberInSurah, wordOffset = 0 }) 
               textShadow: status !== 'pending' ? `0 0 8px ${cfg.color}` : 'none',
               transition: 'all 0.2s',
             }}
-            title={status === 'substitution' && getSpokenWord(idx) ? `You said: ${getSpokenWord(idx)}` : undefined}
+            title={spokenWord ? `You said: ${spokenWord}` : undefined}
           >
-            {word}
+            {mapping.word}
           </span>
         );
       })}
