@@ -374,10 +374,41 @@ export const useRecitationCheck = (
     if (liveDebounceRef.current) clearTimeout(liveDebounceRef.current);
     liveDebounceRef.current = setTimeout(() => {
       const id = ++pendingIdRef.current;
+
+      // When a hint lock is active for verse X:
+      // Replace the spoken text with:
+      //   [expected words for already-passed verses 0..X-1] + [only NEW words spoken after hint]
+      // This prevents the old failed words from consuming the expected word slots for verse X,
+      // so the DP can cleanly match the fresh re-recitation against the correct verse.
+      let spokenForWorker = spoken;
+      if (hintedVerseIndexRef.current !== null && hintTranscriptSnapshotRef.current !== undefined) {
+        const hintVerseIdx = hintedVerseIndexRef.current;
+        const snapshot = hintTranscriptSnapshotRef.current;
+
+        // Words spoken AFTER the hint fired
+        const newWords = spoken.length > snapshot.length
+          ? spoken.slice(snapshot.length).trim()
+          : '';
+
+        // Reconstruct a "perfect" prefix using the expected words for verses 0..hintVerseIdx-1
+        // so those verses score 100% and the DP positions are correct for verse X onwards.
+        const expWords = expectedRef.current.trim().split(/\s+/).filter(Boolean);
+        const counts = ayahWordCountsRef.current || [];
+        let passedWordCount = 0;
+        for (let i = 0; i < hintVerseIdx; i++) {
+          passedWordCount += counts[i] || 0;
+        }
+        const passedExpected = expWords.slice(0, passedWordCount).join(' ');
+
+        // Build the substituted spoken string:
+        //   passed-verses expected text + new words only
+        spokenForWorker = passedExpected + (newWords ? ' ' + newWords : '');
+      }
+
       workerRef.current.postMessage({
         type: 'COMPARE',
         expected: expectedRef.current,
-        spoken,
+        spoken: spokenForWorker,
         id,
         ayahWordCounts: ayahWordCountsRef.current,
       });
