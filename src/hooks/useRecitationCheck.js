@@ -97,6 +97,7 @@ export const useRecitationCheck = (
   // Hint tracking refs — for resetting accuracy of a specific verse
   const hintedVerseIndexRef = useRef(null);
   const hintTranscriptSnapshotRef = useRef('');
+  const lastPlowedVerseIndexRef = useRef(-1);
 
   // Keep refs in sync without restarting recognition
   useEffect(() => { expectedRef.current = expectedText; }, [expectedText]);
@@ -273,8 +274,9 @@ export const useRecitationCheck = (
           }
         }
 
-        if (plowedAhead && onStuckRef.current && hintedVerseIndexRef.current !== activeVerseIndex) {
+        if (plowedAhead && onStuckRef.current && lastPlowedVerseIndexRef.current !== activeVerseIndex) {
           clearStuckTimer();
+          lastPlowedVerseIndexRef.current = activeVerseIndex;
           hintedVerseIndexRef.current = activeVerseIndex;
           hintTranscriptSnapshotRef.current = transcriptRef.current;
           onStuckRef.current(activeVerseIndex);
