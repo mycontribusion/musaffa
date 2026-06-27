@@ -91,6 +91,7 @@ export const useRecitationCheck = (
   // Stuck detection refs
   const stuckTimerRef = useRef(null);
   const latestVerseStatsRef = useRef(null);
+  const latestPayloadRef = useRef(null);  // full payload for immediate verse reset
   const onStuckRef = useRef(onStuck);
   const onUserSpeechAfterHintRef = useRef(onUserSpeechAfterHint);
 
@@ -152,9 +153,19 @@ export const useRecitationCheck = (
         }
 
         if (stuckIndex !== -1) {
-          // Track the hinted verse so its accuracy can be reset when user re-recites
+          // 1. Reset the verse to 0% in the UI immediately (before audio plays)
+          if (latestPayloadRef.current) {
+            const resetPayload = resetVerseInPayload(
+              latestPayloadRef.current,
+              stuckIndex,
+              ayahWordCountsRef.current
+            );
+            setLiveResults(resetPayload);
+          }
+          // 2. Track the hinted verse so worker output stays reset until user re-speaks
           hintedVerseIndexRef.current = stuckIndex;
           hintTranscriptSnapshotRef.current = transcriptRef.current;
+          // 3. Fire onStuck → PartnerSession plays the audio hint
           onStuckRef.current(stuckIndex);
         }
       }
@@ -226,29 +237,55 @@ export const useRecitationCheck = (
     worker.onmessage = (event) => {
       const { type, payload, id } = event.data;
       if (type === 'RESULT' && id === pendingIdRef.current) {
+        // Store latest payload so we can reset a verse immediately when a hint fires
+        latestPayloadRef.current = payload;
+
+        // If a hint is active but the transcript hasn't changed yet, keep showing
+        // the already-reset payload in the UI (don't let the worker re-colour it).
         let processedPayload = payload;
-        
-        // If a hint was recently played for a verse, reset that verse's accuracy
         if (hintedVerseIndexRef.current !== null && payload && payload.results) {
-          // Only reset if transcript has changed since hint was played
-          if (transcriptRef.current !== hintTranscriptSnapshotRef.current) {
+          if (transcriptRef.current === hintTranscriptSnapshotRef.current) {
+            // User hasn't spoken yet — keep the verse visually at 0%
             processedPayload = resetVerseInPayload(
-              payload, 
-              hintedVerseIndexRef.current, 
+              payload,
+              hintedVerseIndexRef.current,
               ayahWordCountsRef.current
             );
+          } else {
+            // User has started re-reciting — let the worker's fresh score through
             hintedVerseIndexRef.current = null;
             hintTranscriptSnapshotRef.current = '';
           }
         }
-        
+
         setLiveResults(processedPayload);
 
-        // Plow-ahead detection: If the user starts reciting a future verse 
-        // without passing the active verse, immediately trigger the hint for the active verse.
-        let plowedAhead = false;
+        // ── Helper: reset a verse immediately in UI and fire onStuck ──────────
+        const triggerHint = (verseIndex) => {
+          if (!onStuckRef.current) return;
+          if (hintedVerseIndexRef.current === verseIndex) return; // already handled
+
+          clearStuckTimer();
+
+          // 1. Reset the verse to 0% in the UI RIGHT NOW (before audio starts)
+          const resetPayload = resetVerseInPayload(
+            latestPayloadRef.current,
+            verseIndex,
+            ayahWordCountsRef.current
+          );
+          setLiveResults(resetPayload);
+
+          // 2. Snapshot current transcript so we can detect when user re-speaks
+          hintedVerseIndexRef.current = verseIndex;
+          hintTranscriptSnapshotRef.current = transcriptRef.current;
+
+          // 3. Fire onStuck → PartnerSession plays the audio hint
+          onStuckRef.current(verseIndex);
+        };
+
+        // ── Compute active verse index ────────────────────────────────────────
         const verseStats = processedPayload?.verseStats || [];
-        
+
         let activeVerseIndex = 0;
         for (let i = 0; i < verseStats.length; i++) {
           const stat = verseStats[i];
@@ -264,46 +301,24 @@ export const useRecitationCheck = (
 
         if (activeVerseIndex < verseStats.length) {
           const activeVerseStat = verseStats[activeVerseIndex];
-          const activeHasPending = activeVerseStat?.hasPending ?? false;
 
-          // Only flag plow-ahead if the active verse still has UNSPOKEN words (pending).
-          // If the user has fully attempted the active verse (no pending words) but failed
-          // the threshold, that is NOT plow-ahead — the silence timer handles retry.
-          // This prevents false-positives when verses share identical words at their boundaries.
-          if (activeHasPending) {
+          // ── Plow-ahead: user skipped into a future verse with pending words ─
+          if (activeVerseStat?.hasPending) {
+            let plowedAhead = false;
             for (let i = activeVerseIndex + 1; i < verseStats.length; i++) {
               const stat = verseStats[i];
               const hasStarted = stat.hasStarted !== undefined ? stat.hasStarted : !stat.hasPending;
-              if (hasStarted) {
-                plowedAhead = true;
-                break;
-              }
+              if (hasStarted) { plowedAhead = true; break; }
             }
-          }
-        }
+            if (plowedAhead) { triggerHint(activeVerseIndex); }
 
-        if (plowedAhead && onStuckRef.current && hintedVerseIndexRef.current !== activeVerseIndex) {
-          clearStuckTimer();
-          hintedVerseIndexRef.current = activeVerseIndex;
-          hintTranscriptSnapshotRef.current = transcriptRef.current;
-          onStuckRef.current(activeVerseIndex);
-        }
-
-        // Immediate-fail detection: verse is fully attempted (no pending words)
-        // but accuracy is below threshold. Trigger the hint right away without
-        // waiting for the silence timer — whether the user is silent or speaking.
-        if (!plowedAhead && onStuckRef.current && hintedVerseIndexRef.current !== activeVerseIndex) {
-          const activeVerseStat = verseStats[activeVerseIndex];
-          if (
-            activeVerseStat &&
-            activeVerseStat.hasStarted &&
-            !activeVerseStat.hasPending &&
-            activeVerseStat.accuracy < thresholdRef.current
+          // ── Immediate-fail: verse fully attempted but below threshold ────────
+          } else if (
+            activeVerseStat?.hasStarted &&
+            !activeVerseStat?.hasPending &&
+            activeVerseStat?.accuracy < thresholdRef.current
           ) {
-            clearStuckTimer();
-            hintedVerseIndexRef.current = activeVerseIndex;
-            hintTranscriptSnapshotRef.current = transcriptRef.current;
-            onStuckRef.current(activeVerseIndex);
+            triggerHint(activeVerseIndex);
           }
         }
 
