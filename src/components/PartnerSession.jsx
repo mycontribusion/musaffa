@@ -135,14 +135,30 @@ const PartnerSession = ({
     const reciterSlug = params.reciter || 'ar.alafasy';
     const url = getAudioUrl(ayah.number, reciterSlug, ayah.surahNumber, ayah.numberInSurah);
 
+    // Pause STT for the first 3 seconds so the hint plays without being cut.
+    // After 3s, recognition resumes — user speech can then naturally interrupt the audio.
+    pauseRecognition();
+
     const hintAudio = new Audio(url);
     hintAudioRef.current = hintAudio;
     hintAudio.play().catch(e => console.warn('Failed to play hint audio:', e));
 
-    // When the full verse ends naturally, free the guard
-    hintAudio.onended = () => { hintAudioRef.current = null; };
-    hintAudio.onerror = () => { hintAudioRef.current = null; };
-  }, [activeChunkSlice, params.reciter, retryStartIndex]);
+    // Resume STT after 3 seconds regardless of whether audio is still playing
+    const resumeTimer = setTimeout(() => {
+      resumeRecognition();
+    }, 3000);
+
+    hintAudio.onended = () => {
+      clearTimeout(resumeTimer);
+      hintAudioRef.current = null;
+      resumeRecognition();
+    };
+    hintAudio.onerror = () => {
+      clearTimeout(resumeTimer);
+      hintAudioRef.current = null;
+      resumeRecognition();
+    };
+  }, [activeChunkSlice, params.reciter, retryStartIndex, pauseRecognition, resumeRecognition]);
 
   // STT error detection — active during user's recitation turn only
   // onAutoFinish fires automatically after silence, triggering handleFinishedTurn
@@ -155,6 +171,8 @@ const PartnerSession = ({
     results: recitationResults,
     stopAndCheck,
     clearResults,
+    pauseRecognition,
+    resumeRecognition,
   } = useRecitationCheck(
     sttActive,
     expectedText,

@@ -157,6 +157,8 @@ export const useRecitationCheck = (
         }
 
         if (stuckIndex !== -1) {
+          // Reset the passed flag — this is a new hint for a (possibly different) verse
+          hintPassedRef.current = false;
           // 1. Reset the verse to 0% in the UI immediately (before audio plays)
           if (latestPayloadRef.current) {
             const resetPayload = resetVerseInPayload(
@@ -393,7 +395,7 @@ export const useRecitationCheck = (
       // This prevents the old failed words from consuming the expected word slots for verse X,
       // so the DP can cleanly match the fresh re-recitation against the correct verse.
       let spokenForWorker = spoken;
-      if (hintedVerseIndexRef.current !== null && !hintPassedRef.current && hintTranscriptSnapshotRef.current !== undefined) {
+      if (hintedVerseIndexRef.current !== null && hintTranscriptSnapshotRef.current !== undefined) {
         const hintVerseIdx = hintedVerseIndexRef.current;
         const snapshot = hintTranscriptSnapshotRef.current;
 
@@ -480,7 +482,8 @@ export const useRecitationCheck = (
         clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = null;
       }
-      // ✔ Interrupt hint audio the instant the user begins speaking
+      // Interrupt hint audio only if recognition was NOT paused for the hint.
+      // When recognition is paused (during hint playback), onspeechstart won't fire.
       if (hintAudioRef && hintAudioRef.current) {
         try {
           hintAudioRef.current.pause();
@@ -559,6 +562,7 @@ export const useRecitationCheck = (
     // a verse on the next turn
     hintedVerseIndexRef.current = null;
     hintTranscriptSnapshotRef.current = '';
+    hintPassedRef.current = false;
     // NOTE: transcript is intentionally NOT cleared here — it persists across
     // retries and mark-satisfied actions so the user can see what they've recited.
   }, [clearStuckTimer]);
@@ -593,6 +597,25 @@ export const useRecitationCheck = (
     };
   }, []);
 
+  // ── Pause / Resume recognition without clearing transcript ─────────────────
+  // Used by PartnerSession when playing a hint audio so the hint plays fully
+  // without being cut by the user's speech. STT resumes after audio ends.
+  const pauseRecognition = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current._shouldRestart = false;
+      try { recognitionRef.current.stop(); } catch (_) {}
+    }
+  }, []);
+
+  const resumeRecognition = useCallback(() => {
+    // Only resume if we're still in an active session and not already listening
+    if (!recognitionRef.current) return;
+    if (recognitionRef.current._shouldRestart) return; // already resuming or running
+    recognitionRef.current._shouldRestart = true;
+    try { recognitionRef.current.start(); } catch (_) {}
+    setIsListening(true);
+  }, []);
+
   return { 
     isSupported, 
     isListening, 
@@ -601,6 +624,8 @@ export const useRecitationCheck = (
     results, 
     startListening, 
     stopAndCheck, 
-    clearResults 
+    clearResults,
+    pauseRecognition,
+    resumeRecognition,
   };
 };
