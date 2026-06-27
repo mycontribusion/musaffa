@@ -98,6 +98,10 @@ export const useRecitationCheck = (
   // Hint tracking refs — for resetting accuracy of a specific verse
   const hintedVerseIndexRef = useRef(null);
   const hintTranscriptSnapshotRef = useRef('');
+  // hintPassedRef: true once the hinted verse genuinely passes.
+  // hintedVerseIndexRef stays set (as a re-trigger guard) but we stop showing 0%
+  // and stop applying the transcript substitution once the verse has passed.
+  const hintPassedRef = useRef(false);
 
   // Keep refs in sync without restarting recognition
   useEffect(() => { expectedRef.current = expectedText; }, [expectedText]);
@@ -241,20 +245,24 @@ export const useRecitationCheck = (
         latestPayloadRef.current = payload;
 
         // If a hint is active for a verse, keep showing 0% until that verse
-        // genuinely passes in the RAW worker score. This prevents the infinite
-        // loop where clearing on transcript-change caused immediate re-triggering.
+        // genuinely passes in the RAW worker score. Once passed, mark it done
+        // (hintPassedRef=true) but keep hintedVerseIndexRef set so triggerHint
+        // won't re-fire for the same verse — preventing the race condition where
+        // the full old transcript briefly makes the verse look failed again.
         let processedPayload = payload;
         if (hintedVerseIndexRef.current !== null && payload && payload.results) {
           const verseIdx = hintedVerseIndexRef.current;
           const rawStat = payload.verseStats?.[verseIdx];
 
-          if (rawStat && !rawStat.hasPending && rawStat.accuracy >= thresholdRef.current) {
-            // Verse has genuinely passed → unlock and let real score show
-            hintedVerseIndexRef.current = null;
-            hintTranscriptSnapshotRef.current = '';
+          if (hintPassedRef.current) {
+            // Already passed — show real score, keep guard active
+            processedPayload = payload;
+          } else if (rawStat && !rawStat.hasPending && rawStat.accuracy >= thresholdRef.current) {
+            // Verse just passed now → mark done, show real score, keep guard
+            hintPassedRef.current = true;
             processedPayload = payload;
           } else {
-            // Still failing (or pending) → keep the verse at 0% in the UI
+            // Still failing/pending → keep verse at 0% in the UI
             processedPayload = resetVerseInPayload(
               payload,
               verseIdx,
@@ -269,9 +277,13 @@ export const useRecitationCheck = (
         // ── Helper: reset a verse immediately in UI and fire onStuck ──────────
         const triggerHint = (verseIndex) => {
           if (!onStuckRef.current) return;
-          if (hintedVerseIndexRef.current === verseIndex) return; // already handled
+          // Guard: same verse already handled (whether passed or still failing)
+          if (hintedVerseIndexRef.current === verseIndex) return;
 
           clearStuckTimer();
+
+          // New verse → reset the passed flag
+          hintPassedRef.current = false;
 
           // 1. Reset the verse to 0% in the UI RIGHT NOW (before audio starts)
           const resetPayload = resetVerseInPayload(
@@ -281,7 +293,7 @@ export const useRecitationCheck = (
           );
           setLiveResults(resetPayload);
 
-          // 2. Snapshot current transcript so we can detect when user re-speaks
+          // 2. Snapshot current transcript so substitution uses only post-hint words
           hintedVerseIndexRef.current = verseIndex;
           hintTranscriptSnapshotRef.current = transcriptRef.current;
 
@@ -381,7 +393,7 @@ export const useRecitationCheck = (
       // This prevents the old failed words from consuming the expected word slots for verse X,
       // so the DP can cleanly match the fresh re-recitation against the correct verse.
       let spokenForWorker = spoken;
-      if (hintedVerseIndexRef.current !== null && hintTranscriptSnapshotRef.current !== undefined) {
+      if (hintedVerseIndexRef.current !== null && !hintPassedRef.current && hintTranscriptSnapshotRef.current !== undefined) {
         const hintVerseIdx = hintedVerseIndexRef.current;
         const snapshot = hintTranscriptSnapshotRef.current;
 
