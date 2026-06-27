@@ -240,25 +240,31 @@ export const useRecitationCheck = (
         // Store latest payload so we can reset a verse immediately when a hint fires
         latestPayloadRef.current = payload;
 
-        // If a hint is active but the transcript hasn't changed yet, keep showing
-        // the already-reset payload in the UI (don't let the worker re-colour it).
+        // If a hint is active for a verse, keep showing 0% until that verse
+        // genuinely passes in the RAW worker score. This prevents the infinite
+        // loop where clearing on transcript-change caused immediate re-triggering.
         let processedPayload = payload;
         if (hintedVerseIndexRef.current !== null && payload && payload.results) {
-          if (transcriptRef.current === hintTranscriptSnapshotRef.current) {
-            // User hasn't spoken yet — keep the verse visually at 0%
-            processedPayload = resetVerseInPayload(
-              payload,
-              hintedVerseIndexRef.current,
-              ayahWordCountsRef.current
-            );
-          } else {
-            // User has started re-reciting — let the worker's fresh score through
+          const verseIdx = hintedVerseIndexRef.current;
+          const rawStat = payload.verseStats?.[verseIdx];
+
+          if (rawStat && !rawStat.hasPending && rawStat.accuracy >= thresholdRef.current) {
+            // Verse has genuinely passed → unlock and let real score show
             hintedVerseIndexRef.current = null;
             hintTranscriptSnapshotRef.current = '';
+            processedPayload = payload;
+          } else {
+            // Still failing (or pending) → keep the verse at 0% in the UI
+            processedPayload = resetVerseInPayload(
+              payload,
+              verseIdx,
+              ayahWordCountsRef.current
+            );
           }
         }
 
         setLiveResults(processedPayload);
+
 
         // ── Helper: reset a verse immediately in UI and fire onStuck ──────────
         const triggerHint = (verseIndex) => {
