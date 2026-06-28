@@ -4,74 +4,73 @@ import MudarasaView from './MudarasaView';
 import QuizEngine from './QuizEngine';
 import { useMic } from '../hooks/useMic';
 import { useRecitationCheck } from '../hooks/useRecitationCheck';
-import { removeTashkeel, normalizeArabic, expandMuqattaat, getAudioUrl } from '../utils/quranUtils';
-
-const BISMILLAH = 'بسم الله الرحمن الرحيم';
+import { removeTashkeel, normalizeArabic, expandMuqattaat, getAudioUrl, BISMILLAH_SIMPLE, hasBismillahHeader } from '../utils/quranUtils';
 
 /**
  * Build expected text for the current chunk by concatenating ayah texts.
  * Uses quranSimple (plain text) for error-detection comparison when available,
  * ensuring the exact same surah|ayah is used for comparison as shown on screen.
  * Falls back to quranAr text if quranSimple is not loaded.
- *
- * When a chunk starts with ayah 1 of a surah (except Al-Fatiha and At-Tawbah),
- * the Bismillah header is prepended to the expected text so it is scored
- * as part of the recitation — matching the on-screen display and audio playback.
  */
 const buildExpectedText = (chunk, quranSimple) => {
   if (!chunk || chunk.length === 0) return '';
-  const firstAyah = chunk[0];
-  const needsBismillah = firstAyah.numberInSurah === 1 && firstAyah.surahNumber !== 1 && firstAyah.surahNumber !== 9;
-
-  const ayahTexts = chunk.map(ayah => {
+  return chunk.map(ayah => {
     let text = ayah.text || '';
     if (quranSimple) {
       const key = `${ayah.surahNumber}|${ayah.numberInSurah}`;
       const simpleText = quranSimple[key];
       if (simpleText) text = simpleText;
     }
+
+    // If this ayah starts a surah with a Bismillah header, the simple-clean text
+    // has the Bismillah baked in (e.g. "بسم الله الرحمن الرحيم الم").
+    // Prepend a separate Bismillah entry so it is scored independently,
+    // then strip it from the ayah body to avoid duplication.
+    if (hasBismillahHeader(ayah.surahNumber, ayah.numberInSurah)) {
+      const bismillahNorm = normalizeArabic(BISMILLAH_SIMPLE);
+      const bodyText = text.startsWith(BISMILLAH_SIMPLE)
+        ? text.slice(BISMILLAH_SIMPLE.length).trim()
+        : text;
+      const clean = removeTashkeel(bodyText);
+      const bodyNorm = normalizeArabic(expandMuqattaat(clean));
+      return bismillahNorm + ' ' + bodyNorm;
+    }
+
     const clean = removeTashkeel(text);
     return normalizeArabic(expandMuqattaat(clean));
-  });
-
-  if (needsBismillah) {
-    const bismillahClean = removeTashkeel(BISMILLAH);
-    const bismillahNorm = normalizeArabic(expandMuqattaat(bismillahClean));
-    return [bismillahNorm, ...ayahTexts].join(' ');
-  }
-  return ayahTexts.join(' ');
+  }).join(' ');
 };
 
 /**
  * Returns the number of words each ayah contributes to the expected text,
  * using the same text source as buildExpectedText. Used by the worker to
  * check per-verse minimum accuracy (each ayah must be ≥50% correct).
- *
- * When a chunk starts with ayah 1 of a surah (except Al-Fatiha and At-Tawbah),
- * the Bismillah word count is added to the first ayah's count so the worker
- * correctly attributes those words to the first verse.
  */
 const buildAyahWordCounts = (chunk, quranSimple) => {
   if (!chunk || chunk.length === 0) return [];
-  const firstAyah = chunk[0];
-  const needsBismillah = firstAyah.numberInSurah === 1 && firstAyah.surahNumber !== 1 && firstAyah.surahNumber !== 9;
-
-  const bismillahWordCount = needsBismillah
-    ? normalizeArabic(expandMuqattaat(removeTashkeel(BISMILLAH))).trim().split(/\s+/).filter(Boolean).length
-    : 0;
-
-  return chunk.map((ayah, idx) => {
+  return chunk.map(ayah => {
     let text = ayah.text || '';
     if (quranSimple) {
       const key = `${ayah.surahNumber}|${ayah.numberInSurah}`;
       const simpleText = quranSimple[key];
       if (simpleText) text = simpleText;
     }
+
+    // Mirror the same Bismillah-prepend logic as buildExpectedText
+    if (hasBismillahHeader(ayah.surahNumber, ayah.numberInSurah)) {
+      const bismillahNorm = normalizeArabic(BISMILLAH_SIMPLE);
+      const bodyText = text.startsWith(BISMILLAH_SIMPLE)
+        ? text.slice(BISMILLAH_SIMPLE.length).trim()
+        : text;
+      const clean = removeTashkeel(bodyText);
+      const bodyNorm = normalizeArabic(expandMuqattaat(clean));
+      const combined = bismillahNorm + ' ' + bodyNorm;
+      return combined.trim().split(/\s+/).filter(Boolean).length;
+    }
+
     const clean = removeTashkeel(text);
     const expanded = normalizeArabic(expandMuqattaat(clean));
-    const count = expanded.trim().split(/\s+/).filter(Boolean).length;
-    // Add Bismillah words to the first ayah's count
-    return idx === 0 ? count + bismillahWordCount : count;
+    return expanded.trim().split(/\s+/).filter(Boolean).length;
   });
 };
 

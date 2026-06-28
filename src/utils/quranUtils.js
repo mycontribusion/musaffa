@@ -42,6 +42,15 @@ export const getAyahTextByGlobal = (globalIndex, quranAr) => {
 
 export const removeTashkeel = (text) => text.replace(/[\u064B-\u065F]/g, "");
 
+/** Plain Bismillah as it appears in quran-simple-clean.txt (no tashkeel) */
+export const BISMILLAH_SIMPLE = 'بسم الله الرحمن الرحيم';
+
+/** Returns true if this ayah is the first ayah of a surah that has a Bismillah header
+ *  (all surahs except Al-Fatiha which IS the Bismillah, and At-Tawbah which has none) */
+export const hasBismillahHeader = (surahNumber, numberInSurah) =>
+  numberInSurah === 1 && surahNumber !== 1 && surahNumber !== 9;
+
+
 export const stripBismillah = (text, surahNumber, numberInSurah) => {
   if (!text) return '';
   if (numberInSurah === 1 && surahNumber !== 1 && surahNumber !== 9) {

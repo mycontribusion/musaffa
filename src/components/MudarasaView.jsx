@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import RecitationStatusOverlay from './RedBlinkOverlay';
 import { ChevronLeft, Mic, WifiOff, RefreshCw, FastForward, BrainCircuit, AlertTriangle, CheckCircle2, BookOpen, BookX } from 'lucide-react';
-import { removeTashkeel, normalizeArabic, expandMuqattaat } from '../utils/quranUtils';
+import { removeTashkeel, normalizeArabic, expandMuqattaat, BISMILLAH_SIMPLE, hasBismillahHeader } from '../utils/quranUtils';
 
 const MudarasaView = ({
   chunks,
@@ -86,11 +86,21 @@ const MudarasaView = ({
         const simpleText = quranSimple[key];
         if (simpleText) txt = simpleText;
       }
-      // Use the same text processing as buildAyahWordCounts in PartnerSession.jsx
-      // to ensure word offset matches the expected text used by the worker
-      const clean = removeTashkeel(txt);
-      const expanded = normalizeArabic(expandMuqattaat(clean));
-      activeVerseWordOffset += expanded.trim().split(/\s+/).filter(Boolean).length;
+      // Mirror the same Bismillah-prepend logic as buildAyahWordCounts in PartnerSession.jsx
+      let combined;
+      if (hasBismillahHeader(ayah.surahNumber, ayah.numberInSurah)) {
+        const bismillahNorm = normalizeArabic(BISMILLAH_SIMPLE);
+        const bodyText = txt.startsWith(BISMILLAH_SIMPLE)
+          ? txt.slice(BISMILLAH_SIMPLE.length).trim()
+          : txt;
+        const clean = removeTashkeel(bodyText);
+        const bodyNorm = normalizeArabic(expandMuqattaat(clean));
+        combined = bismillahNorm + ' ' + bodyNorm;
+      } else {
+        const clean = removeTashkeel(txt);
+        combined = normalizeArabic(expandMuqattaat(clean));
+      }
+      activeVerseWordOffset += combined.trim().split(/\s+/).filter(Boolean).length;
     }
   }
 
@@ -423,6 +433,15 @@ const MudarasaView = ({
                   const simpleText = quranSimple[key];
                   if (simpleText) {
                     displayText = simpleText;
+                  }
+                }
+
+                // Strip the baked-in Bismillah prefix from ayah 1 of surahs that have
+                // a Bismillah header card — it is already displayed above the verse card
+                // and scored as a separate entry in the expected text.
+                if (hasBismillahHeader(ayah.surahNumber, ayah.numberInSurah)) {
+                  if (displayText.startsWith(BISMILLAH_SIMPLE)) {
+                    displayText = displayText.slice(BISMILLAH_SIMPLE.length).trim();
                   }
                 }
 
