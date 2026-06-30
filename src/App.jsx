@@ -18,7 +18,15 @@ const App = () => {
   const [selectedSurah, setSelectedSurah] = useState(null);
   const [partnerSubView, setPartnerSubView] = useState('config');
   const [activeQuizType, setActiveQuizType] = useState('all');
-  const [musaffaParams, setMusaffaParams] = useState({ startSurah: 1, startAyah: 1, endSurah: 2, endAyah: 286, portion: 'page', whoStarts: 'app', autoNext: true, micSensitivity: 15, errorDetection: false });
+  const DEFAULT_PARAMS = { startSurah: 1, startAyah: 1, endSurah: 2, endAyah: 286, portion: 'page', whoStarts: 'app', autoNext: true, micSensitivity: 15, errorDetection: false, errorThreshold: 50 };
+  const [musaffaParams, setMusaffaParams] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('quran_musaffa_params'));
+      return saved ? { ...DEFAULT_PARAMS, ...saved } : DEFAULT_PARAMS;
+    } catch {
+      return DEFAULT_PARAMS;
+    }
+  });
   const [multiSurahSession, setMultiSurahSession] = useState(null);
   const [reciter, setReciter] = useState(() => localStorage.getItem('quran_reciter') || 'ar.saoodshuraym');
   const [stumbles, setStumbles] = useState(() => JSON.parse(localStorage.getItem('quran_stumbles') || '[]'));
@@ -133,6 +141,7 @@ const App = () => {
   useEffect(() => { localStorage.setItem('quran_recent', JSON.stringify(recentSurahs)); }, [recentSurahs]);
   useEffect(() => { localStorage.setItem('quran_reciter', reciter); }, [reciter]);
   useEffect(() => { localStorage.setItem('quran_musaffa_presets', JSON.stringify(musaffaPresets)); }, [musaffaPresets]);
+  useEffect(() => { localStorage.setItem('quran_musaffa_params', JSON.stringify(musaffaParams)); }, [musaffaParams]);
   // Feature 3: Persist last-read ayah
   useEffect(() => {
     if (lastRead) localStorage.setItem('quran_last_read', JSON.stringify(lastRead));
