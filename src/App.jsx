@@ -203,16 +203,25 @@ const App = () => {
      setMusaffaParams(p => ({ ...p, startSurah: s.number, startAyah: 1, endSurah: s.number, endAyah: s.numberOfAyahs }));
    };
 
-   // Auto-update endSurah/endAyah when startSurah changes in Musaffa config
+   // Only reset End At when Start From moves beyond it
    const handleMusaffaParamChange = (key, value) => {
-     if (key === 'startSurah') {
-       const surah = surahs.find(x => x.number === value);
-       if (surah) {
-         setMusaffaParams(p => ({ ...p, startSurah: value, startAyah: 1, endSurah: value, endAyah: surah.numberOfAyahs }));
-         return;
+     setMusaffaParams(p => {
+       const next = { ...p, [key]: value };
+       if (key === 'startSurah') {
+         // Reset startAyah to 1 whenever surah changes
+         next.startAyah = 1;
+         // Only push end forward if new start surah is beyond current end surah
+         const startBeyondEnd =
+           value > p.endSurah ||
+           (value === p.endSurah && 1 >= p.endAyah);
+         if (startBeyondEnd) {
+           const surah = surahs.find(x => x.number === value);
+           next.endSurah = value;
+           next.endAyah = surah ? surah.numberOfAyahs : p.endAyah;
+         }
        }
-     }
-     setMusaffaParams(p => ({ ...p, [key]: value }));
+       return next;
+     });
    };
 
     // Feature 2: Resume Musaffa session from saved state

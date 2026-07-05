@@ -22,6 +22,26 @@ const PartnerConfig = ({
 
   const [showAdvanced, setShowAdvanced] = useState(false);
 
+  // Auto-correct End At only when Start From >= End At
+  const handleStartSurahChange = (newStartSurah) => {
+    onChange('startSurah', newStartSurah);
+    const startExceedsEnd =
+      newStartSurah > params.endSurah ||
+      (newStartSurah === params.endSurah && params.startAyah >= params.endAyah);
+    if (startExceedsEnd) {
+      onChange('endSurah', newStartSurah);
+      onChange('endAyah', getAyahCount(newStartSurah));
+    }
+  };
+
+  const handleStartAyahChange = (newStartAyah) => {
+    onChange('startAyah', newStartAyah);
+    const sameSurah = params.startSurah === params.endSurah;
+    if (sameSurah && newStartAyah >= params.endAyah) {
+      onChange('endAyah', getAyahCount(params.startSurah));
+    }
+  };
+
   useEffect(() => {
     if (portionRef.current) portionRef.current.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
   }, [params.portion]);
@@ -75,11 +95,11 @@ const PartnerConfig = ({
           <div>
             <div style={sectionLabel}>Start From</div>
             <div style={{ display: 'flex', gap: '0.4rem', overflow: 'hidden' }}>
-              <select value={params.startSurah} onChange={e => onChange('startSurah', Number(e.target.value))}
+              <select value={params.startSurah} onChange={e => handleStartSurahChange(Number(e.target.value))}
                 style={{ ...selectStyle, flex: '1.8' }}>
                 {surahs.map(s => <option key={s.number} value={s.number}>{s.number}. {s.englishName}</option>)}
               </select>
-              <select value={params.startAyah} onChange={e => onChange('startAyah', Number(e.target.value))}
+              <select value={params.startAyah} onChange={e => handleStartAyahChange(Number(e.target.value))}
                 style={{ ...selectStyle, flex: '1', textAlign: 'center' }}>
                 {Array.from({ length: startAyahCount }, (_, i) => i + 1).map(n =>
                   <option key={n} value={n}>Ayah {n}</option>)}
@@ -112,7 +132,7 @@ const PartnerConfig = ({
           </div>
         )}
 
-        
+
         {/* ── Unified Session Mode ── */}
         <div>
           <div style={sectionLabel}>Session Mode</div>
@@ -185,19 +205,29 @@ const PartnerConfig = ({
         </div>
 
         {/* ── Advanced Settings Toggle ── */}
-        <button 
+        <button
           onClick={() => setShowAdvanced(!showAdvanced)}
           style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-            padding: '0.75rem', width: '100%', background: showAdvanced ? 'var(--bg-accent)' : 'transparent',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem',
+            padding: '0.6rem 0.9rem', width: '100%', background: showAdvanced ? 'var(--bg-accent)' : 'transparent',
             border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-md)',
-            color: 'var(--text-primary)', fontSize: '0.8rem', fontWeight: '800',
-            cursor: 'pointer'
+            color: 'var(--text-primary)', cursor: 'pointer', textAlign: 'left',
           }}
         >
-          <Settings2 size={16} style={{ color: 'var(--accent-gold)' }} />
-          {showAdvanced ? 'Hide Advanced Settings' : 'Show Advanced Settings'}
-          {showAdvanced ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+            <Settings2 size={15} style={{ color: 'var(--accent-gold)', flexShrink: 0 }} />
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: '800', lineHeight: 1.2 }}>
+                {showAdvanced ? 'Hide Advanced Settings' : 'Advanced Settings'}
+              </div>
+              {!showAdvanced && (
+                <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginTop: '0.15rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  Portion · Reciter · Who Starts · Mic Sensitivity
+                </div>
+              )}
+            </div>
+          </div>
+          {showAdvanced ? <ChevronUp size={15} style={{ flexShrink: 0 }} /> : <ChevronDown size={15} style={{ flexShrink: 0 }} />}
         </button>
 
         <AnimatePresence>
@@ -209,7 +239,7 @@ const PartnerConfig = ({
               style={{ overflow: 'hidden' }}
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingTop: '0.5rem', paddingBottom: '0.5rem' }}>
-                
+
                 {/* ── Turn Portion — horizontal scroll ── */}
                 <div>
                   <div style={sectionLabel}>Turn Portion</div>
@@ -346,7 +376,7 @@ const PartnerConfig = ({
                         style={{ width: '100%', accentColor: '#6366f1' }}
                       />
                       <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.5rem', lineHeight: '1.4' }}>
-                        Auto-advances only when <strong style={{color: '#818cf8'}}>every verse</strong> individually meets the {params.errorThreshold ?? 50}% accuracy target with no unread words remaining.
+                        Auto-advances only when <strong style={{ color: '#818cf8' }}>every verse</strong> individually meets the {params.errorThreshold ?? 50}% accuracy target with no unread words remaining.
                       </p>
                     </div>
                   </motion.div>
