@@ -154,8 +154,26 @@ const PartnerSession = ({
   // hintAudioRef doubles as the "is a hint playing?" guard:
   // non-null means a hint is in progress; null means free to play another.
   const hintAudioRef = useRef(null);
+  const hintResumeTimerRef = useRef(null);
+  const hintFallbackTimerRef = useRef(null);
+  const sttActionsRef = useRef({});
 
   const clearResultsRef = useRef(null);
+
+  const interruptHint = useCallback(() => {
+    if (hintResumeTimerRef.current) {
+      clearTimeout(hintResumeTimerRef.current);
+      hintResumeTimerRef.current = null;
+    }
+    if (hintFallbackTimerRef.current) {
+      clearTimeout(hintFallbackTimerRef.current);
+      hintFallbackTimerRef.current = null;
+    }
+    if (hintAudioRef.current) {
+      try { hintAudioRef.current.pause(); } catch (e) {}
+      hintAudioRef.current = null;
+    }
+  }, []);
 
   const handleStuck = useCallback((stuckIndex) => {
     // Guard: do not play a new hint if one is already playing
@@ -166,29 +184,38 @@ const PartnerSession = ({
     const url = getAudioUrl(ayah.number, reciterSlug, ayah.surahNumber, ayah.numberInSurah);
 
     // Pause STT for the first 3 seconds so the hint plays without being cut.
-    // After 3s, recognition resumes — user speech can then naturally interrupt the audio.
-    pauseRecognition();
+    sttActionsRef.current.pauseRecognition?.();
 
     const hintAudio = new Audio(url);
     hintAudioRef.current = hintAudio;
-    hintAudio.play().catch(e => console.warn('Failed to play hint audio:', e));
+    hintAudio.play().catch(e => {
+      console.warn('Failed to play hint audio:', e);
+      setAudioError(true);
+      interruptHint();
+      sttActionsRef.current.resumeRecognition?.();
+    });
 
     // Resume STT after 3 seconds regardless of whether audio is still playing
-    const resumeTimer = setTimeout(() => {
-      resumeRecognition();
+    hintResumeTimerRef.current = setTimeout(() => {
+      sttActionsRef.current.resumeRecognition?.();
     }, 3000);
 
+    // 5-second fallback in case onended/onerror never fire due to network hang
+    hintFallbackTimerRef.current = setTimeout(() => {
+      interruptHint();
+      sttActionsRef.current.resumeRecognition?.();
+    }, 5000);
+
     hintAudio.onended = () => {
-      clearTimeout(resumeTimer);
-      hintAudioRef.current = null;
-      resumeRecognition();
+      interruptHint();
+      sttActionsRef.current.resumeRecognition?.();
     };
     hintAudio.onerror = () => {
-      clearTimeout(resumeTimer);
-      hintAudioRef.current = null;
-      resumeRecognition();
+      setAudioError(true);
+      interruptHint();
+      sttActionsRef.current.resumeRecognition?.();
     };
-  }, [activeChunkSlice, params.reciter]);
+  }, [activeChunkSlice, params.reciter, interruptHint, setAudioError]);
 
   // STT error detection — active during user's recitation turn only
   // onAutoFinish fires automatically after silence, triggering handleFinishedTurn
@@ -210,8 +237,10 @@ const PartnerSession = ({
     params.errorThreshold ?? 50,
     ayahWordCounts,
     handleStuck,
-    hintAudioRef    // interrupt hint audio the moment user starts speaking
+    interruptHint
   );
+
+  sttActionsRef.current = { pauseRecognition, resumeRecognition };
 
   useEffect(() => {
     clearResultsRef.current = clearResults;
@@ -253,20 +282,16 @@ const PartnerSession = ({
   useEffect(() => {
     return () => {
       if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
-      if (hintAudioRef.current) {
-        try { hintAudioRef.current.pause(); } catch (e) {}
-        hintAudioRef.current = null;
-      }
+      interruptHint();
     };
-  }, []);
+  }, [interruptHint]);
 
   // Stop hint audio if the turn changes or we exit Mudarasa view
   useEffect(() => {
-    if (!sttActive && hintAudioRef.current) {
-      try { hintAudioRef.current.pause(); } catch (e) {}
-      hintAudioRef.current = null;
+    if (!sttActive) {
+      interruptHint();
     }
-  }, [sttActive]);
+  }, [sttActive, interruptHint]);
 
   // Automatically log stumbles and store recitation history in localStorage when results are computed
   useEffect(() => {

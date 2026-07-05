@@ -66,7 +66,7 @@ export const useRecitationCheck = (
   accuracyThreshold = 100,
   ayahWordCounts = [],
   onStuck = null,
-  hintAudioRef = null,    // external ref to the playing hint Audio object; paused on speech start
+  interruptHint = null,
   onUserSpeechAfterHint = null,
 ) => {
   const SR = getSpeechRecognition();
@@ -95,6 +95,7 @@ export const useRecitationCheck = (
   const latestPayloadRef = useRef(null);  // full payload for immediate verse reset
   const onStuckRef = useRef(onStuck);
   const onUserSpeechAfterHintRef = useRef(onUserSpeechAfterHint);
+  const interruptHintRef = useRef(interruptHint);
 
   // Hint tracking refs — for resetting accuracy of a specific verse
   const hintedVerseIndexRef = useRef(null);
@@ -110,6 +111,7 @@ export const useRecitationCheck = (
   useEffect(() => { onAutoFinishRef.current = onAutoFinish; }, [onAutoFinish]);
   useEffect(() => { onStuckRef.current = onStuck; }, [onStuck]);
   useEffect(() => { onUserSpeechAfterHintRef.current = onUserSpeechAfterHint; }, [onUserSpeechAfterHint]);
+  useEffect(() => { interruptHintRef.current = interruptHint; }, [interruptHint]);
   useEffect(() => { thresholdRef.current = accuracyThreshold; }, [accuracyThreshold]);
   const ayahWordCountsRef = useRef(ayahWordCounts);
   useEffect(() => { ayahWordCountsRef.current = ayahWordCounts; }, [ayahWordCounts]);
@@ -517,12 +519,8 @@ export const useRecitationCheck = (
       }
       // Interrupt hint audio only if recognition was NOT paused for the hint.
       // When recognition is paused (during hint playback), onspeechstart won't fire.
-      if (hintAudioRef && hintAudioRef.current) {
-        try {
-          hintAudioRef.current.pause();
-          hintAudioRef.current.currentTime = 0;
-        } catch (_) {}
-        hintAudioRef.current = null;
+      if (interruptHintRef.current) {
+        interruptHintRef.current();
       }
     };
 
