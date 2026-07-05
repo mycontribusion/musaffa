@@ -289,21 +289,11 @@ export const useRecitationCheck = (
 
           const rawStat = payload.verseStats?.[verseIdx];
 
-          if (hintPassedRef.current) {
-            // Already passed — show real score, keep guard active
-            processedPayload = payload;
-          } else if (rawStat && !rawStat.hasPending && rawStat.accuracy >= thresholdRef.current) {
-            // Verse just passed now → mark done, show real score, keep guard
+          if (!hintPassedRef.current && rawStat && !rawStat.hasPending && rawStat.accuracy >= thresholdRef.current) {
+            // Verse just passed now → mark done, keep guard
             hintPassedRef.current = true;
-            processedPayload = payload;
-          } else {
-            // Still failing/pending → keep verse at 0% in the UI
-            processedPayload = resetVerseInPayload(
-              payload,
-              verseIdx,
-              ayahWordCountsRef.current
-            );
           }
+          processedPayload = payload;
         }
 
         setLiveResults(processedPayload);
