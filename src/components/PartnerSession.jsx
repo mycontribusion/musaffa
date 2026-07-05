@@ -249,12 +249,24 @@ const PartnerSession = ({
   // Keep the ref in sync so the onAutoFinish closure always calls the latest version
   handleFinishedTurnRef.current = handleFinishedTurn;
 
-  // Cleanup timers on unmount
+  // Cleanup timers and audio on unmount
   useEffect(() => {
     return () => {
       if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
+      if (hintAudioRef.current) {
+        try { hintAudioRef.current.pause(); } catch (e) {}
+        hintAudioRef.current = null;
+      }
     };
   }, []);
+
+  // Stop hint audio if the turn changes or we exit Mudarasa view
+  useEffect(() => {
+    if (!sttActive && hintAudioRef.current) {
+      try { hintAudioRef.current.pause(); } catch (e) {}
+      hintAudioRef.current = null;
+    }
+  }, [sttActive]);
 
   // Automatically log stumbles and store recitation history in localStorage when results are computed
   useEffect(() => {

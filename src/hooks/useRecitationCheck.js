@@ -87,6 +87,7 @@ export const useRecitationCheck = (
   const thresholdRef = useRef(accuracyThreshold);
   const workerRef = useRef(null);          // Web Worker instance
   const pendingIdRef = useRef(0);          // track latest request to discard stale results
+  const workerCompletedIdRef = useRef(0);  // track latest completed worker response
 
   // Stuck detection refs
   const stuckTimerRef = useRef(null);
@@ -158,6 +159,12 @@ export const useRecitationCheck = (
         }
 
         if (stuckIndex !== -1) {
+          // Guard: Worker is still processing the latest speech. Wait for it to finish.
+          if (pendingIdRef.current !== workerCompletedIdRef.current) return;
+
+          // Guard: same verse already hinted (prevent repeated/overlapping audio)
+          if (hintedVerseIndexRef.current === stuckIndex) return;
+
           // Reset the passed flag — this is a new hint for a (possibly different) verse
           hintPassedRef.current = false;
           // 1. Reset the verse to 0% in the UI immediately (before audio plays)
@@ -244,6 +251,8 @@ export const useRecitationCheck = (
     worker.onmessage = (event) => {
       const { type, payload, id } = event.data;
       if (type === 'RESULT' && id === pendingIdRef.current) {
+        workerCompletedIdRef.current = id;
+        
         // Store latest payload so we can reset a verse immediately when a hint fires
         latestPayloadRef.current = payload;
 
@@ -394,6 +403,7 @@ export const useRecitationCheck = (
           }
         }
       } else if (type === 'RESULT_FINAL' && id === pendingIdRef.current) {
+        workerCompletedIdRef.current = id;
         setResults(payload);
         setLiveResults(payload);
       }
