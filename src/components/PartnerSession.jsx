@@ -133,8 +133,6 @@ const PartnerSession = ({
   );
 
   const [retryStartIndex, setRetryStartIndex] = useState(0);
-
-  const [retryStartIndex, setRetryStartIndex] = useState(0);
   const [completedResults, setCompletedResults] = useState(null);
 
   // Reset retryStartIndex and completedResults on chunk index change
