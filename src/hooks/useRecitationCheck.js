@@ -96,6 +96,7 @@ export const useRecitationCheck = (
   const onStuckRef = useRef(onStuck);
   const onUserSpeechAfterHintRef = useRef(onUserSpeechAfterHint);
   const interruptHintRef = useRef(interruptHint);
+  const isActiveRef = useRef(isActive);
 
   // Hint tracking refs — for resetting accuracy of a specific verse
   const hintedVerseIndexRef = useRef(null);
@@ -112,6 +113,7 @@ export const useRecitationCheck = (
   useEffect(() => { onStuckRef.current = onStuck; }, [onStuck]);
   useEffect(() => { onUserSpeechAfterHintRef.current = onUserSpeechAfterHint; }, [onUserSpeechAfterHint]);
   useEffect(() => { interruptHintRef.current = interruptHint; }, [interruptHint]);
+  useEffect(() => { isActiveRef.current = isActive; }, [isActive]);
   useEffect(() => { thresholdRef.current = accuracyThreshold; }, [accuracyThreshold]);
   const ayahWordCountsRef = useRef(ayahWordCounts);
   useEffect(() => { ayahWordCountsRef.current = ayahWordCounts; }, [ayahWordCounts]);
@@ -600,6 +602,8 @@ export const useRecitationCheck = (
       }
       clearStuckTimer();
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      if (liveDebounceRef.current) clearTimeout(liveDebounceRef.current);
+      pendingIdRef.current++; // Discard any pending worker messages
       setIsListening(false);
       // Clear live results when turn switches away from user (prevents lingering state)
       setLiveResults(null);
@@ -631,6 +635,7 @@ export const useRecitationCheck = (
 
   const resumeRecognition = useCallback(() => {
     // Only resume if we're still in an active session and not already listening
+    if (!isActiveRef.current) return;
     if (!recognitionRef.current) return;
     if (recognitionRef.current._shouldRestart) return; // already resuming or running
     recognitionRef.current._shouldRestart = true;
