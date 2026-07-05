@@ -98,6 +98,7 @@ export const useRecitationCheck = (
   // Hint tracking refs — for resetting accuracy of a specific verse
   const hintedVerseIndexRef = useRef(null);
   const hintTranscriptSnapshotRef = useRef('');
+  const hintPayloadSnapshotRef = useRef(null);
   // hintPassedRef: true once the hinted verse genuinely passes.
   // hintedVerseIndexRef stays set (as a re-trigger guard) but we stop showing 0%
   // and stop applying the transcript substitution once the verse has passed.
@@ -254,6 +255,27 @@ export const useRecitationCheck = (
         let processedPayload = payload;
         if (hintedVerseIndexRef.current !== null && payload && payload.results) {
           const verseIdx = hintedVerseIndexRef.current;
+
+          // Restore the snapshot for previously passed verses so they don't turn artificially green
+          // due to the passedExpected transcript substitution trick in dispatchLiveCompare.
+          if (hintPayloadSnapshotRef.current) {
+            let passedWordCount = 0;
+            const counts = ayahWordCountsRef.current || [];
+            for (let i = 0; i < verseIdx; i++) {
+              passedWordCount += counts[i] || 0;
+            }
+            for (let i = 0; i < passedWordCount && i < payload.results.length && i < hintPayloadSnapshotRef.current.results.length; i++) {
+              payload.results[i] = hintPayloadSnapshotRef.current.results[i];
+            }
+            if (payload.verseStats && hintPayloadSnapshotRef.current.verseStats) {
+              for (let i = 0; i < verseIdx && i < payload.verseStats.length && i < hintPayloadSnapshotRef.current.verseStats.length; i++) {
+                payload.verseStats[i] = hintPayloadSnapshotRef.current.verseStats[i];
+              }
+            }
+            const correct = payload.results.filter(r => r.status === 'correct').length;
+            payload.accuracy = payload.results.length > 0 ? Math.round((correct / payload.results.length) * 100) : 100;
+          }
+
           const rawStat = payload.verseStats?.[verseIdx];
 
           if (hintPassedRef.current) {
@@ -298,6 +320,7 @@ export const useRecitationCheck = (
           // 2. Snapshot current transcript so substitution uses only post-hint words
           hintedVerseIndexRef.current = verseIndex;
           hintTranscriptSnapshotRef.current = transcriptRef.current;
+          hintPayloadSnapshotRef.current = latestPayloadRef.current;
 
           // 3. Fire onStuck → PartnerSession plays the audio hint
           onStuckRef.current(verseIndex);
@@ -562,6 +585,7 @@ export const useRecitationCheck = (
     // a verse on the next turn
     hintedVerseIndexRef.current = null;
     hintTranscriptSnapshotRef.current = '';
+    hintPayloadSnapshotRef.current = null;
     hintPassedRef.current = false;
     // NOTE: transcript is intentionally NOT cleared here — it persists across
     // retries and mark-satisfied actions so the user can see what they've recited.
