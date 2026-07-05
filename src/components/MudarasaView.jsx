@@ -32,6 +32,7 @@ const MudarasaView = ({
   targetAccuracy,     // threshold percentage
   retryStartIndex = 0,
   setRetryStartIndex,
+  completedResults,
 }) => {
 
   // ── Text visibility toggle (applies to both turns) ──────────────────────
@@ -453,8 +454,8 @@ const MudarasaView = ({
                 const isActive = !enableErrorDetection || idx === activeAyahIndex;
                 const isLocked = enableErrorDetection && idx > activeAyahIndex;
 
-                // Show live overlay only for the active verse
                 const showLiveOverlay = enableErrorDetection && isSttListening && liveResults && mudarasaTurn === 'user' && isActive;
+                const showCompletedOverlay = enableErrorDetection && isCompleted && (completedResults || liveResults);
 
                 if (isActive) {
                   activeAyahIdRef.current = `mudarasa-ayah-${ayah.number}`;
@@ -505,12 +506,40 @@ const MudarasaView = ({
                       }}
                     >
                       {showText ? (
-                        showLiveOverlay ? (
+                        (showLiveOverlay || showCompletedOverlay) ? (
                           <LiveTextOverlay
                             plainText={displayText}
-                            results={liveResults.results}
+                            results={showCompletedOverlay ? (completedResults?.results || liveResults?.results) : liveResults?.results}
                             numberInSurah={ayah.numberInSurah}
-                            wordOffset={activeVerseWordOffset}
+                            wordOffset={idx === sliceActiveAyahIndex ? activeVerseWordOffset : (
+                              // We need word offsets for completed verses too if we're rendering them.
+                              // Wait, calculating wordOffset for arbitrary verses is needed.
+                              // But for now, let's just do a simple lookup.
+                              // Actually, if we just use activeVerseWordOffset, it'll be wrong for previous verses.
+                              // Let's compute it.
+                              (() => {
+                                let offset = 0;
+                                const sliceChunk = chunks[currentChunkIndex].slice(retryStartIndex);
+                                for (let i = 0; i < idx - retryStartIndex; i++) {
+                                  const a = sliceChunk[i];
+                                  if (!a) continue;
+                                  let txt = a.text || '';
+                                  if (quranSimple) {
+                                    const key = `${a.surahNumber}|${a.numberInSurah}`;
+                                    if (quranSimple[key]) txt = quranSimple[key];
+                                  }
+                                  let combined;
+                                  if (hasBismillahHeader(a.surahNumber, a.numberInSurah)) {
+                                    const bodyText = txt.startsWith(BISMILLAH_SIMPLE) ? txt.slice(BISMILLAH_SIMPLE.length).trim() : txt;
+                                    combined = normalizeArabic(BISMILLAH_SIMPLE) + ' ' + normalizeArabic(expandMuqattaat(removeTashkeel(bodyText)));
+                                  } else {
+                                    combined = normalizeArabic(expandMuqattaat(removeTashkeel(txt)));
+                                  }
+                                  offset += combined.trim().split(/\s+/).filter(Boolean).length;
+                                }
+                                return offset;
+                              })()
+                            )}
                           />
                         ) : (
                           <p 

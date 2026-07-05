@@ -134,9 +134,13 @@ const PartnerSession = ({
 
   const [retryStartIndex, setRetryStartIndex] = useState(0);
 
-  // Reset retryStartIndex on chunk index change
+  const [retryStartIndex, setRetryStartIndex] = useState(0);
+  const [completedResults, setCompletedResults] = useState(null);
+
+  // Reset retryStartIndex and completedResults on chunk index change
   useEffect(() => {
     setRetryStartIndex(0);
+    setCompletedResults(null);
   }, [currentChunkIndex]);
 
   // Build expected text for the current chunk (sliced by retryStartIndex)
@@ -235,6 +239,7 @@ const PartnerSession = ({
       // Advance immediately — if triggered by auto-finish, 100% is already confirmed.
       // If triggered manually, we give a brief moment for final comparison to log.
       autoAdvanceTimerRef.current = setTimeout(() => {
+        setCompletedResults(liveResults);
         clearResults();
         handleNextTurn();
       }, 200);
@@ -368,6 +373,7 @@ const PartnerSession = ({
       targetAccuracy={params.errorThreshold ?? 50}
       retryStartIndex={retryStartIndex}
       setRetryStartIndex={setRetryStartIndex}
+      completedResults={completedResults}
     />
   );
 
