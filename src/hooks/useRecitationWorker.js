@@ -94,7 +94,9 @@ export const useRecitationWorker = ({
       worker.terminate();
       workerRef.current = null;
     };
-  }, [ayahWordCounts, checkAutoFinish, hintPassedRef, hintPayloadSnapshotRef, hintedVerseIndexRef, latestPayloadRef, threshold, triggerHint]);
+  // Refs (hintedVerseIndexRef, hintPassedRef, etc.) are intentionally excluded
+  // from deps — they are stable mutable objects, not reactive values.
+  }, [ayahWordCounts, checkAutoFinish, threshold, triggerHint]);
 
   const dispatchLiveCompare = useCallback((spoken) => {
     if (!workerRef.current || !expectedText) return;
@@ -120,7 +122,8 @@ export const useRecitationWorker = ({
         ayahWordCounts,
       });
     }, 350);
-  }, [ayahWordCounts, expectedText, hintTranscriptSnapshotRef, hintedVerseIndexRef]);
+  // hintedVerseIndexRef and hintTranscriptSnapshotRef are refs — excluded from deps intentionally.
+  }, [ayahWordCounts, expectedText]);
 
   const dispatchFinalCompare = useCallback((spoken) => {
     if (liveDebounceRef.current) {

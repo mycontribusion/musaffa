@@ -38,40 +38,15 @@ export const useRecitationCheck = (
     ayahWordCounts,
   });
 
-  const {
-    liveResults,
-    setLiveResults,
-    results,
-    dispatchLiveCompare,
-    dispatchFinalCompare,
-    clearWorkerResults,
-    pendingIdRef,
-    workerCompletedIdRef,
-    liveDebounceRef
-  } = useRecitationWorker({
-    expectedText,
-    ayahWordCounts,
-    threshold: accuracyThreshold,
-    hintedVerseIndexRef,
-    hintTranscriptSnapshotRef,
-    hintPayloadSnapshotRef,
-    hintPassedRef,
-    triggerHint: (idx) => triggerHint(idx, { current: transcript }, setLiveResults),
-    checkAutoFinish,
-    latestPayloadRef
-  });
-  
-  // Connect the refs between stuck detection and worker
-  useEffect(() => {
-    // This is a hacky workaround to connect refs across hooks
-    // but it allows the hooks to be decoupled logically
-    latestPayloadRef.current = liveResults;
-  }, [liveResults, latestPayloadRef]);
-
+  // ── useSpeechRecognition MUST come before useRecitationWorker ─────────────
+  // transcriptRef is passed into the worker's triggerHint closure, so it must
+  // exist before the worker effect captures it. Callbacks are defined after
+  // both hooks; they read transcriptRef.current (always fresh, no stale closure).
   const onResultCallback = useCallback((combined) => {
     if (combined) dispatchLiveCompare(combined);
-    restartStuckTimer({ current: combined }, setLiveResults);
-  }, [dispatchLiveCompare, restartStuckTimer, setLiveResults]);
+    restartStuckTimer(transcriptRef, setLiveResults);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatchLiveCompare, restartStuckTimer]);
 
   const onSpeechStartCallback = useCallback(() => {
     clearStuckTimer();
@@ -80,8 +55,10 @@ export const useRecitationCheck = (
   }, [clearStuckTimer, clearSilenceTimer, interruptHintRef]);
 
   const onSpeechEndCallback = useCallback(() => {
-    restartStuckTimer({ current: transcript }, setLiveResults);
+    // Use transcriptRef.current — always the latest value, no stale closure risk.
+    restartStuckTimer(transcriptRef, setLiveResults);
     clearSilenceTimer();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restartStuckTimer, clearSilenceTimer]);
 
   const {
@@ -100,9 +77,31 @@ export const useRecitationCheck = (
     onSpeechStart: onSpeechStartCallback,
     onSpeechEnd: onSpeechEndCallback,
   });
-  
-  // Re-bind the restartStuckTimer's internal usage of transcriptRef since it needs to read latest
-  // Actually, we pass the transcript explicitly from onResult and onSpeechEnd.
+
+  const {
+    liveResults,
+    setLiveResults,
+    results,
+    dispatchLiveCompare,
+    dispatchFinalCompare,
+    clearWorkerResults,
+    pendingIdRef,
+    workerCompletedIdRef,
+    liveDebounceRef
+  } = useRecitationWorker({
+    expectedText,
+    ayahWordCounts,
+    threshold: accuracyThreshold,
+    hintedVerseIndexRef,
+    hintTranscriptSnapshotRef,
+    hintPayloadSnapshotRef,
+    hintPassedRef,
+    // Pass transcriptRef (stable ref object) so the worker closure always reads
+    // the current transcript without creating a stale-closure dependency.
+    triggerHint: (idx) => triggerHint(idx, transcriptRef, setLiveResults),
+    checkAutoFinish,
+    latestPayloadRef
+  });
 
   const startListening = useCallback(() => {
     clearStuckState();
