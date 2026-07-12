@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useSpeechRecognition } from './useSpeechRecognition';
 import { useRecitationWorker } from './useRecitationWorker';
 import { useStuckDetection } from './useStuckDetection';
@@ -42,11 +42,13 @@ export const useRecitationCheck = (
   // transcriptRef is passed into the worker's triggerHint closure, so it must
   // exist before the worker effect captures it. Callbacks are defined after
   // both hooks; they read transcriptRef.current (always fresh, no stale closure).
+  const dispatchLiveCompareRef = useRef(null);
+
   const onResultCallback = useCallback((combined) => {
-    if (combined) dispatchLiveCompare(combined);
+    if (combined) dispatchLiveCompareRef.current?.(combined);
     restartStuckTimer(transcriptRef, setLiveResults);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dispatchLiveCompare, restartStuckTimer]);
+  }, [restartStuckTimer]);
 
   const onSpeechStartCallback = useCallback(() => {
     clearStuckTimer();
@@ -102,6 +104,8 @@ export const useRecitationCheck = (
     checkAutoFinish,
     latestPayloadRef
   });
+
+  dispatchLiveCompareRef.current = dispatchLiveCompare;
 
   const startListening = useCallback(() => {
     clearStuckState();
