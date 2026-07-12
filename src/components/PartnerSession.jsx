@@ -2,77 +2,10 @@ import { useEffect, useCallback, useRef, useState } from 'react';
 import PartnerConfig from './PartnerConfig';
 import MudarasaView from './MudarasaView';
 import QuizEngine from './QuizEngine';
+import { ResumeBanner } from './partnerConfig/ResumeBanner';
 import { useMic } from '../hooks/useMic';
 import { useRecitationCheck } from '../hooks/useRecitationCheck';
-import { removeTashkeel, normalizeArabic, expandMuqattaat, getAudioUrl, BISMILLAH_SIMPLE, hasBismillahHeader } from '../utils/quranUtils';
-
-/**
- * Build expected text for the current chunk by concatenating ayah texts.
- * Uses quranSimple (plain text) for error-detection comparison when available,
- * ensuring the exact same surah|ayah is used for comparison as shown on screen.
- * Falls back to quranAr text if quranSimple is not loaded.
- */
-const buildExpectedText = (chunk, quranSimple) => {
-  if (!chunk || chunk.length === 0) return '';
-  return chunk.map(ayah => {
-    let text = ayah.text || '';
-    if (quranSimple) {
-      const key = `${ayah.surahNumber}|${ayah.numberInSurah}`;
-      const simpleText = quranSimple[key];
-      if (simpleText) text = simpleText;
-    }
-
-    // If this ayah starts a surah with a Bismillah header, the simple-clean text
-    // has the Bismillah baked in (e.g. "بسم الله الرحمن الرحيم الم").
-    // Prepend a separate Bismillah entry so it is scored independently,
-    // then strip it from the ayah body to avoid duplication.
-    if (hasBismillahHeader(ayah.surahNumber, ayah.numberInSurah)) {
-      const bismillahNorm = normalizeArabic(BISMILLAH_SIMPLE);
-      const bodyText = text.startsWith(BISMILLAH_SIMPLE)
-        ? text.slice(BISMILLAH_SIMPLE.length).trim()
-        : text;
-      const clean = removeTashkeel(bodyText);
-      const bodyNorm = normalizeArabic(expandMuqattaat(clean));
-      return bismillahNorm + ' ' + bodyNorm;
-    }
-
-    const clean = removeTashkeel(text);
-    return normalizeArabic(expandMuqattaat(clean));
-  }).join(' ');
-};
-
-/**
- * Returns the number of words each ayah contributes to the expected text,
- * using the same text source as buildExpectedText. Used by the worker to
- * check per-verse minimum accuracy (each ayah must be ≥50% correct).
- */
-const buildAyahWordCounts = (chunk, quranSimple) => {
-  if (!chunk || chunk.length === 0) return [];
-  return chunk.map(ayah => {
-    let text = ayah.text || '';
-    if (quranSimple) {
-      const key = `${ayah.surahNumber}|${ayah.numberInSurah}`;
-      const simpleText = quranSimple[key];
-      if (simpleText) text = simpleText;
-    }
-
-    // Mirror the same Bismillah-prepend logic as buildExpectedText
-    if (hasBismillahHeader(ayah.surahNumber, ayah.numberInSurah)) {
-      const bismillahNorm = normalizeArabic(BISMILLAH_SIMPLE);
-      const bodyText = text.startsWith(BISMILLAH_SIMPLE)
-        ? text.slice(BISMILLAH_SIMPLE.length).trim()
-        : text;
-      const clean = removeTashkeel(bodyText);
-      const bodyNorm = normalizeArabic(expandMuqattaat(clean));
-      const combined = bismillahNorm + ' ' + bodyNorm;
-      return combined.trim().split(/\s+/).filter(Boolean).length;
-    }
-
-    const clean = removeTashkeel(text);
-    const expanded = normalizeArabic(expandMuqattaat(clean));
-    return expanded.trim().split(/\s+/).filter(Boolean).length;
-  });
-};
+import { getAudioUrl, buildExpectedText, buildAyahWordCounts } from '../utils/quranUtils';
 
 const PartnerSession = ({
   subView,
@@ -173,11 +106,20 @@ const PartnerSession = ({
       try { hintAudioRef.current.pause(); } catch (e) {}
       hintAudioRef.current = null;
     }
+    // Release the hook's authoritative in-flight lock so the trigger paths and
+    // the audio element stay in agreement (prevents overlapping hint playback).
+    sttActionsRef.current.notifyHintEnded?.();
   }, []);
 
   const handleStuck = useCallback((stuckIndex) => {
-    // Guard: do not play a new hint if one is already playing
-    if (hintAudioRef.current || !activeChunkSlice[stuckIndex]) return;
+    // Guard: do not play a new hint if one is already playing.
+    // The hook sets its in-flight lock BEFORE calling onStuck, so if we bail out
+    // here without playing we must release that lock — otherwise no further hints
+    // could ever fire.
+    if (hintAudioRef.current || !activeChunkSlice[stuckIndex]) {
+      sttActionsRef.current.notifyHintEnded?.();
+      return;
+    }
 
     const ayah = activeChunkSlice[stuckIndex];
     const reciterSlug = params.reciter || 'ar.alafasy';
@@ -230,6 +172,7 @@ const PartnerSession = ({
     clearResults,
     pauseRecognition,
     resumeRecognition,
+    notifyHintEnded,
   } = useRecitationCheck(
     sttActive,
     expectedText,
@@ -240,7 +183,7 @@ const PartnerSession = ({
     interruptHint
   );
 
-  sttActionsRef.current = { pauseRecognition, resumeRecognition };
+  sttActionsRef.current = { pauseRecognition, resumeRecognition, notifyHintEnded };
 
   useEffect(() => {
     clearResultsRef.current = clearResults;
@@ -328,35 +271,12 @@ const PartnerSession = ({
   // Dispatcher
   if (subView === 'config') return (
     <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0.5rem 0.5rem 6rem' }}>
-      {/* Resume Session Banner — hidden when editing a preset */}
-      {savedMusaffaSession && !presetEditingIndex && (
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)',
-          borderRadius: 'var(--radius-lg)', padding: '0.85rem 1rem', marginBottom: '1rem',
-          gap: '0.75rem',
-        }}>
-          <div>
-            <p style={{ fontWeight: '800', fontSize: '0.8rem', color: 'var(--accent-gold)' }}>Resume Session?</p>
-            <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>
-              {savedMusaffaSession.surahNumber
-                ? `Surah ${savedMusaffaSession.surahNumber} · Chunk ${savedMusaffaSession.chunkIndex + 1}`
-                : 'Continue from where you left off'}
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
-            <button onClick={clearMusaffaSession} style={{
-              padding: '0.4rem 0.7rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)',
-              background: 'var(--bg-accent)', color: 'var(--text-secondary)', fontSize: '0.65rem',
-              fontWeight: '700', cursor: 'pointer',
-            }}>Dismiss</button>
-            <button onClick={resumeMusaffaSession} style={{
-              padding: '0.4rem 0.7rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-gold)',
-              background: 'var(--accent-gold)', color: '#000', fontSize: '0.65rem',
-              fontWeight: '800', cursor: 'pointer',
-            }}>Resume</button>
-          </div>
-        </div>
+      {!presetEditingIndex && (
+        <ResumeBanner
+          savedSession={savedMusaffaSession}
+          onResume={resumeMusaffaSession}
+          onDismiss={clearMusaffaSession}
+        />
       )}
       <PartnerConfig
         key="config"

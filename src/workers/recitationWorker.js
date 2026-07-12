@@ -277,6 +277,11 @@ const compareRecitation = (expectedText, spokenText, ayahWordCounts = []) => {
     preBlockAccuracy,
     perVerseMinMet,
     verseStats,
+    // Word-level alignment frontier: the index of the last expected word that was
+    // successfully matched. Everything after this index is still 'pending'.
+    // Exposes the DP's internal state so the hook can target hints by exact word
+    // position rather than inferring verse from per-verse booleans.
+    lastMatchedExpIdx,
   };
 };
 

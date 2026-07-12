@@ -232,3 +232,72 @@ export const getAudioUrl = (number, reciterId = 'ar.alafasy', surahNum = null, a
   
   return `https://cdn.islamic.network/quran/audio/${reciter.bitrate}/${reciter.id}/${number}.mp3`;
 };
+
+/**
+ * Build expected text for the current chunk by concatenating ayah texts.
+ * Uses quranSimple (plain text) for error-detection comparison when available,
+ * ensuring the exact same surah|ayah is used for comparison as shown on screen.
+ * Falls back to quranAr text if quranSimple is not loaded.
+ */
+export const buildExpectedText = (chunk, quranSimple) => {
+  if (!chunk || chunk.length === 0) return '';
+  return chunk.map(ayah => {
+    let text = ayah.text || '';
+    if (quranSimple) {
+      const key = `${ayah.surahNumber}|${ayah.numberInSurah}`;
+      const simpleText = quranSimple[key];
+      if (simpleText) text = simpleText;
+    }
+
+    // If this ayah starts a surah with a Bismillah header, the simple-clean text
+    // has the Bismillah baked in (e.g. "بسم الله الرحمن الرحيم الم").
+    // Prepend a separate Bismillah entry so it is scored independently,
+    // then strip it from the ayah body to avoid duplication.
+    if (hasBismillahHeader(ayah.surahNumber, ayah.numberInSurah)) {
+      const bismillahNorm = normalizeArabic(BISMILLAH_SIMPLE);
+      const bodyText = text.startsWith(BISMILLAH_SIMPLE)
+        ? text.slice(BISMILLAH_SIMPLE.length).trim()
+        : text;
+      const clean = removeTashkeel(bodyText);
+      const bodyNorm = normalizeArabic(expandMuqattaat(clean));
+      return bismillahNorm + ' ' + bodyNorm;
+    }
+
+    const clean = removeTashkeel(text);
+    return normalizeArabic(expandMuqattaat(clean));
+  }).join(' ');
+};
+
+/**
+ * Returns the number of words each ayah contributes to the expected text,
+ * using the same text source as buildExpectedText. Used by the worker to
+ * check per-verse minimum accuracy (each ayah must be ≥50% correct).
+ */
+export const buildAyahWordCounts = (chunk, quranSimple) => {
+  if (!chunk || chunk.length === 0) return [];
+  return chunk.map(ayah => {
+    let text = ayah.text || '';
+    if (quranSimple) {
+      const key = `${ayah.surahNumber}|${ayah.numberInSurah}`;
+      const simpleText = quranSimple[key];
+      if (simpleText) text = simpleText;
+    }
+
+    // Mirror the same Bismillah-prepend logic as buildExpectedText
+    if (hasBismillahHeader(ayah.surahNumber, ayah.numberInSurah)) {
+      const bismillahNorm = normalizeArabic(BISMILLAH_SIMPLE);
+      const bodyText = text.startsWith(BISMILLAH_SIMPLE)
+        ? text.slice(BISMILLAH_SIMPLE.length).trim()
+        : text;
+      const clean = removeTashkeel(bodyText);
+      const bodyNorm = normalizeArabic(expandMuqattaat(clean));
+      const combined = bismillahNorm + ' ' + bodyNorm;
+      return combined.trim().split(/\s+/).filter(Boolean).length;
+    }
+
+    const clean = removeTashkeel(text);
+    const expanded = normalizeArabic(expandMuqattaat(clean));
+    return expanded.trim().split(/\s+/).filter(Boolean).length;
+  });
+};
+
