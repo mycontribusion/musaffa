@@ -152,22 +152,21 @@ const PartnerSession = ({
 
     // After 3 seconds, decide based on whether the user spoke:
     // - If transcript grew → user spoke during the 3-sec window.
-    //   Stop hint, rescore with user's speech, continue.
+    //   Stop hint, resume STT, and let the normal scoring loop continue.
     // - If transcript did not grow → user was silent.
-    //   Let the hint finish playing the full verse, then rescore as if
-    //   the user repeated it (100%) and continue.
+    //   Let the hint finish playing the full verse, then resume STT
+    //   and let the normal scoring loop continue.
     hintResumeTimerRef.current = setTimeout(() => {
       const userSpoke = transcript.length > hintStartTranscriptLengthRef.current;
       log('Hint 3-sec timer fired, userSpoke:', userSpoke, 'transcript length:', transcript.length, 'start length:', hintStartTranscriptLengthRef.current);
       if (userSpoke) {
-        // User spoke during the 3-second window — stop hint, rescore, continue
-        log('User spoke during hint — stopping and rescoring');
+        // User spoke during the 3-second window — stop hint and resume STT
+        log('User spoke during hint — stopping hint and resuming STT');
         interruptHint();
-        sttActionsRef.current.dispatchFinalCompare?.(transcript);
-        handleFinishedTurnRef.current?.();
+        sttActionsRef.current.resumeRecognition?.();
       } else {
-        // User was silent — do NOT resume STT; let the hint audio finish
-        // playing the full verse. The onended handler will rescore and continue.
+        // User was silent — do NOT resume STT yet; let the hint audio finish
+        // playing the full verse. The onended handler will resume STT.
         log('User was silent during hint — letting audio finish');
       }
     }, 3000);
@@ -176,36 +175,15 @@ const PartnerSession = ({
     hintFallbackTimerRef.current = setTimeout(() => {
       log('Hint fallback timer fired, interrupting hint');
       interruptHint();
-      const userSpoke = transcript.length > hintStartTranscriptLengthRef.current;
-      if (!userSpoke) {
-        // No speech detected — rescore as if user repeated the verse (100%)
-        // and continue the session.
-        log('Fallback: no speech detected, rescoring with expected text');
-        sttActionsRef.current.dispatchFinalCompare?.(expectedText);
-        handleFinishedTurnRef.current?.();
-      } else {
-        // User spoke — rescore with their speech and continue
-        log('Fallback: user spoke, rescoring with transcript');
-        sttActionsRef.current.dispatchFinalCompare?.(transcript);
-        handleFinishedTurnRef.current?.();
-      }
       sttActionsRef.current.resumeRecognition?.();
     }, 5000);
 
     const finishHint = () => {
-      const userSpoke = transcript.length > hintStartTranscriptLengthRef.current;
-      if (!userSpoke) {
-        // No speech detected — rescore as if user repeated the verse (100%)
-        // and continue the session.
-        log('Hint ended naturally, no speech detected, rescoring with expected text');
-        sttActionsRef.current.dispatchFinalCompare?.(expectedText);
-        handleFinishedTurnRef.current?.();
-      } else {
-        // User spoke — rescore with their speech and continue
-        log('Hint ended, user spoke, rescoring with transcript');
-        sttActionsRef.current.dispatchFinalCompare?.(transcript);
-        handleFinishedTurnRef.current?.();
-      }
+      // Always resume STT and restart the stuck timer when the hint ends.
+      // The normal scoring loop will evaluate the user's transcript and
+      // auto-advance if they meet the threshold, or trigger another hint
+      // if they're still stuck.
+      log('Hint ended, resuming STT and restarting stuck timer');
       interruptHint();
       sttActionsRef.current.resumeRecognition?.();
     };

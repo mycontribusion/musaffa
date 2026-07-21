@@ -47,6 +47,9 @@ export const useRecitationCheck = (
   // both hooks; they read transcriptRef.current (always fresh, no stale closure).
   const dispatchLiveCompareRef = useRef(null);
 
+  // Track previous frontier (lastMatchedExpIdx) to detect verse boundary crossings
+  const prevLastMatchedExpIdxRef = useRef(-1);
+
   const onResultCallback = useCallback((combined) => {
     log('onResult, length:', combined?.length);
     if (combined) dispatchLiveCompareRef.current?.(combined);
@@ -149,6 +152,49 @@ export const useRecitationCheck = (
       setLiveResults(null);
     }
   }, [isActive]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Immediate Verse-Boundary Accuracy Gate ─────────────────────────────
+  // When liveResults updates, check if the frontier (lastMatchedExpIdx) has
+  // reached or crossed the boundary of the current verse. If the verse is
+  // fully completed by speech but its accuracy is below the threshold,
+  // immediately fire the audio hint interrupt — do NOT wait for the stuck
+  // timer (4.5s–9s) or silence detection.
+  useEffect(() => {
+    if (!liveResults?.verseStats || liveResults.verseStats.length === 0 || liveResults.lastMatchedExpIdx === undefined) {
+      prevLastMatchedExpIdxRef.current = -1;
+      return;
+    }
+
+    const currentFrontier = liveResults.lastMatchedExpIdx;
+    const prevFrontier = prevLastMatchedExpIdxRef.current;
+
+    for (let i = 0; i < liveResults.verseStats.length; i++) {
+      const stat = liveResults.verseStats[i];
+      const wordCount = ayahWordCounts[i] || 0;
+
+      // Skip ayahs with no words
+      if (wordCount === 0) continue;
+
+      // Compute the word index of the last word in this verse
+      let verseEndIdx = -1;
+      let wordOffset = 0;
+      for (let j = 0; j <= i; j++) {
+        wordOffset += ayahWordCounts[j] || 0;
+      }
+      verseEndIdx = wordOffset - 1;
+
+      // Frontier crossed this verse boundary
+      const crossedBoundary = prevFrontier < verseEndIdx && currentFrontier >= verseEndIdx;
+      const belowThreshold = stat.accuracy < accuracyThreshold;
+
+      if (crossedBoundary && belowThreshold) {
+        log('Boundary gate: verse', i, 'frontier crossed boundary (', prevFrontier, '->', currentFrontier, ') but accuracy', stat.accuracy, '% < threshold', accuracyThreshold, '— triggering hint immediately');
+        triggerHint(i, transcriptRef, setLiveResults);
+      }
+    }
+
+    prevLastMatchedExpIdxRef.current = currentFrontier;
+  }, [liveResults, accuracyThreshold, ayahWordCounts, triggerHint, transcriptRef, setLiveResults]);
 
   // Wrap notifyHintEnded so that when a hint finishes we immediately restart
   // the stuck timer. Without this, if the user stays silent after the hint,

@@ -161,13 +161,16 @@ export const useStuckDetection = ({
       log('triggerHint called but no onStuck');
       return;
     }
-    if (isHintPlayingRef.current) {
-      log('triggerHint called but hint already playing, verse:', verseIndex);
-      return;
-    }
-    if (hintedVerseIndexRef.current === verseIndex) {
+    // Allow re-triggering for the SAME verse only if the previous hint ended naturally.
+    // If a hint is already playing for a DIFFERENT verse, interrupt it and play the new hint.
+    if (isHintPlayingRef.current && hintedVerseIndexRef.current === verseIndex) {
       log('triggerHint called but already hinted this verse:', verseIndex);
       return;
+    }
+    if (isHintPlayingRef.current && hintedVerseIndexRef.current !== verseIndex) {
+      log('triggerHint: interrupting existing hint for verse', hintedVerseIndexRef.current, 'to play hint for verse', verseIndex);
+      // Interrupt the existing hint (stops audio, clears timers, releases hook lock)
+      interruptHintRef.current?.();
     }
 
     log('triggerHint firing for verse:', verseIndex, 'transcriptRef is null:', transcriptRef === null);

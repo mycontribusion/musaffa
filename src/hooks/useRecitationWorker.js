@@ -78,14 +78,10 @@ export const useRecitationWorker = ({
                 log('Worker triggering hint (plowedAhead) for verse:', activeVerseIndex);
                 triggerHint(activeVerseIndex, null, setLiveResults);
             }
-          } else if (
-            activeVerseStat?.hasStarted &&
-            !activeVerseStat?.hasPending &&
-            activeVerseStat?.accuracy < threshold
-          ) {
-            log('Worker triggering hint (below threshold) for verse:', activeVerseIndex);
-            triggerHint(activeVerseIndex, null, setLiveResults);
           }
+          // Note: The "below threshold" boundary gate check is now handled in
+          // useRecitationCheck.js via a useEffect on liveResults for immediate
+          // triggering when a verse boundary is crossed.
         }
 
         checkAutoFinish(processedPayload);
@@ -127,7 +123,7 @@ export const useRecitationWorker = ({
         id,
         ayahWordCounts,
       });
-    }, 350);
+    }, 100); // Reduced from 350ms to 100ms for more immediate verse-boundary feedback
   // hintedVerseIndexRef and hintTranscriptSnapshotRef are refs — excluded from deps intentionally.
   }, [ayahWordCounts, expectedText]);
 
