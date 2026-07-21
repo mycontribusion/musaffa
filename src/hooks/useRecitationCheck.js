@@ -14,7 +14,6 @@ export const useRecitationCheck = (
   ayahWordCounts = [],
   onStuck = null,
   interruptHint = null,
-  onUserSpeechAfterHint = null,
 ) => {
   const {
     clearStuckTimer,
@@ -59,8 +58,10 @@ export const useRecitationCheck = (
     log('onSpeechStart');
     clearStuckTimer();
     clearSilenceTimer();
-    if (interruptHintRef.current) interruptHintRef.current();
-  }, [clearStuckTimer, clearSilenceTimer, interruptHintRef]);
+    // NOTE: Do NOT interrupt the hint here. The hint should keep playing for
+    // the full 3 seconds even if the user speaks. The decision to stop the
+    // hint is made after the 3-second window in PartnerSession.handleStuck.
+  }, [clearStuckTimer, clearSilenceTimer]);
 
   const onSpeechEndCallback = useCallback(() => {
     log('onSpeechEnd');
@@ -169,5 +170,6 @@ export const useRecitationCheck = (
     pauseRecognition,
     resumeRecognition,
     notifyHintEnded: wrappedNotifyHintEnded,
+    dispatchFinalCompare,
   };
 };

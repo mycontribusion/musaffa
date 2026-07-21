@@ -93,6 +93,7 @@ const PartnerSession = ({
   const hintResumeTimerRef = useRef(null);
   const hintFallbackTimerRef = useRef(null);
   const sttActionsRef = useRef({});
+  const hintStartTranscriptLengthRef = useRef(0);
 
   const clearResultsRef = useRef(null);
 
@@ -131,6 +132,10 @@ const PartnerSession = ({
     const url = getAudioUrl(ayah.number, reciterSlug, ayah.surahNumber, ayah.numberInSurah);
     log('Playing hint audio for ayah:', ayah.number, 'url:', url);
 
+    // Save the transcript length at the start of the hint so we can detect
+    // whether the user spoke during the 3-second window.
+    hintStartTranscriptLengthRef.current = transcript.length;
+
     // Pause STT for the first 3 seconds so the hint plays without being cut.
     sttActionsRef.current.pauseRecognition?.();
 
@@ -145,31 +150,76 @@ const PartnerSession = ({
       sttActionsRef.current.resumeRecognition?.();
     });
 
-    // Resume STT after 3 seconds regardless of whether audio is still playing
+    // After 3 seconds, decide based on whether the user spoke:
+    // - If transcript grew → user spoke during the 3-sec window.
+    //   Stop hint, rescore with user's speech, continue.
+    // - If transcript did not grow → user was silent.
+    //   Let the hint finish playing the full verse, then rescore as if
+    //   the user repeated it (100%) and continue.
     hintResumeTimerRef.current = setTimeout(() => {
-      log('Hint resume timer fired, resuming STT');
-      sttActionsRef.current.resumeRecognition?.();
+      const userSpoke = transcript.length > hintStartTranscriptLengthRef.current;
+      log('Hint 3-sec timer fired, userSpoke:', userSpoke, 'transcript length:', transcript.length, 'start length:', hintStartTranscriptLengthRef.current);
+      if (userSpoke) {
+        // User spoke during the 3-second window — stop hint, rescore, continue
+        log('User spoke during hint — stopping and rescoring');
+        interruptHint();
+        sttActionsRef.current.dispatchFinalCompare?.(transcript);
+        handleFinishedTurnRef.current?.();
+      } else {
+        // User was silent — do NOT resume STT; let the hint audio finish
+        // playing the full verse. The onended handler will rescore and continue.
+        log('User was silent during hint — letting audio finish');
+      }
     }, 3000);
 
     // 5-second fallback in case onended/onerror never fire due to network hang
     hintFallbackTimerRef.current = setTimeout(() => {
       log('Hint fallback timer fired, interrupting hint');
       interruptHint();
+      const userSpoke = transcript.length > hintStartTranscriptLengthRef.current;
+      if (!userSpoke) {
+        // No speech detected — rescore as if user repeated the verse (100%)
+        // and continue the session.
+        log('Fallback: no speech detected, rescoring with expected text');
+        sttActionsRef.current.dispatchFinalCompare?.(expectedText);
+        handleFinishedTurnRef.current?.();
+      } else {
+        // User spoke — rescore with their speech and continue
+        log('Fallback: user spoke, rescoring with transcript');
+        sttActionsRef.current.dispatchFinalCompare?.(transcript);
+        handleFinishedTurnRef.current?.();
+      }
       sttActionsRef.current.resumeRecognition?.();
     }, 5000);
 
-    hintAudio.onended = () => {
-      log('Hint audio onended');
+    const finishHint = () => {
+      const userSpoke = transcript.length > hintStartTranscriptLengthRef.current;
+      if (!userSpoke) {
+        // No speech detected — rescore as if user repeated the verse (100%)
+        // and continue the session.
+        log('Hint ended naturally, no speech detected, rescoring with expected text');
+        sttActionsRef.current.dispatchFinalCompare?.(expectedText);
+        handleFinishedTurnRef.current?.();
+      } else {
+        // User spoke — rescore with their speech and continue
+        log('Hint ended, user spoke, rescoring with transcript');
+        sttActionsRef.current.dispatchFinalCompare?.(transcript);
+        handleFinishedTurnRef.current?.();
+      }
       interruptHint();
       sttActionsRef.current.resumeRecognition?.();
+    };
+
+    hintAudio.onended = () => {
+      log('Hint audio onended');
+      finishHint();
     };
     hintAudio.onerror = (e) => {
       log('Hint audio onerror:', e);
       setAudioError(true);
-      interruptHint();
-      sttActionsRef.current.resumeRecognition?.();
+      finishHint();
     };
-  }, [activeChunkSlice, params.reciter, interruptHint, setAudioError]);
+  }, [activeChunkSlice, params.reciter, interruptHint, setAudioError, expectedText, transcript]);
 
   // STT error detection — active during user's recitation turn only
   // onAutoFinish fires automatically after silence, triggering handleFinishedTurn
