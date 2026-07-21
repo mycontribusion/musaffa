@@ -14,6 +14,7 @@ export const useRecitationCheck = (
   ayahWordCounts = [],
   onStuck = null,
   interruptHint = null,
+  turn = 'user',
 ) => {
   const {
     clearStuckTimer,
@@ -39,6 +40,7 @@ export const useRecitationCheck = (
     onAutoFinish,
     threshold: accuracyThreshold,
     ayahWordCounts,
+    turn,
   });
 
   // ── useSpeechRecognition MUST come before useRecitationWorker ─────────────
@@ -165,6 +167,12 @@ export const useRecitationCheck = (
       return;
     }
 
+    // Guard: only trigger hints during the user's turn
+    if (turn !== 'user') {
+      prevLastMatchedExpIdxRef.current = liveResults.lastMatchedExpIdx;
+      return;
+    }
+
     const currentFrontier = liveResults.lastMatchedExpIdx;
     const prevFrontier = prevLastMatchedExpIdxRef.current;
 
@@ -194,7 +202,7 @@ export const useRecitationCheck = (
     }
 
     prevLastMatchedExpIdxRef.current = currentFrontier;
-  }, [liveResults, accuracyThreshold, ayahWordCounts, triggerHint, transcriptRef, setLiveResults]);
+  }, [liveResults, accuracyThreshold, ayahWordCounts, triggerHint, transcriptRef, setLiveResults, turn]);
 
   // Wrap notifyHintEnded so that when a hint finishes we immediately restart
   // the stuck timer. Without this, if the user stays silent after the hint,

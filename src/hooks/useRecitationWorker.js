@@ -14,7 +14,8 @@ export const useRecitationWorker = ({
   hintPassedRef,
   triggerHint,
   checkAutoFinish,
-  latestPayloadRef
+  latestPayloadRef,
+  turn = 'user',
 }) => {
   const [liveResults, setLiveResults] = useState(null);
   const [results, setResults] = useState(null);
@@ -22,6 +23,9 @@ export const useRecitationWorker = ({
   const workerRef = useRef(null);
   const pendingIdRef = useRef(0);
   const workerCompletedIdRef = useRef(0);
+  const turnRef = useRef(turn);
+
+  useEffect(() => { turnRef.current = turn; }, [turn]);
 
   useEffect(() => {
     const worker = new Worker(
@@ -31,6 +35,12 @@ export const useRecitationWorker = ({
     worker.onmessage = (event) => {
       const { type, payload, id } = event.data;
       if (type === 'RESULT' && id === pendingIdRef.current) {
+        // Guard: ignore worker results if it's not the user's turn
+        if (turnRef.current !== 'user') {
+          log('Worker result ignored - not user turn');
+          return;
+        }
+
         workerCompletedIdRef.current = id;
         latestPayloadRef.current = payload;
 
@@ -98,7 +108,7 @@ export const useRecitationWorker = ({
     };
   // Refs (hintedVerseIndexRef, hintPassedRef, etc.) are intentionally excluded
   // from deps — they are stable mutable objects, not reactive values.
-  }, [ayahWordCounts, checkAutoFinish, threshold, triggerHint]);
+  }, [ayahWordCounts, checkAutoFinish, threshold, triggerHint, turn]);
 
   const dispatchLiveCompare = useCallback((spoken) => {
     if (!workerRef.current || !expectedText) return;

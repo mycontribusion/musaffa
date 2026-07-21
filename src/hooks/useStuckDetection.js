@@ -9,6 +9,7 @@ export const useStuckDetection = ({
   onAutoFinish,
   threshold,
   ayahWordCounts,
+  turn = 'user',
 }) => {
   const stuckTimerRef = useRef(null);
   const silenceTimerRef = useRef(null);
@@ -17,6 +18,7 @@ export const useStuckDetection = ({
   const onStuckRef = useRef(onStuck);
   const interruptHintRef = useRef(interruptHint);
   const onAutoFinishRef = useRef(onAutoFinish);
+  const turnRef = useRef(turn);
   
   const hintedVerseIndexRef = useRef(null);
   const hintTranscriptSnapshotRef = useRef('');
@@ -27,6 +29,7 @@ export const useStuckDetection = ({
   useEffect(() => { onStuckRef.current = onStuck; }, [onStuck]);
   useEffect(() => { interruptHintRef.current = interruptHint; }, [interruptHint]);
   useEffect(() => { onAutoFinishRef.current = onAutoFinish; }, [onAutoFinish]);
+  useEffect(() => { turnRef.current = turn; }, [turn]);
 
   const clearStuckTimer = useCallback(() => {
     if (stuckTimerRef.current) {
@@ -90,6 +93,12 @@ export const useStuckDetection = ({
     const STUCK_MS = Math.min(9000, Math.max(4500, totalWords * 500));
 
     stuckTimerRef.current = setTimeout(() => {
+      // Guard: only fire if it's still the user's turn
+      if (turnRef.current !== 'user') {
+        log('Stuck timer fired but not user turn');
+        return;
+      }
+
       const payload = latestPayloadRef.current;
       if (!payload || !onStuckRef.current) {
         log('Stuck timer fired but no payload or onStuck');
@@ -157,6 +166,12 @@ export const useStuckDetection = ({
   }, [clearStuckTimer, threshold, ayahWordCounts, resetVerseInPayload]);
 
   const triggerHint = useCallback((verseIndex, transcriptRef, setLiveResults) => {
+    // Guard: only trigger hints during the user's turn
+    if (turnRef.current !== 'user') {
+      log('triggerHint called but not user turn');
+      return;
+    }
+
     if (!onStuckRef.current) {
       log('triggerHint called but no onStuck');
       return;
@@ -186,7 +201,7 @@ export const useStuckDetection = ({
     hintPayloadSnapshotRef.current = latestPayloadRef.current;
 
     onStuckRef.current(verseIndex);
-  }, [clearStuckTimer, ayahWordCounts, resetVerseInPayload]);
+  }, [clearStuckTimer, ayahWordCounts, resetVerseInPayload, turn]);
 
   const notifyHintEnded = useCallback(() => {
     log('notifyHintEnded called, hintedVerseIndex:', hintedVerseIndexRef.current);

@@ -118,6 +118,11 @@ const PartnerSession = ({
 
   const handleStuck = useCallback((stuckIndex) => {
     log('handleStuck called for verse:', stuckIndex, 'hintAudioRef.current:', !!hintAudioRef.current);
+    // Guard: do not play a hint if it's not the user's turn.
+    if (turn !== 'user') {
+      log('handleStuck bailing out - not user turn');
+      return;
+    }
     // Guard: do not play a new hint if one is already playing.
     // If we bail out here we must NOT release the hook's in-flight lock,
     // because a hint IS actually playing. Releasing it would allow the
@@ -197,7 +202,7 @@ const PartnerSession = ({
       setAudioError(true);
       finishHint();
     };
-  }, [activeChunkSlice, params.reciter, interruptHint, setAudioError, expectedText, transcript]);
+  }, [activeChunkSlice, params.reciter, interruptHint, setAudioError, expectedText, transcript, turn]);
 
   // STT error detection — active during user's recitation turn only
   // onAutoFinish fires automatically after silence, triggering handleFinishedTurn
@@ -220,7 +225,8 @@ const PartnerSession = ({
     params.errorThreshold ?? 50,
     ayahWordCounts,
     handleStuck,
-    interruptHint
+    interruptHint,
+    turn
   );
 
   sttActionsRef.current = { pauseRecognition, resumeRecognition, notifyHintEnded };
@@ -246,17 +252,20 @@ const PartnerSession = ({
     if (enableErrorDetection && sttSupported) {
       if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
       stopAndCheck();
+      // Immediately stop any hint audio and clear worker results to prevent
+      // out-of-turn scoring and audio overlap during the 200ms transition.
+      interruptHint();
+      clearResults();
       // Advance immediately — if triggered by auto-finish, 100% is already confirmed.
       // If triggered manually, we give a brief moment for final comparison to log.
       autoAdvanceTimerRef.current = setTimeout(() => {
         setCompletedResults(liveResults);
-        clearResults();
         handleNextTurn();
       }, 200);
     } else {
       handleNextTurn();
     }
-  }, [enableErrorDetection, sttSupported, stopAndCheck, clearResults, handleNextTurn]);
+  }, [enableErrorDetection, sttSupported, stopAndCheck, interruptHint, clearResults, handleNextTurn, liveResults]);
 
   // Keep the ref in sync so the onAutoFinish closure always calls the latest version
   handleFinishedTurnRef.current = handleFinishedTurn;
