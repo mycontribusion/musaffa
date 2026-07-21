@@ -1,4 +1,7 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+
+const DEBUG = true;
+const log = (...args) => { if (DEBUG) console.log('[SpeechRecognition]', ...args); };
 
 const getSpeechRecognition = () =>
   typeof window !== 'undefined'
@@ -32,38 +35,85 @@ export const mergeTranscripts = (oldText, newText) => {
   return mergedWords.join(' ') + ' ';
 };
 
+// ── STT Status enum ─────────────────────────────────────────────────────────
+// 'idle'     — not started / stopped normally
+// 'starting' — startListening() called, awaiting recognition.onstart
+// 'listening'— recognition.onstart fired; actively listening
+// 'paused'   — pauseRecognition() called (e.g. hint audio playing)
+// 'failed'   — recognition died unexpectedly with no recovery
+
+const STARTUP_TIMEOUT_MS = 5000; // Safety: 'starting' → 'failed' if onstart never fires
+const RETRY_DELAY_MS     = 500;  // One auto-retry before surfacing 'failed'
+
 export const useSpeechRecognition = ({
   onResult,
   onSpeechStart,
   onSpeechEnd,
-  onEnd
+  onEnd,
 }) => {
   const SR = getSpeechRecognition();
   const isSupported = !!SR;
 
-  const [isListening, setIsListening] = useState(false);
+  const [sttStatus, setSttStatus] = useState('idle');
   const [transcript, setTranscript] = useState('');
   
-  const recognitionRef = useRef(null);
-  const transcriptRef = useRef('');
-  const hasSpeechRef = useRef(false);
+  const recognitionRef       = useRef(null);
+  const transcriptRef        = useRef('');
+  const hasSpeechRef         = useRef(false);
+  const startupTimerRef      = useRef(null);
+  const retryTimerRef        = useRef(null);
+  const onResultRef          = useRef(onResult);
+  const onSpeechStartRef     = useRef(onSpeechStart);
+  const onSpeechEndRef       = useRef(onSpeechEnd);
+  const onEndRef             = useRef(onEnd);
 
-  const startListening = useCallback(() => {
+  // Keep callback refs fresh without recreating the recognition instance
+  useEffect(() => { onResultRef.current    = onResult;     }, [onResult]);
+  useEffect(() => { onSpeechStartRef.current = onSpeechStart; }, [onSpeechStart]);
+  useEffect(() => { onSpeechEndRef.current = onSpeechEnd;  }, [onSpeechEnd]);
+  useEffect(() => { onEndRef.current       = onEnd;        }, [onEnd]);
+
+  // ── Derived bool for any caller that only needs "is actively listening" ──
+  const isListening = sttStatus === 'listening';
+
+  const _clearStartupTimer = () => {
+    if (startupTimerRef.current) {
+      clearTimeout(startupTimerRef.current);
+      startupTimerRef.current = null;
+    }
+  };
+
+  const _clearRetryTimer = () => {
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+  };
+
+  // ── Core: build and wire a fresh SpeechRecognition instance ─────────────
+  const _createAndStart = useCallback((statusOnSuccess = 'starting') => {
     if (!isSupported) return;
 
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch (_) {}
-    }
+    _clearStartupTimer();
+    _clearRetryTimer();
 
-    transcriptRef.current = '';
-    hasSpeechRef.current = false;
-    setTranscript('');
+    // Abort any previous instance cleanly
+    if (recognitionRef.current) {
+      try { recognitionRef.current._shouldRestart = false; recognitionRef.current.abort(); } catch (_) {}
+    }
 
     const recognition = new SR();
     recognition.lang = 'ar-SA';
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
+    recognition._shouldRestart = true;
+
+    // ── onstart: first sign of life → transition to 'listening' ──────────
+    recognition.onstart = () => {
+      _clearStartupTimer();
+      setSttStatus('listening');
+    };
 
     recognition.onresult = (event) => {
       let currentFinal = '';
@@ -81,75 +131,144 @@ export const useSpeechRecognition = ({
       }
       const combined = mergeTranscripts(transcriptRef.current, currentInterim).trim();
       setTranscript(combined);
-
-      if (onResult) onResult(combined);
+      if (onResultRef.current) onResultRef.current(combined);
     };
 
     recognition.onspeechstart = () => {
       hasSpeechRef.current = true;
-      if (onSpeechStart) onSpeechStart();
+      if (onSpeechStartRef.current) onSpeechStartRef.current();
     };
 
     recognition.onspeechend = () => {
       hasSpeechRef.current = true;
-      if (onSpeechEnd) onSpeechEnd();
+      if (onSpeechEndRef.current) onSpeechEndRef.current();
     };
 
     recognition.onend = () => {
-      if (recognitionRef.current && recognitionRef.current._shouldRestart) {
-        try { recognition.start(); } catch (_) {}
+      log('onend fired, _shouldRestart:', recognition._shouldRestart, 'current status:', sttStatus);
+      _clearStartupTimer();
+
+      if (recognition._shouldRestart) {
+        // Keep-alive: try to restart immediately
+        try {
+          recognition.start();
+          // Don't change status — still 'listening' from onstart
+        } catch (_) {
+          // start() failed — schedule one retry after RETRY_DELAY_MS
+          retryTimerRef.current = setTimeout(() => {
+            try {
+              recognition.start();
+            } catch (_2) {
+              // Both attempts failed → surface 'failed'
+              setSttStatus('failed');
+              if (onEndRef.current) onEndRef.current();
+            }
+          }, RETRY_DELAY_MS);
+        }
       } else {
-        setIsListening(false);
-        if (onEnd) onEnd();
+        // Intentional stop — check current status via ref so we don't clobber 'paused'
+        setSttStatus(prev => {
+          if (prev === 'paused') {
+            log('onend: status was paused, keeping paused');
+            return 'paused'; // Hint is playing; don't change
+          }
+          log('onend: setting status to idle');
+          return 'idle';
+        });
+        if (onEndRef.current) onEndRef.current();
       }
     };
 
-    recognition._shouldRestart = true;
+    recognition.onerror = (e) => {
+      // 'no-speech' is not a real error — let onend handle restart
+      if (e.error === 'no-speech') return;
+      // 'aborted' is intentional (from abort()/stop()) — don't mark as failed
+      if (e.error === 'aborted') return;
+      // Anything else (network, not-allowed, service-not-allowed, …) → failed
+      _clearStartupTimer();
+      _clearRetryTimer();
+      recognition._shouldRestart = false;
+      setSttStatus('failed');
+      if (onEndRef.current) onEndRef.current();
+    };
+
     recognitionRef.current = recognition;
+
+    // Set 'starting' now; onstart will move it to 'listening'
+    setSttStatus(statusOnSuccess);
+
+    // 5-second safety: if onstart never fires (Android WebView bug) → 'failed'
+    startupTimerRef.current = setTimeout(() => {
+      setSttStatus(prev => {
+        if (prev === 'starting') {
+          recognition._shouldRestart = false;
+          try { recognition.abort(); } catch (_) {}
+          return 'failed';
+        }
+        return prev;
+      });
+    }, STARTUP_TIMEOUT_MS);
 
     try {
       recognition.start();
-      setIsListening(true);
     } catch (e) {
+      _clearStartupTimer();
       console.warn('Could not start STT:', e);
+      setSttStatus('failed');
     }
-  }, [isSupported, SR, onResult, onSpeechStart, onSpeechEnd, onEnd]);
+  }, [isSupported, SR]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Public API ───────────────────────────────────────────────────────────
+
+  const startListening = useCallback(() => {
+    transcriptRef.current = '';
+    hasSpeechRef.current  = false;
+    setTranscript('');
+    _createAndStart('starting');
+  }, [_createAndStart]);
 
   const stopRecognition = useCallback(() => {
+    _clearStartupTimer();
+    _clearRetryTimer();
     if (recognitionRef.current) {
       recognitionRef.current._shouldRestart = false;
       try { recognitionRef.current.stop(); } catch (_) {}
     }
-    setIsListening(false);
-  }, []);
+    setSttStatus('idle');
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pauseRecognition = useCallback(() => {
+    log('pauseRecognition');
+    _clearStartupTimer();
+    _clearRetryTimer();
     if (recognitionRef.current) {
       recognitionRef.current._shouldRestart = false;
+      setSttStatus('paused'); // Set BEFORE stop() so onend sees 'paused' and doesn't clobber
       try { recognitionRef.current.stop(); } catch (_) {}
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const resumeRecognition = useCallback((isActive) => {
+    log('resumeRecognition, isActive:', isActive);
     if (!isActive) return;
-    if (!recognitionRef.current) return;
-    if (recognitionRef.current._shouldRestart) return;
-    recognitionRef.current._shouldRestart = true;
-    try { recognitionRef.current.start(); } catch (_) {}
-    setIsListening(true);
-  }, []);
+    // Recreate the instance — reusing a stopped instance is the Web Speech dead-state bug
+    _createAndStart('starting');
+  }, [_createAndStart]);
 
   const abortRecognition = useCallback(() => {
+    _clearStartupTimer();
+    _clearRetryTimer();
     if (recognitionRef.current) {
       recognitionRef.current._shouldRestart = false;
       try { recognitionRef.current.abort(); } catch (_) {}
     }
-    setIsListening(false);
-  }, []);
+    setSttStatus('idle');
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     isSupported,
-    isListening,
+    sttStatus,
+    isListening,            // derived: sttStatus === 'listening'
     transcript,
     transcriptRef,
     hasSpeechRef,
@@ -158,7 +277,7 @@ export const useSpeechRecognition = ({
     pauseRecognition,
     resumeRecognition,
     abortRecognition,
-    setIsListening,
-    setTranscript
+    setSttStatus,
+    setTranscript,
   };
 };

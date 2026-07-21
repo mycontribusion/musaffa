@@ -7,6 +7,9 @@ import { useMic } from '../hooks/useMic';
 import { useRecitationCheck } from '../hooks/useRecitationCheck';
 import { getAudioUrl, buildExpectedText, buildAyahWordCounts } from '../utils/quranUtils';
 
+const DEBUG = true;
+const log = (...args) => { if (DEBUG) console.log('[PartnerSession]', ...args); };
+
 const PartnerSession = ({
   subView,
   surahs,
@@ -94,6 +97,7 @@ const PartnerSession = ({
   const clearResultsRef = useRef(null);
 
   const interruptHint = useCallback(() => {
+    log('interruptHint called');
     if (hintResumeTimerRef.current) {
       clearTimeout(hintResumeTimerRef.current);
       hintResumeTimerRef.current = null;
@@ -112,26 +116,30 @@ const PartnerSession = ({
   }, []);
 
   const handleStuck = useCallback((stuckIndex) => {
+    log('handleStuck called for verse:', stuckIndex, 'hintAudioRef.current:', !!hintAudioRef.current);
     // Guard: do not play a new hint if one is already playing.
-    // The hook sets its in-flight lock BEFORE calling onStuck, so if we bail out
-    // here without playing we must release that lock — otherwise no further hints
-    // could ever fire.
+    // If we bail out here we must NOT release the hook's in-flight lock,
+    // because a hint IS actually playing. Releasing it would allow the
+    // stuck timer to fire again and potentially overlap hints.
     if (hintAudioRef.current || !activeChunkSlice[stuckIndex]) {
-      sttActionsRef.current.notifyHintEnded?.();
+      log('handleStuck bailing out - hint already playing or no ayah');
       return;
     }
 
     const ayah = activeChunkSlice[stuckIndex];
     const reciterSlug = params.reciter || 'ar.alafasy';
     const url = getAudioUrl(ayah.number, reciterSlug, ayah.surahNumber, ayah.numberInSurah);
+    log('Playing hint audio for ayah:', ayah.number, 'url:', url);
 
     // Pause STT for the first 3 seconds so the hint plays without being cut.
     sttActionsRef.current.pauseRecognition?.();
 
     const hintAudio = new Audio(url);
     hintAudioRef.current = hintAudio;
-    hintAudio.play().catch(e => {
-      console.warn('Failed to play hint audio:', e);
+    hintAudio.play().then(() => {
+      log('Hint audio started playing');
+    }).catch(e => {
+      log('Failed to play hint audio:', e);
       setAudioError(true);
       interruptHint();
       sttActionsRef.current.resumeRecognition?.();
@@ -139,20 +147,24 @@ const PartnerSession = ({
 
     // Resume STT after 3 seconds regardless of whether audio is still playing
     hintResumeTimerRef.current = setTimeout(() => {
+      log('Hint resume timer fired, resuming STT');
       sttActionsRef.current.resumeRecognition?.();
     }, 3000);
 
     // 5-second fallback in case onended/onerror never fire due to network hang
     hintFallbackTimerRef.current = setTimeout(() => {
+      log('Hint fallback timer fired, interrupting hint');
       interruptHint();
       sttActionsRef.current.resumeRecognition?.();
     }, 5000);
 
     hintAudio.onended = () => {
+      log('Hint audio onended');
       interruptHint();
       sttActionsRef.current.resumeRecognition?.();
     };
-    hintAudio.onerror = () => {
+    hintAudio.onerror = (e) => {
+      log('Hint audio onerror:', e);
       setAudioError(true);
       interruptHint();
       sttActionsRef.current.resumeRecognition?.();

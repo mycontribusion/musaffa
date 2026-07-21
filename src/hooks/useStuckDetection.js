@@ -1,5 +1,8 @@
 import { useRef, useCallback, useEffect } from 'react';
 
+const DEBUG = true;
+const log = (...args) => { if (DEBUG) console.log('[StuckDetection]', ...args); };
+
 export const useStuckDetection = ({
   onStuck,
   interruptHint,
@@ -88,7 +91,10 @@ export const useStuckDetection = ({
 
     stuckTimerRef.current = setTimeout(() => {
       const payload = latestPayloadRef.current;
-      if (!payload || !onStuckRef.current) return;
+      if (!payload || !onStuckRef.current) {
+        log('Stuck timer fired but no payload or onStuck');
+        return;
+      }
 
       // ── Frontier-based stuck verse detection ───────────────────────────
       // Use the DP's lastMatchedExpIdx (word-level) rather than inferring
@@ -99,7 +105,10 @@ export const useStuckDetection = ({
       const totalExpected = payload.results?.length ?? 0;
 
       // Nothing pending after the frontier → user has finished
-      if (totalExpected === 0 || frontier >= totalExpected - 1) return;
+      if (totalExpected === 0 || frontier >= totalExpected - 1) {
+        log('Stuck timer fired but user has finished');
+        return;
+      }
 
       // Find which verse contains the first unmatched word (frontier + 1)
       const firstPendingWordIdx = frontier + 1;
@@ -112,16 +121,29 @@ export const useStuckDetection = ({
           break;
         }
       }
-      if (stuckVerseIndex === -1) return;
+      if (stuckVerseIndex === -1) {
+        log('Stuck timer fired but no stuck verse found');
+        return;
+      }
 
       // Only fire if the stuck verse is actually below threshold
       const verseStat = latestVerseStatsRef.current?.[stuckVerseIndex];
-      if (!verseStat || verseStat.accuracy >= threshold) return;
+      if (!verseStat || verseStat.accuracy >= threshold) {
+        log('Stuck timer fired but verse accuracy is above threshold:', verseStat?.accuracy);
+        return;
+      }
 
       // Standard guards: no duplicate hints for same verse, none already playing
-      if (isHintPlayingRef.current) return;
-      if (hintedVerseIndexRef.current === stuckVerseIndex) return;
+      if (isHintPlayingRef.current) {
+        log('Stuck timer fired but hint is already playing');
+        return;
+      }
+      if (hintedVerseIndexRef.current === stuckVerseIndex) {
+        log('Stuck timer fired but already hinted this verse');
+        return;
+      }
 
+      log('Stuck timer firing hint for verse:', stuckVerseIndex);
       isHintPlayingRef.current = true;
       hintPassedRef.current = false;
 
@@ -135,8 +157,20 @@ export const useStuckDetection = ({
   }, [clearStuckTimer, threshold, ayahWordCounts, resetVerseInPayload]);
 
   const triggerHint = useCallback((verseIndex, transcriptRef, setLiveResults) => {
-    if (!onStuckRef.current || isHintPlayingRef.current || hintedVerseIndexRef.current === verseIndex) return;
+    if (!onStuckRef.current) {
+      log('triggerHint called but no onStuck');
+      return;
+    }
+    if (isHintPlayingRef.current) {
+      log('triggerHint called but hint already playing, verse:', verseIndex);
+      return;
+    }
+    if (hintedVerseIndexRef.current === verseIndex) {
+      log('triggerHint called but already hinted this verse:', verseIndex);
+      return;
+    }
 
+    log('triggerHint firing for verse:', verseIndex, 'transcriptRef is null:', transcriptRef === null);
     clearStuckTimer();
     isHintPlayingRef.current = true;
     hintPassedRef.current = false;
@@ -145,17 +179,25 @@ export const useStuckDetection = ({
     setLiveResults(resetPayload);
 
     hintedVerseIndexRef.current = verseIndex;
-    hintTranscriptSnapshotRef.current = transcriptRef.current;
+    hintTranscriptSnapshotRef.current = transcriptRef?.current ?? '';
     hintPayloadSnapshotRef.current = latestPayloadRef.current;
 
     onStuckRef.current(verseIndex);
   }, [clearStuckTimer, ayahWordCounts, resetVerseInPayload]);
 
   const notifyHintEnded = useCallback(() => {
+    log('notifyHintEnded called, hintedVerseIndex:', hintedVerseIndexRef.current);
     isHintPlayingRef.current = false;
   }, []);
+
+  // Expose a restart function so the parent hook can restart the stuck timer
+  // when a hint ends (so the user gets another hint if still stuck).
+  const restartStuckTimerExported = useCallback((transcriptRef, setLiveResults) => {
+    restartStuckTimer(transcriptRef, setLiveResults);
+  }, [restartStuckTimer]);
   
   const clearStuckState = useCallback(() => {
+    log('clearStuckState called');
     clearStuckTimer();
     clearSilenceTimer();
     hintedVerseIndexRef.current = null;
@@ -170,11 +212,12 @@ export const useStuckDetection = ({
       const { verseStats } = processedPayload;
       latestVerseStatsRef.current = verseStats;
       
-      const allPassed = verseStats && verseStats.length > 0 && verseStats.every(stat => 
+      const allPassed = verseStats && verseStats.length > 0 && verseStats.every(stat =>
         stat.accuracy >= threshold && !stat.hasPending
       );
 
       if (allPassed) {
+        log('checkAutoFinish: all verses passed');
         clearStuckTimer();
         clearSilenceTimer();
         silenceTimerRef.current = setTimeout(() => {
@@ -188,6 +231,7 @@ export const useStuckDetection = ({
     clearStuckTimer,
     clearSilenceTimer,
     restartStuckTimer,
+    restartStuckTimerExported,
     triggerHint,
     notifyHintEnded,
     clearStuckState,

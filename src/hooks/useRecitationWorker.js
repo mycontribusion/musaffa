@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { computeActiveVerseIndex } from '../utils/verseProgress';
 
+const DEBUG = true;
+const log = (...args) => { if (DEBUG) console.log('[RecitationWorker]', ...args); };
+
 export const useRecitationWorker = ({
   expectedText,
   ayahWordCounts,
@@ -52,6 +55,7 @@ export const useRecitationWorker = ({
           const rawStat = payload.verseStats?.[verseIdx];
           if (!hintPassedRef.current && rawStat && !rawStat.hasPending && rawStat.accuracy >= threshold) {
             hintPassedRef.current = true;
+            log('Hint passed for verse:', verseIdx);
           }
           processedPayload = payload;
         }
@@ -70,14 +74,16 @@ export const useRecitationWorker = ({
               const hasStarted = stat.hasStarted !== undefined ? stat.hasStarted : !stat.hasPending;
               if (hasStarted) { plowedAhead = true; break; }
             }
-            if (plowedAhead) { 
-                triggerHint(activeVerseIndex, null, setLiveResults); 
+            if (plowedAhead) {
+                log('Worker triggering hint (plowedAhead) for verse:', activeVerseIndex);
+                triggerHint(activeVerseIndex, null, setLiveResults);
             }
           } else if (
             activeVerseStat?.hasStarted &&
             !activeVerseStat?.hasPending &&
             activeVerseStat?.accuracy < threshold
           ) {
+            log('Worker triggering hint (below threshold) for verse:', activeVerseIndex);
             triggerHint(activeVerseIndex, null, setLiveResults);
           }
         }

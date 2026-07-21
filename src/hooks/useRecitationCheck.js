@@ -3,6 +3,9 @@ import { useSpeechRecognition } from './useSpeechRecognition';
 import { useRecitationWorker } from './useRecitationWorker';
 import { useStuckDetection } from './useStuckDetection';
 
+const DEBUG = true;
+const log = (...args) => { if (DEBUG) console.log('[RecitationCheck]', ...args); };
+
 export const useRecitationCheck = (
   isActive,
   expectedText,
@@ -17,6 +20,7 @@ export const useRecitationCheck = (
     clearStuckTimer,
     clearSilenceTimer,
     restartStuckTimer,
+    restartStuckTimerExported,
     triggerHint,
     notifyHintEnded,
     clearStuckState,
@@ -45,18 +49,21 @@ export const useRecitationCheck = (
   const dispatchLiveCompareRef = useRef(null);
 
   const onResultCallback = useCallback((combined) => {
+    log('onResult, length:', combined?.length);
     if (combined) dispatchLiveCompareRef.current?.(combined);
     restartStuckTimer(transcriptRef, setLiveResults);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restartStuckTimer]);
 
   const onSpeechStartCallback = useCallback(() => {
+    log('onSpeechStart');
     clearStuckTimer();
     clearSilenceTimer();
     if (interruptHintRef.current) interruptHintRef.current();
   }, [clearStuckTimer, clearSilenceTimer, interruptHintRef]);
 
   const onSpeechEndCallback = useCallback(() => {
+    log('onSpeechEnd');
     // Use transcriptRef.current — always the latest value, no stale closure risk.
     restartStuckTimer(transcriptRef, setLiveResults);
     clearSilenceTimer();
@@ -108,6 +115,7 @@ export const useRecitationCheck = (
   dispatchLiveCompareRef.current = dispatchLiveCompare;
 
   const startListening = useCallback(() => {
+    log('startListening');
     clearStuckState();
     clearWorkerResults();
     if (liveDebounceRef.current) clearTimeout(liveDebounceRef.current);
@@ -115,6 +123,7 @@ export const useRecitationCheck = (
   }, [clearStuckState, clearWorkerResults, liveDebounceRef, startSTT]);
 
   const stopAndCheck = useCallback(() => {
+    log('stopAndCheck');
     clearStuckState();
     if (liveDebounceRef.current) clearTimeout(liveDebounceRef.current);
     stopRecognition();
@@ -122,6 +131,7 @@ export const useRecitationCheck = (
   }, [clearStuckState, liveDebounceRef, stopRecognition, dispatchFinalCompare, transcriptRef]);
 
   const clearResults = useCallback(() => {
+    log('clearResults');
     clearStuckState();
     clearWorkerResults();
   }, [clearStuckState, clearWorkerResults]);
@@ -130,6 +140,7 @@ export const useRecitationCheck = (
     if (isActive) {
       startListening();
     } else {
+      log('isActive became false, stopping');
       stopRecognition();
       clearStuckState();
       if (liveDebounceRef.current) clearTimeout(liveDebounceRef.current);
@@ -138,17 +149,25 @@ export const useRecitationCheck = (
     }
   }, [isActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { 
-    isSupported, 
-    isListening, 
-    transcript, 
-    liveResults, 
-    results, 
-    startListening, 
-    stopAndCheck, 
+  // Wrap notifyHintEnded so that when a hint finishes we immediately restart
+  // the stuck timer. Without this, if the user stays silent after the hint,
+  // the timer never fires again and the app appears stuck.
+  const wrappedNotifyHintEnded = useCallback(() => {
+    notifyHintEnded();
+    restartStuckTimerExported(transcriptRef, setLiveResults);
+  }, [notifyHintEnded, restartStuckTimerExported, transcriptRef, setLiveResults]);
+
+  return {
+    isSupported,
+    isListening,
+    transcript,
+    liveResults,
+    results,
+    startListening,
+    stopAndCheck,
     clearResults,
     pauseRecognition,
     resumeRecognition,
-    notifyHintEnded,
+    notifyHintEnded: wrappedNotifyHintEnded,
   };
 };
