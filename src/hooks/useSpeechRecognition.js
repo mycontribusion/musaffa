@@ -42,8 +42,10 @@ export const mergeTranscripts = (oldText, newText) => {
 // 'paused'   — pauseRecognition() called (e.g. hint audio playing)
 // 'failed'   — recognition died unexpectedly with no recovery
 
-const STARTUP_TIMEOUT_MS = 5000; // Safety: 'starting' → 'failed' if onstart never fires
-const RETRY_DELAY_MS     = 500;  // One auto-retry before surfacing 'failed'
+const STARTUP_TIMEOUT_MS      = 5000; // Safety: 'starting' → 'failed' if onstart never fires
+const RETRY_DELAY_MS          = 500;  // One auto-retry before surfacing 'failed'
+const NETWORK_RECOVERY_DELAY  = 2000; // Base delay for network error recovery
+const MAX_NETWORK_RETRIES     = 5;    // Give up after this many consecutive network failures
 
 export const useSpeechRecognition = ({
   onResult,
@@ -57,15 +59,17 @@ export const useSpeechRecognition = ({
   const [sttStatus, setSttStatus] = useState('idle');
   const [transcript, setTranscript] = useState('');
   
-  const recognitionRef       = useRef(null);
-  const transcriptRef        = useRef('');
-  const hasSpeechRef         = useRef(false);
-  const startupTimerRef      = useRef(null);
-  const retryTimerRef        = useRef(null);
-  const onResultRef          = useRef(onResult);
-  const onSpeechStartRef     = useRef(onSpeechStart);
-  const onSpeechEndRef       = useRef(onSpeechEnd);
-  const onEndRef             = useRef(onEnd);
+  const recognitionRef          = useRef(null);
+  const transcriptRef           = useRef('');
+  const hasSpeechRef            = useRef(false);
+  const startupTimerRef         = useRef(null);
+  const retryTimerRef           = useRef(null);
+  const networkRetryCountRef    = useRef(0);
+  const networkRecoveryRef      = useRef(false);
+  const onResultRef             = useRef(onResult);
+  const onSpeechStartRef        = useRef(onSpeechStart);
+  const onSpeechEndRef          = useRef(onSpeechEnd);
+  const onEndRef                = useRef(onEnd);
 
   // Keep callback refs fresh without recreating the recognition instance
   useEffect(() => { onResultRef.current    = onResult;     }, [onResult]);
@@ -88,6 +92,11 @@ export const useSpeechRecognition = ({
       clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
     }
+  };
+
+  const _clearNetworkRecovery = () => {
+    networkRetryCountRef.current = 0;
+    networkRecoveryRef.current = false;
   };
 
   // ── Core: build and wire a fresh SpeechRecognition instance ─────────────
@@ -113,6 +122,7 @@ export const useSpeechRecognition = ({
     recognition.onstart = () => {
       _clearStartupTimer();
       setSttStatus('listening');
+      _clearNetworkRecovery(); // Successful start resets network retry count
     };
 
     recognition.onresult = (event) => {
@@ -145,7 +155,7 @@ export const useSpeechRecognition = ({
     };
 
     recognition.onend = () => {
-      log('onend fired, _shouldRestart:', recognition._shouldRestart, 'current status:', sttStatus);
+      log('onend fired, _shouldRestart:', recognition._shouldRestart, 'current status:', sttStatus, 'networkRecovery:', networkRecoveryRef.current);
       _clearStartupTimer();
 
       if (recognition._shouldRestart) {
@@ -166,6 +176,12 @@ export const useSpeechRecognition = ({
           }, RETRY_DELAY_MS);
         }
       } else {
+        // If we're in network recovery mode, don't change status — recovery
+        // logic will create a fresh instance and transition to 'starting'/'listening'
+        if (networkRecoveryRef.current) {
+          log('onend during network recovery — keeping current status');
+          return;
+        }
         // Intentional stop — check current status via ref so we don't clobber 'paused'
         setSttStatus(prev => {
           if (prev === 'paused') {
@@ -184,7 +200,41 @@ export const useSpeechRecognition = ({
       if (e.error === 'no-speech') return;
       // 'aborted' is intentional (from abort()/stop()) — don't mark as failed
       if (e.error === 'aborted') return;
-      // Anything else (network, not-allowed, service-not-allowed, …) → failed
+      // 'network' is often transient on mobile/Capacitor — attempt recovery
+      // with exponential backoff instead of immediately failing the session.
+      if (e.error === 'network') {
+        log('Network error detected — scheduling recovery');
+        _clearStartupTimer();
+        _clearRetryTimer();
+        recognition._shouldRestart = false;
+        networkRecoveryRef.current = true;
+
+        const retryCount = networkRetryCountRef.current;
+        if (retryCount >= MAX_NETWORK_RETRIES) {
+          log('Max network retries exceeded — surfacing failed');
+          setSttStatus('failed');
+          if (onEndRef.current) onEndRef.current();
+          return;
+        }
+
+        // Exponential backoff: 2s, 4s, 8s, 16s, 32s (capped at 10s)
+        const delay = Math.min(10000, NETWORK_RECOVERY_DELAY * Math.pow(2, retryCount));
+        networkRetryCountRef.current = retryCount + 1;
+
+        log('Scheduling network recovery in', delay, 'ms, attempt', retryCount + 1);
+        retryTimerRef.current = setTimeout(() => {
+          log('Attempting network recovery...');
+          try {
+            _createAndStart('starting');
+          } catch (_) {
+            log('Network recovery failed — could not create instance');
+            setSttStatus('failed');
+            if (onEndRef.current) onEndRef.current();
+          }
+        }, delay);
+        return;
+      }
+      // Anything else (not-allowed, service-not-allowed, …) → failed
       _clearStartupTimer();
       _clearRetryTimer();
       recognition._shouldRestart = false;
@@ -224,12 +274,14 @@ export const useSpeechRecognition = ({
     transcriptRef.current = '';
     hasSpeechRef.current  = false;
     setTranscript('');
+    _clearNetworkRecovery();
     _createAndStart('starting');
   }, [_createAndStart]);
 
   const stopRecognition = useCallback(() => {
     _clearStartupTimer();
     _clearRetryTimer();
+    _clearNetworkRecovery();
     if (recognitionRef.current) {
       recognitionRef.current._shouldRestart = false;
       try { recognitionRef.current.stop(); } catch (_) {}
@@ -241,6 +293,7 @@ export const useSpeechRecognition = ({
     log('pauseRecognition');
     _clearStartupTimer();
     _clearRetryTimer();
+    _clearNetworkRecovery();
     if (recognitionRef.current) {
       recognitionRef.current._shouldRestart = false;
       setSttStatus('paused'); // Set BEFORE stop() so onend sees 'paused' and doesn't clobber
@@ -261,6 +314,7 @@ export const useSpeechRecognition = ({
   const abortRecognition = useCallback(() => {
     _clearStartupTimer();
     _clearRetryTimer();
+    _clearNetworkRecovery();
     if (recognitionRef.current) {
       recognitionRef.current._shouldRestart = false;
       try { recognitionRef.current.abort(); } catch (_) {}
