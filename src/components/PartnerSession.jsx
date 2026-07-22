@@ -5,7 +5,7 @@ import QuizEngine from './QuizEngine';
 import { ResumeBanner } from './partnerConfig/ResumeBanner';
 import { useMic } from '../hooks/useMic';
 import { useRecitationCheck } from '../hooks/useRecitationCheck';
-import { getAudioUrl, buildExpectedText, buildAyahWordCounts, getCachedAudioBlobUrl } from '../utils/quranUtils';
+import { getAudioUrl, buildExpectedText, buildAyahWordCounts } from '../utils/quranUtils';
 
 const DEBUG = true;
 const log = (...args) => { if (DEBUG) console.log('[PartnerSession]', ...args); };
@@ -110,9 +110,6 @@ const PartnerSession = ({
     }
     if (hintAudioRef.current) {
       try { hintAudioRef.current.pause(); } catch (e) {}
-      if (hintAudioRef.current._blobUrlToRevoke) {
-        URL.revokeObjectURL(hintAudioRef.current._blobUrlToRevoke);
-      }
       hintAudioRef.current = null;
     }
     // Release the hook's authoritative in-flight lock so the trigger paths and
@@ -120,7 +117,7 @@ const PartnerSession = ({
     sttActionsRef.current.notifyHintEnded?.();
   }, []);
 
-  const handleStuck = useCallback(async (stuckIndex) => {
+  const handleStuck = useCallback((stuckIndex) => {
     log('handleStuck called for verse:', stuckIndex, 'hintAudioRef.current:', !!hintAudioRef.current);
     // Guard: do not play a hint if it's not the user's turn.
     if (turn !== 'user') {
@@ -148,34 +145,8 @@ const PartnerSession = ({
     // Pause STT for the first 3 seconds so the hint plays without being cut.
     sttActionsRef.current.pauseRecognition?.();
 
-    // ── Local-first audio resolver ─────────────────────────────────────────
-    let audioSrc = url;
-    let blobUrlToRevoke = null;
-
-    try {
-      const cachedBlobUrl = await getCachedAudioBlobUrl(url);
-      if (cachedBlobUrl) {
-        audioSrc = cachedBlobUrl;
-        blobUrlToRevoke = cachedBlobUrl;
-        log('Hint audio found in local cache, using blob URL');
-      } else if (!navigator.onLine) {
-        log('Hint audio not cached and network unavailable — skipping hint');
-        finishHint();
-        return;
-      }
-    } catch (e) {
-      log('Cache check failed, falling back to network:', e);
-      if (!navigator.onLine) {
-        log('Network unavailable after cache check failure — skipping hint');
-        finishHint();
-        return;
-      }
-    }
-    // ──────────────────────────────────────────────────────────────────────
-
-    const hintAudio = new Audio(audioSrc);
+    const hintAudio = new Audio(url);
     hintAudioRef.current = hintAudio;
-    hintAudio._blobUrlToRevoke = blobUrlToRevoke;
     // Track whether .play() was explicitly attempted so we only show the
     // "Audio Unavailable" modal for genuine play failures, not for silent
     // background preload/buffering errors.
@@ -185,14 +156,8 @@ const PartnerSession = ({
     }).catch(e => {
       playAttempted = true;
       log('Failed to play hint audio:', e);
-      if (blobUrlToRevoke) {
-        URL.revokeObjectURL(blobUrlToRevoke);
-      }
       setAudioError(true);
       interruptHint();
-      // Reset scoring window so the engine evaluates fresh input against
-      // the current target verse.
-      sttActionsRef.current.clearScoringWindow?.();
       log('Calling resumeRecognition after hint play error, sttActive:', sttActive);
       sttActionsRef.current.resumeRecognition?.(sttActive);
     });
@@ -210,9 +175,6 @@ const PartnerSession = ({
         // User spoke during the 3-second window — stop hint and resume STT
         log('User spoke during hint — stopping hint and resuming STT');
         interruptHint();
-        // Reset scoring window so the engine evaluates fresh input against
-        // the current target verse.
-        sttActionsRef.current.clearScoringWindow?.();
         log('Calling resumeRecognition after 3-sec timer (user spoke), sttActive:', sttActive);
         sttActionsRef.current.resumeRecognition?.(sttActive);
       } else {
@@ -226,26 +188,17 @@ const PartnerSession = ({
     hintFallbackTimerRef.current = setTimeout(() => {
       log('Hint fallback timer fired, interrupting hint');
       interruptHint();
-      // Reset scoring window so the engine evaluates fresh input against
-      // the current target verse.
-      sttActionsRef.current.clearScoringWindow?.();
       log('Calling resumeRecognition from fallback timer, sttActive:', sttActive);
       sttActionsRef.current.resumeRecognition?.(sttActive);
     }, 5000);
 
     const finishHint = () => {
-      if (blobUrlToRevoke) {
-        URL.revokeObjectURL(blobUrlToRevoke);
-      }
       // Always resume STT and restart the stuck timer when the hint ends.
       // The normal scoring loop will evaluate the user's transcript and
       // auto-advance if they meet the threshold, or trigger another hint
       // if they're still stuck.
       log('Hint ended, resuming STT and restarting stuck timer');
       interruptHint();
-      // Reset scoring window so the engine evaluates fresh input against
-      // the current target verse (clears stale hint evaluation locks).
-      sttActionsRef.current.clearScoringWindow?.();
       log('Calling resumeRecognition from finishHint, sttActive:', sttActive);
       sttActionsRef.current.resumeRecognition?.(sttActive);
     };
@@ -277,7 +230,6 @@ const PartnerSession = ({
     results: recitationResults,
     stopAndCheck,
     clearResults,
-    clearScoringWindow,
     pauseRecognition,
     resumeRecognition,
     notifyHintEnded,
@@ -292,7 +244,7 @@ const PartnerSession = ({
     turn
   );
 
-  sttActionsRef.current = { pauseRecognition, resumeRecognition, notifyHintEnded, clearScoringWindow };
+  sttActionsRef.current = { pauseRecognition, resumeRecognition, notifyHintEnded };
   transcriptRef.current = transcript;
 
   useEffect(() => {

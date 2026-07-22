@@ -142,11 +142,6 @@ export const useRecitationCheck = (
     clearWorkerResults();
   }, [clearStuckState, clearWorkerResults]);
 
-  const clearScoringWindow = useCallback(() => {
-    log('clearScoringWindow');
-    clearWorkerResults();
-  }, [clearWorkerResults]);
-
   useEffect(() => {
     if (isActive) {
       startListening();
@@ -226,7 +221,6 @@ export const useRecitationCheck = (
     startListening,
     stopAndCheck,
     clearResults,
-    clearScoringWindow,
     pauseRecognition,
     resumeRecognition,
     notifyHintEnded: wrappedNotifyHintEnded,

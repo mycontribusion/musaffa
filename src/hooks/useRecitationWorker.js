@@ -74,17 +74,6 @@ export const useRecitationWorker = ({
 
         const activeVerseIndex = computeActiveVerseIndex(processedPayload?.verseStats, threshold);
         const verseStats = processedPayload?.verseStats || [];
-
-        // Re-sync scoring target: if the active verse has changed from the
-        // hinted verse, clear the hint evaluation lock so subsequent comparisons
-        // target the correct verse.
-        if (hintedVerseIndexRef.current !== null && hintedVerseIndexRef.current !== activeVerseIndex) {
-          log('Re-syncing scoring target: active verse changed from', hintedVerseIndexRef.current, 'to', activeVerseIndex);
-          hintedVerseIndexRef.current = null;
-          hintTranscriptSnapshotRef.current = '';
-          hintPayloadSnapshotRef.current = null;
-          hintPassedRef.current = false;
-        }
         
         if (activeVerseIndex < verseStats.length) {
           const activeVerseStat = verseStats[activeVerseIndex];

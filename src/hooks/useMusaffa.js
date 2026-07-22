@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { getAudioUrl, getCachedAudioBlobUrl } from '../utils/quranUtils';
+import { getAudioUrl } from '../utils/quranUtils';
 
 export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 'ar.alafasy') => {
   const [chunks, setChunks] = useState([]);
@@ -102,38 +102,14 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     return finalChunks;
   };
 
-  const playAyahAudioAsync = async (ayah) => {
-    const audio = getAudio(audioRef);
-    const nextAudio = getAudio(nextAudioRef);
-    const url = getAudioUrl(ayah.number, reciter, ayah.surahNumber, ayah.numberInSurah);
-
-    // ── Local-first audio resolver ─────────────────────────────────────────
-    let audioSrc = url;
-    let blobUrlToRevoke = null;
-
-    try {
-      const cachedBlobUrl = await getCachedAudioBlobUrl(url);
-      if (cachedBlobUrl) {
-        audioSrc = cachedBlobUrl;
-        blobUrlToRevoke = cachedBlobUrl;
-        console.log('[useMusaffa] Audio found in local cache, using blob URL for ayah:', ayah.number);
-      } else if (!navigator.onLine) {
-        console.warn('Audio not cached and network unavailable — rejecting playback for ayah:', ayah.number);
-        throw new Error('Audio not available offline');
-      }
-    } catch (e) {
-      if (e.message === 'Audio not available offline') throw e;
-      console.warn('Cache check failed, falling back to network for ayah:', ayah.number, e);
-      if (!navigator.onLine) {
-        throw new Error('Audio not available offline', { cause: e });
-      }
-    }
-    // ──────────────────────────────────────────────────────────────────────
-
+  const playAyahAudioAsync = (ayah) => {
     return new Promise((resolve, reject) => {
+      const audio = getAudio(audioRef);
+      const nextAudio = getAudio(nextAudioRef);
+      const url = getAudioUrl(ayah.number, reciter, ayah.surahNumber, ayah.numberInSurah);
+
       // Use preloaded audio ONLY if it perfectly matches the requested URL (including reciter)
-      // and we're not using a blob URL (preloaded audio uses remote URLs)
-      if (nextAudio.src === url && !blobUrlToRevoke) {
+      if (nextAudio.src === url) {
         const temp = audioRef.current;
         audioRef.current = nextAudioRef.current;
         nextAudioRef.current = temp;
@@ -149,35 +125,17 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
         };
         audioRef.current.play().catch(() => reject(new Error('Audio playback failed')));
       } else {
-        // Clean up previous blob URL if any
-        if (audio._blobUrlToRevoke) {
-          URL.revokeObjectURL(audio._blobUrlToRevoke);
-          audio._blobUrlToRevoke = null;
-        }
         audio.onended = () => {
           audio.onended = null;
           audio.onerror = null;
-          if (blobUrlToRevoke) {
-            URL.revokeObjectURL(blobUrlToRevoke);
-          }
           resolve();
         };
         audio.onerror = () => {
           audio.onended = null;
           audio.onerror = null;
-          if (blobUrlToRevoke) {
-            URL.revokeObjectURL(blobUrlToRevoke);
-          }
           reject(new Error('Audio playback failed'));
         };
-        audio.src = audioSrc;
-        audio._blobUrlToRevoke = blobUrlToRevoke;
-        audio.play().catch(() => {
-          if (blobUrlToRevoke) {
-            URL.revokeObjectURL(blobUrlToRevoke);
-          }
-          reject(new Error('Audio playback failed'));
-        });
+        audio.play().catch(() => reject(new Error('Audio playback failed')));
       }
     });
   };

@@ -206,12 +206,6 @@ export const useStuckDetection = ({
   const notifyHintEnded = useCallback(() => {
     log('notifyHintEnded called, hintedVerseIndex:', hintedVerseIndexRef.current);
     isHintPlayingRef.current = false;
-    // Clear all hint-related evaluation locks so the scoring engine
-    // re-syncs to the active verse on the next comparison.
-    hintedVerseIndexRef.current = null;
-    hintTranscriptSnapshotRef.current = '';
-    hintPayloadSnapshotRef.current = null;
-    hintPassedRef.current = false;
   }, []);
 
   // Expose a restart function so the parent hook can restart the stuck timer
