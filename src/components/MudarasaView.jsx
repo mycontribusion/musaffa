@@ -30,13 +30,14 @@ const MudarasaView = ({
   setAudioError,
   enableErrorDetection,
   isSttListening,
-  liveResults,        
+  sttStatus,
+  liveResults,
   transcript,
   onFinishedTurn,
-  onRetryTurn,        
+  onRetryTurn,
   onClearResults,
-  quranSimple,        
-  targetAccuracy,     
+  quranSimple,
+  targetAccuracy,
   retryStartIndex = 0,
   setRetryStartIndex,
   completedResults,
@@ -132,7 +133,16 @@ const MudarasaView = ({
     }
   });
 
-  const showInternetBanner = enableErrorDetection && mudarasaTurn === 'user' && !isSttListening;
+  // Only show the internet banner when STT has actually failed, not when it's
+  // merely paused for a hint (where isSttListening is also false).
+  const showInternetBanner = enableErrorDetection && mudarasaTurn === 'user' && sttStatus === 'failed';
+  
+  // Diagnostic: log when the internet banner is shown with the actual STT status
+  useEffect(() => {
+    if (showInternetBanner) {
+      console.warn('[MudarasaView] Internet banner shown — isSttListening:', isSttListening, 'sttStatus:', sttStatus, 'enableErrorDetection:', enableErrorDetection, 'mudarasaTurn:', mudarasaTurn);
+    }
+  }, [showInternetBanner, isSttListening, sttStatus, enableErrorDetection, mudarasaTurn]);
 
   return (
     <>

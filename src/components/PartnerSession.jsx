@@ -153,7 +153,8 @@ const PartnerSession = ({
       log('Failed to play hint audio:', e);
       setAudioError(true);
       interruptHint();
-      sttActionsRef.current.resumeRecognition?.();
+      log('Calling resumeRecognition after hint play error, sttActive:', sttActive);
+      sttActionsRef.current.resumeRecognition?.(sttActive);
     });
 
     // After 3 seconds, decide based on whether the user spoke:
@@ -169,7 +170,8 @@ const PartnerSession = ({
         // User spoke during the 3-second window — stop hint and resume STT
         log('User spoke during hint — stopping hint and resuming STT');
         interruptHint();
-        sttActionsRef.current.resumeRecognition?.();
+        log('Calling resumeRecognition after 3-sec timer (user spoke), sttActive:', sttActive);
+        sttActionsRef.current.resumeRecognition?.(sttActive);
       } else {
         // User was silent — do NOT resume STT yet; let the hint audio finish
         // playing the full verse. The onended handler will resume STT.
@@ -181,7 +183,8 @@ const PartnerSession = ({
     hintFallbackTimerRef.current = setTimeout(() => {
       log('Hint fallback timer fired, interrupting hint');
       interruptHint();
-      sttActionsRef.current.resumeRecognition?.();
+      log('Calling resumeRecognition from fallback timer, sttActive:', sttActive);
+      sttActionsRef.current.resumeRecognition?.(sttActive);
     }, 5000);
 
     const finishHint = () => {
@@ -191,7 +194,8 @@ const PartnerSession = ({
       // if they're still stuck.
       log('Hint ended, resuming STT and restarting stuck timer');
       interruptHint();
-      sttActionsRef.current.resumeRecognition?.();
+      log('Calling resumeRecognition from finishHint, sttActive:', sttActive);
+      sttActionsRef.current.resumeRecognition?.(sttActive);
     };
 
     hintAudio.onended = () => {
@@ -211,6 +215,7 @@ const PartnerSession = ({
   const {
     isSupported: sttSupported,
     isListening: isSttListening,
+    sttStatus,
     transcript,
     liveResults,
     results: recitationResults,
@@ -371,6 +376,7 @@ const PartnerSession = ({
       setAudioError={setAudioError}
       enableErrorDetection={enableErrorDetection && sttSupported}
       isSttListening={isSttListening}
+      sttStatus={sttStatus}
       liveResults={liveResults}
       transcript={transcript}
       onFinishedTurn={handleFinishedTurn}

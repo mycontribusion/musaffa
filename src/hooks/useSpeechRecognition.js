@@ -249,8 +249,11 @@ export const useSpeechRecognition = ({
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const resumeRecognition = useCallback((isActive) => {
-    log('resumeRecognition, isActive:', isActive);
-    if (!isActive) return;
+    log('resumeRecognition called, isActive:', isActive);
+    if (!isActive) {
+      console.warn('[SpeechRecognition] resumeRecognition called without isActive — recognition will NOT resume!');
+      return;
+    }
     // Recreate the instance — reusing a stopped instance is the Web Speech dead-state bug
     _createAndStart('starting');
   }, [_createAndStart]);
