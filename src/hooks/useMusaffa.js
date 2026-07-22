@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { getAudioUrl } from '../utils/quranUtils';
+import { getAudioUrl, getCachedAudioBlobUrl } from '../utils/quranUtils';
 
 export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 'ar.alafasy') => {
   const [chunks, setChunks] = useState([]);
@@ -102,25 +102,82 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     return finalChunks;
   };
 
-  const playAyahAudioAsync = (ayah) => {
-    return new Promise((resolve, reject) => {
-      const audio = getAudio(audioRef);
-      const nextAudio = getAudio(nextAudioRef);
-      const url = getAudioUrl(ayah.number, reciter, ayah.surahNumber, ayah.numberInSurah);
+  const playAyahAudioAsync = async (ayah) => {
+    const audio = getAudio(audioRef);
+    const nextAudio = getAudio(nextAudioRef);
+    const url = getAudioUrl(ayah.number, reciter, ayah.surahNumber, ayah.numberInSurah);
 
+    // ── Local-first audio resolver ─────────────────────────────────────────
+    let audioSrc = url;
+    let blobUrlToRevoke = null;
+
+    try {
+      const cachedBlobUrl = await getCachedAudioBlobUrl(url);
+      if (cachedBlobUrl) {
+        audioSrc = cachedBlobUrl;
+        blobUrlToRevoke = cachedBlobUrl;
+        console.log('[useMusaffa] Audio found in local cache, using blob URL for ayah:', ayah.number);
+      } else if (!navigator.onLine) {
+        console.warn('Audio not cached and network unavailable — rejecting playback for ayah:', ayah.number);
+        throw new Error('Audio not available offline');
+      }
+    } catch (e) {
+      if (e.message === 'Audio not available offline') throw e;
+      console.warn('Cache check failed, falling back to network for ayah:', ayah.number, e);
+      if (!navigator.onLine) {
+        throw new Error('Audio not available offline', { cause: e });
+      }
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
+    return new Promise((resolve, reject) => {
       // Use preloaded audio ONLY if it perfectly matches the requested URL (including reciter)
-      if (nextAudio.src === url) {
+      // and we're not using a blob URL (preloaded audio uses remote URLs)
+      if (nextAudio.src === url && !blobUrlToRevoke) {
         const temp = audioRef.current;
         audioRef.current = nextAudioRef.current;
         nextAudioRef.current = temp;
-        audioRef.current.onended = resolve;
-        audioRef.current.onerror = () => reject(new Error('Audio playback failed'));
+        audioRef.current.onended = () => {
+          audioRef.current.onended = null;
+          audioRef.current.onerror = null;
+          resolve();
+        };
+        audioRef.current.onerror = () => {
+          audioRef.current.onended = null;
+          audioRef.current.onerror = null;
+          reject(new Error('Audio playback failed'));
+        };
         audioRef.current.play().catch(() => reject(new Error('Audio playback failed')));
       } else {
-        audio.src = url;
-        audio.onended = resolve;
-        audio.onerror = () => reject(new Error('Audio playback failed'));
-        audio.play().catch(() => reject(new Error('Audio playback failed')));
+        // Clean up previous blob URL if any
+        if (audio._blobUrlToRevoke) {
+          URL.revokeObjectURL(audio._blobUrlToRevoke);
+          audio._blobUrlToRevoke = null;
+        }
+        audio.onended = () => {
+          audio.onended = null;
+          audio.onerror = null;
+          if (blobUrlToRevoke) {
+            URL.revokeObjectURL(blobUrlToRevoke);
+          }
+          resolve();
+        };
+        audio.onerror = () => {
+          audio.onended = null;
+          audio.onerror = null;
+          if (blobUrlToRevoke) {
+            URL.revokeObjectURL(blobUrlToRevoke);
+          }
+          reject(new Error('Audio playback failed'));
+        };
+        audio.src = audioSrc;
+        audio._blobUrlToRevoke = blobUrlToRevoke;
+        audio.play().catch(() => {
+          if (blobUrlToRevoke) {
+            URL.revokeObjectURL(blobUrlToRevoke);
+          }
+          reject(new Error('Audio playback failed'));
+        });
       }
     });
   };
@@ -153,9 +210,14 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
       // Play Bismillah for the start of any Surah (except Fatiha and Tawbah)
       if (ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9) {
         // Preload the actual first verse while Bismillah is playing
-        const na = getAudio(nextAudioRef);
-        na.src = getAudioUrl(ayah.number, reciter, ayah.surahNumber, ayah.numberInSurah);
-        na.load();
+        try {
+          const na = getAudio(nextAudioRef);
+          na.src = getAudioUrl(ayah.number, reciter, ayah.surahNumber, ayah.numberInSurah);
+          na.load();
+        } catch (e) {
+          // Silent preload failure — background network glitches should not
+          // interrupt the active recitation UI.
+        }
         
         try {
           setCurrentAyahNumber('bismillah-' + ayah.number);
@@ -168,12 +230,17 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
 
       setCurrentAyahNumber(ayah.number);
 
-      // Preload next ayah
+      // Preload next ayah (silent — network glitches during background preload
+      // must not break the active recitation UI)
       const nextAyah = chunk[i + 1];
       if (nextAyah) {
-        const na = getAudio(nextAudioRef);
-        na.src = getAudioUrl(nextAyah.number, reciter, nextAyah.surahNumber, nextAyah.numberInSurah);
-        na.load();
+        try {
+          const na = getAudio(nextAudioRef);
+          na.src = getAudioUrl(nextAyah.number, reciter, nextAyah.surahNumber, nextAyah.numberInSurah);
+          na.load();
+        } catch (e) {
+          // Silent preload failure
+        }
       }
 
       try {
@@ -185,9 +252,22 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
         setCurrentAyahNumber(null);
         isPlayingRef.current = false;
         
-        // Manual pause logic to prevent stale state issues
-        if (audioRef.current) audioRef.current.pause();
-        if (nextAudioRef.current) nextAudioRef.current.pause();
+        // Reset audio refs to clean state so subsequent recitation attempts
+        // aren't blocked by a broken media state.
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current.src = '';
+          audioRef.current.onended = null;
+          audioRef.current.onerror = null;
+          audioRef.current = null;
+        }
+        if (nextAudioRef.current) {
+          nextAudioRef.current.pause();
+          nextAudioRef.current.src = '';
+          nextAudioRef.current.onended = null;
+          nextAudioRef.current.onerror = null;
+          nextAudioRef.current = null;
+        }
         releaseWakeLock();
         setIsPaused(true);
         return;
@@ -258,10 +338,14 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     // ---- NEW: Preload first ayah of the upcoming chunk ----
     const nextChunk = chunks[nextIdx];
     if (nextChunk && nextChunk.length > 0) {
-      const firstAyah = nextChunk[0];
-      const preAudio = getAudio(nextAudioRef);
-      preAudio.src = getAudioUrl(firstAyah.number, reciter, firstAyah.surahNumber, firstAyah.numberInSurah);
-      preAudio.load(); // start downloading immediately
+      try {
+        const firstAyah = nextChunk[0];
+        const preAudio = getAudio(nextAudioRef);
+        preAudio.src = getAudioUrl(firstAyah.number, reciter, firstAyah.surahNumber, firstAyah.numberInSurah);
+        preAudio.load(); // start downloading immediately
+      } catch (e) {
+        // Silent preload failure
+      }
     }
     // -----------------------------------------------------
     

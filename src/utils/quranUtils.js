@@ -301,3 +301,27 @@ export const buildAyahWordCounts = (chunk, quranSimple) => {
   });
 };
 
+/**
+ * Check if an audio URL is available in the Cache API and return a blob URL if found.
+ * Used for local-first audio playback: plays from cache when available, falls back
+ * to network only when online and the file is not cached.
+ *
+ * @param {string} url - The remote audio URL to look up
+ * @returns {Promise<string|null>} - A blob:// URL if the audio is cached, otherwise null
+ */
+export const getCachedAudioBlobUrl = async (url) => {
+  try {
+    if ('caches' in window) {
+      const cache = await caches.open('quran-audio-v1');
+      const response = await cache.match(url);
+      if (response) {
+        const blob = await response.blob();
+        return URL.createObjectURL(blob);
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to check cache for audio:', e);
+  }
+  return null;
+};
+

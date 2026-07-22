@@ -5,7 +5,7 @@ import QuizEngine from './QuizEngine';
 import { ResumeBanner } from './partnerConfig/ResumeBanner';
 import { useMic } from '../hooks/useMic';
 import { useRecitationCheck } from '../hooks/useRecitationCheck';
-import { getAudioUrl, buildExpectedText, buildAyahWordCounts } from '../utils/quranUtils';
+import { getAudioUrl, buildExpectedText, buildAyahWordCounts, getCachedAudioBlobUrl } from '../utils/quranUtils';
 
 const DEBUG = true;
 const log = (...args) => { if (DEBUG) console.log('[PartnerSession]', ...args); };
@@ -110,6 +110,9 @@ const PartnerSession = ({
     }
     if (hintAudioRef.current) {
       try { hintAudioRef.current.pause(); } catch (e) {}
+      if (hintAudioRef.current._blobUrlToRevoke) {
+        URL.revokeObjectURL(hintAudioRef.current._blobUrlToRevoke);
+      }
       hintAudioRef.current = null;
     }
     // Release the hook's authoritative in-flight lock so the trigger paths and
@@ -117,7 +120,7 @@ const PartnerSession = ({
     sttActionsRef.current.notifyHintEnded?.();
   }, []);
 
-  const handleStuck = useCallback((stuckIndex) => {
+  const handleStuck = useCallback(async (stuckIndex) => {
     log('handleStuck called for verse:', stuckIndex, 'hintAudioRef.current:', !!hintAudioRef.current);
     // Guard: do not play a hint if it's not the user's turn.
     if (turn !== 'user') {
@@ -145,12 +148,46 @@ const PartnerSession = ({
     // Pause STT for the first 3 seconds so the hint plays without being cut.
     sttActionsRef.current.pauseRecognition?.();
 
-    const hintAudio = new Audio(url);
+    // ── Local-first audio resolver ─────────────────────────────────────────
+    let audioSrc = url;
+    let blobUrlToRevoke = null;
+
+    try {
+      const cachedBlobUrl = await getCachedAudioBlobUrl(url);
+      if (cachedBlobUrl) {
+        audioSrc = cachedBlobUrl;
+        blobUrlToRevoke = cachedBlobUrl;
+        log('Hint audio found in local cache, using blob URL');
+      } else if (!navigator.onLine) {
+        log('Hint audio not cached and network unavailable — skipping hint');
+        finishHint();
+        return;
+      }
+    } catch (e) {
+      log('Cache check failed, falling back to network:', e);
+      if (!navigator.onLine) {
+        log('Network unavailable after cache check failure — skipping hint');
+        finishHint();
+        return;
+      }
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
+    const hintAudio = new Audio(audioSrc);
     hintAudioRef.current = hintAudio;
+    hintAudio._blobUrlToRevoke = blobUrlToRevoke;
+    // Track whether .play() was explicitly attempted so we only show the
+    // "Audio Unavailable" modal for genuine play failures, not for silent
+    // background preload/buffering errors.
+    let playAttempted = false;
     hintAudio.play().then(() => {
       log('Hint audio started playing');
     }).catch(e => {
+      playAttempted = true;
       log('Failed to play hint audio:', e);
+      if (blobUrlToRevoke) {
+        URL.revokeObjectURL(blobUrlToRevoke);
+      }
       setAudioError(true);
       interruptHint();
       log('Calling resumeRecognition after hint play error, sttActive:', sttActive);
@@ -188,6 +225,9 @@ const PartnerSession = ({
     }, 5000);
 
     const finishHint = () => {
+      if (blobUrlToRevoke) {
+        URL.revokeObjectURL(blobUrlToRevoke);
+      }
       // Always resume STT and restart the stuck timer when the hint ends.
       // The normal scoring loop will evaluate the user's transcript and
       // auto-advance if they meet the threshold, or trigger another hint
@@ -204,7 +244,11 @@ const PartnerSession = ({
     };
     hintAudio.onerror = (e) => {
       log('Hint audio onerror:', e);
-      setAudioError(true);
+      // Only surface the "Audio Unavailable" modal if .play() was actually
+      // attempted. Preload/buffering errors during idle setup are suppressed.
+      if (playAttempted) {
+        setAudioError(true);
+      }
       finishHint();
     };
   }, [activeChunkSlice, params.reciter, interruptHint, setAudioError, expectedText, turn]);
