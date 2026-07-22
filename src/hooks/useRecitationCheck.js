@@ -19,21 +19,15 @@ export const useRecitationCheck = (
   const {
     clearStuckTimer,
     clearSilenceTimer,
-    restartStuckTimer,
-    restartStuckTimerExported,
     triggerHint,
     notifyHintEnded,
     clearStuckState,
     checkAutoFinish,
     latestPayloadRef,
-    latestVerseStatsRef,
-    silenceTimerRef,
-    interruptHintRef,
     hintedVerseIndexRef,
     hintTranscriptSnapshotRef,
     hintPayloadSnapshotRef,
     hintPassedRef,
-    isHintPlayingRef,
   } = useStuckDetection({
     onStuck,
     interruptHint,
@@ -55,26 +49,23 @@ export const useRecitationCheck = (
   const onResultCallback = useCallback((combined) => {
     log('onResult, length:', combined?.length);
     if (combined) dispatchLiveCompareRef.current?.(combined);
-    restartStuckTimer(transcriptRef, setLiveResults);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [restartStuckTimer]);
+    // NOTE: restartStuckTimer is disabled — silence during recitation
+    // must never trigger an audio hint. Hints fire only from the
+    // verse-boundary gate below when a verse is fully completed.
+  }, []);
 
   const onSpeechStartCallback = useCallback(() => {
     log('onSpeechStart');
     clearStuckTimer();
     clearSilenceTimer();
-    // NOTE: Do NOT interrupt the hint here. The hint should keep playing for
-    // the full 3 seconds even if the user speaks. The decision to stop the
-    // hint is made after the 3-second window in PartnerSession.handleStuck.
   }, [clearStuckTimer, clearSilenceTimer]);
 
   const onSpeechEndCallback = useCallback(() => {
     log('onSpeechEnd');
-    // Use transcriptRef.current — always the latest value, no stale closure risk.
-    restartStuckTimer(transcriptRef, setLiveResults);
     clearSilenceTimer();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [restartStuckTimer, clearSilenceTimer]);
+    // NOTE: restartStuckTimer is disabled — silence during recitation
+    // must never trigger an audio hint.
+  }, [clearSilenceTimer]);
 
   const {
     isSupported,
@@ -85,8 +76,6 @@ export const useRecitationCheck = (
     stopRecognition,
     pauseRecognition,
     resumeRecognition,
-    setIsListening,
-    setTranscript
   } = useSpeechRecognition({
     onResult: onResultCallback,
     onSpeechStart: onSpeechStartCallback,
@@ -100,8 +89,6 @@ export const useRecitationCheck = (
     dispatchLiveCompare,
     dispatchFinalCompare,
     clearWorkerResults,
-    pendingIdRef,
-    workerCompletedIdRef,
     liveDebounceRef
   } = useRecitationWorker({
     expectedText,
@@ -155,12 +142,11 @@ export const useRecitationCheck = (
     }
   }, [isActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Immediate Verse-Boundary Accuracy Gate ─────────────────────────────
-  // When liveResults updates, check if the frontier (lastMatchedExpIdx) has
-  // reached or crossed the boundary of the current verse. If the verse is
-  // fully completed by speech but its accuracy is below the threshold,
-  // immediately fire the audio hint interrupt — do NOT wait for the stuck
-  // timer (4.5s–9s) or silence detection.
+  // ── Single Strict Condition: Verse-Boundary Accuracy Gate ─────────────
+  // Audio hints fire IF AND ONLY IF:
+  //   1. The user's speech frontier has reached the end of a verse (100% attempted).
+  //   2. The final accuracy for that completed verse is strictly below threshold.
+  // This is the ONLY trigger path — silence timers and plow-ahead are disabled.
   useEffect(() => {
     if (!liveResults?.verseStats || liveResults.verseStats.length === 0 || liveResults.lastMatchedExpIdx === undefined) {
       prevLastMatchedExpIdxRef.current = -1;
@@ -176,8 +162,11 @@ export const useRecitationCheck = (
     const currentFrontier = liveResults.lastMatchedExpIdx;
     const prevFrontier = prevLastMatchedExpIdxRef.current;
 
+    // Find the highest-indexed verse whose boundary was just crossed.
+    // This ensures we fire exactly once per completed verse, even if the
+    // frontier jumps across multiple boundaries in a single update.
+    let completedVerseIndex = -1;
     for (let i = 0; i < liveResults.verseStats.length; i++) {
-      const stat = liveResults.verseStats[i];
       const wordCount = ayahWordCounts[i] || 0;
 
       // Skip ayahs with no words
@@ -193,24 +182,32 @@ export const useRecitationCheck = (
 
       // Frontier crossed this verse boundary
       const crossedBoundary = prevFrontier < verseEndIdx && currentFrontier >= verseEndIdx;
+      if (crossedBoundary) {
+        completedVerseIndex = i; // Keep updating to get the highest index
+      }
+    }
+
+    // Fire hint exactly once for the completed verse, if below threshold
+    if (completedVerseIndex >= 0) {
+      const stat = liveResults.verseStats[completedVerseIndex];
       const belowThreshold = stat.accuracy < accuracyThreshold;
 
-      if (crossedBoundary && belowThreshold) {
-        log('Boundary gate: verse', i, 'frontier crossed boundary (', prevFrontier, '->', currentFrontier, ') but accuracy', stat.accuracy, '% < threshold', accuracyThreshold, '— triggering hint immediately');
-        triggerHint(i, transcriptRef, setLiveResults);
+      if (belowThreshold) {
+        log('Boundary gate: verse', completedVerseIndex, 'frontier crossed boundary (', prevFrontier, '->', currentFrontier, ') accuracy', stat.accuracy, '% < threshold', accuracyThreshold, '— triggering hint');
+        triggerHint(completedVerseIndex, transcriptRef, setLiveResults);
       }
     }
 
     prevLastMatchedExpIdxRef.current = currentFrontier;
   }, [liveResults, accuracyThreshold, ayahWordCounts, triggerHint, transcriptRef, setLiveResults, turn]);
 
-  // Wrap notifyHintEnded so that when a hint finishes we immediately restart
-  // the stuck timer. Without this, if the user stays silent after the hint,
-  // the timer never fires again and the app appears stuck.
+  // Wrap notifyHintEnded — when a hint finishes, just release the lock.
+  // The stuck timer is disabled, so there is nothing to restart.
+  // The user's next spoken word will flow through the normal live-results
+  // pipeline and the boundary gate will re-evaluate if needed.
   const wrappedNotifyHintEnded = useCallback(() => {
     notifyHintEnded();
-    restartStuckTimerExported(transcriptRef, setLiveResults);
-  }, [notifyHintEnded, restartStuckTimerExported, transcriptRef, setLiveResults]);
+  }, [notifyHintEnded]);
 
   return {
     isSupported,
@@ -225,5 +222,6 @@ export const useRecitationCheck = (
     resumeRecognition,
     notifyHintEnded: wrappedNotifyHintEnded,
     dispatchFinalCompare,
+    hintedVerseIndexRef,
   };
 };

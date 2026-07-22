@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { computeActiveVerseIndex } from '../utils/verseProgress';
 
 const DEBUG = true;
 const log = (...args) => { if (DEBUG) console.log('[RecitationWorker]', ...args); };
@@ -72,27 +71,10 @@ export const useRecitationWorker = ({
 
         setLiveResults(processedPayload);
 
-        const activeVerseIndex = computeActiveVerseIndex(processedPayload?.verseStats, threshold);
-        const verseStats = processedPayload?.verseStats || [];
-        
-        if (activeVerseIndex < verseStats.length) {
-          const activeVerseStat = verseStats[activeVerseIndex];
-          if (activeVerseStat?.hasPending) {
-            let plowedAhead = false;
-            for (let i = activeVerseIndex + 1; i < verseStats.length; i++) {
-              const stat = verseStats[i];
-              const hasStarted = stat.hasStarted !== undefined ? stat.hasStarted : !stat.hasPending;
-              if (hasStarted) { plowedAhead = true; break; }
-            }
-            if (plowedAhead) {
-                log('Worker triggering hint (plowedAhead) for verse:', activeVerseIndex);
-                triggerHint(activeVerseIndex, null, setLiveResults);
-            }
-          }
-          // Note: The "below threshold" boundary gate check is now handled in
-          // useRecitationCheck.js via a useEffect on liveResults for immediate
-          // triggering when a verse boundary is crossed.
-        }
+        // NOTE: Plow-ahead hint dispatch has been removed.
+        // Audio hints now fire exclusively from the verse-boundary gate
+        // in useRecitationCheck.js when a verse is fully completed
+        // and its accuracy is strictly below the threshold.
 
         checkAutoFinish(processedPayload);
       } else if (type === 'RESULT_FINAL' && id === pendingIdRef.current) {

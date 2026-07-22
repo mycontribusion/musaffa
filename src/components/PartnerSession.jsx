@@ -5,7 +5,7 @@ import QuizEngine from './QuizEngine';
 import { ResumeBanner } from './partnerConfig/ResumeBanner';
 import { useMic } from '../hooks/useMic';
 import { useRecitationCheck } from '../hooks/useRecitationCheck';
-import { getAudioUrl, buildExpectedText, buildAyahWordCounts } from '../utils/quranUtils';
+import { getAudioUrl, buildExpectedText, buildAyahWordCounts, getCachedAudioBlobUrl } from '../utils/quranUtils';
 
 const DEBUG = true;
 const log = (...args) => { if (DEBUG) console.log('[PartnerSession]', ...args); };
@@ -93,8 +93,12 @@ const PartnerSession = ({
   const hintResumeTimerRef = useRef(null);
   const hintFallbackTimerRef = useRef(null);
   const sttActionsRef = useRef({});
-  const hintStartTranscriptLengthRef = useRef(0);
   const transcriptRef = useRef('');
+  // Track STT active state with a ref to avoid stale closures in async handlers.
+  const sttActiveRef = useRef(false);
+  // Proxy ref for hintedVerseIndexRef so handleStuck (defined before useRecitationCheck)
+  // can access it without a stale-closure "accessed before declared" lint error.
+  const hintedVerseIndexRefProxy = useRef(null);
 
   const clearResultsRef = useRef(null);
 
@@ -109,27 +113,35 @@ const PartnerSession = ({
       hintFallbackTimerRef.current = null;
     }
     if (hintAudioRef.current) {
-      try { hintAudioRef.current.pause(); } catch (e) {}
+      try { hintAudioRef.current.pause(); } catch { /* ignore pause errors */ }
       hintAudioRef.current = null;
     }
     // Release the hook's authoritative in-flight lock so the trigger paths and
     // the audio element stay in agreement (prevents overlapping hint playback).
     sttActionsRef.current.notifyHintEnded?.();
+    // Resume STT so the user can keep reciting after an interrupted hint.
+    sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
   }, []);
 
-  const handleStuck = useCallback((stuckIndex) => {
+  const handleStuck = useCallback(async (stuckIndex) => {
     log('handleStuck called for verse:', stuckIndex, 'hintAudioRef.current:', !!hintAudioRef.current);
     // Guard: do not play a hint if it's not the user's turn.
     if (turn !== 'user') {
       log('handleStuck bailing out - not user turn');
       return;
     }
-    // Guard: do not play a new hint if one is already playing.
-    // If we bail out here we must NOT release the hook's in-flight lock,
-    // because a hint IS actually playing. Releasing it would allow the
-    // stuck timer to fire again and potentially overlap hints.
-    if (hintAudioRef.current || !activeChunkSlice[stuckIndex]) {
-      log('handleStuck bailing out - hint already playing or no ayah');
+    // Guard: do not play a new hint if one is already playing for the same verse.
+    // If a hint is playing for a DIFFERENT verse, interrupt it first.
+    if (hintAudioRef.current) {
+      if (hintedVerseIndexRefProxy?.current === stuckIndex) {
+        log('handleStuck bailing out - hint already playing for same verse:', stuckIndex);
+        return;
+      }
+      log('handleStuck interrupting existing hint for different verse');
+      interruptHint();
+    }
+    if (!activeChunkSlice[stuckIndex]) {
+      log('handleStuck bailing out - no ayah');
       return;
     }
 
@@ -138,69 +150,53 @@ const PartnerSession = ({
     const url = getAudioUrl(ayah.number, reciterSlug, ayah.surahNumber, ayah.numberInSurah);
     log('Playing hint audio for ayah:', ayah.number, 'url:', url);
 
-    // Save the transcript length at the start of the hint so we can detect
-    // whether the user spoke during the 3-second window.
-    hintStartTranscriptLengthRef.current = transcriptRef.current.length;
-
-    // Pause STT for the first 3 seconds so the hint plays without being cut.
+    // Pause STT while hint plays so the hint audio is not cut off.
     sttActionsRef.current.pauseRecognition?.();
 
-    const hintAudio = new Audio(url);
-    hintAudioRef.current = hintAudio;
-    // Track whether .play() was explicitly attempted so we only show the
-    // "Audio Unavailable" modal for genuine play failures, not for silent
-    // background preload/buffering errors.
-    let playAttempted = false;
-    hintAudio.play().then(() => {
-      log('Hint audio started playing');
-    }).catch(e => {
-      playAttempted = true;
-      log('Failed to play hint audio:', e);
-      setAudioError(true);
-      interruptHint();
-      log('Calling resumeRecognition after hint play error, sttActive:', sttActive);
-      sttActionsRef.current.resumeRecognition?.(sttActive);
-    });
+    let blobUrl = null;
+    let audioSrc = url;
 
-    // After 3 seconds, decide based on whether the user spoke:
-    // - If transcript grew → user spoke during the 3-sec window.
-    //   Stop hint, resume STT, and let the normal scoring loop continue.
-    // - If transcript did not grow → user was silent.
-    //   Let the hint finish playing the full verse, then resume STT
-    //   and let the normal scoring loop continue.
-    hintResumeTimerRef.current = setTimeout(() => {
-      const userSpoke = transcriptRef.current.length > hintStartTranscriptLengthRef.current;
-      log('Hint 3-sec timer fired, userSpoke:', userSpoke, 'transcript length:', transcriptRef.current.length, 'start length:', hintStartTranscriptLengthRef.current);
-      if (userSpoke) {
-        // User spoke during the 3-second window — stop hint and resume STT
-        log('User spoke during hint — stopping hint and resuming STT');
-        interruptHint();
-        log('Calling resumeRecognition after 3-sec timer (user spoke), sttActive:', sttActive);
-        sttActionsRef.current.resumeRecognition?.(sttActive);
+    // ── Local-First Audio Resolution ─────────────────────────────────────
+    // 1. Check Cache API (quran-audio-v1) for a cached blob.
+    // 2. If cached, play instantly from blob:// URL.
+    // 3. If not cached and online, stream from network.
+    // 4. If not cached and offline, skip gracefully — no "Audio Unavailable" modal.
+    try {
+      blobUrl = await getCachedAudioBlobUrl(url);
+      if (blobUrl) {
+        audioSrc = blobUrl;
+        log('Playing hint from cached blob:', blobUrl);
+      } else if (navigator.onLine) {
+        log('Playing hint from network:', url);
       } else {
-        // User was silent — do NOT resume STT yet; let the hint audio finish
-        // playing the full verse. The onended handler will resume STT.
-        log('User was silent during hint — letting audio finish');
+        // Offline and not cached — skip gracefully, keep STT active.
+        log('Hint audio not cached and offline — skipping, resuming STT');
+        sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
+        return;
       }
-    }, 3000);
+    } catch (e) {
+      log('Error resolving hint audio:', e);
+      if (!navigator.onLine) {
+        sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
+        return;
+      }
+      // If online but cache check failed, fall through to network stream.
+    }
 
-    // 5-second fallback in case onended/onerror never fire due to network hang
-    hintFallbackTimerRef.current = setTimeout(() => {
-      log('Hint fallback timer fired, interrupting hint');
-      interruptHint();
-      log('Calling resumeRecognition from fallback timer, sttActive:', sttActive);
-      sttActionsRef.current.resumeRecognition?.(sttActive);
-    }, 5000);
+    const hintAudio = new Audio(audioSrc);
+    hintAudioRef.current = hintAudio;
 
     const finishHint = () => {
-      // Always resume STT and restart the stuck timer when the hint ends.
-      // The normal scoring loop will evaluate the user's transcript and
-      // auto-advance if they meet the threshold, or trigger another hint
-      // if they're still stuck.
-      log('Hint ended, resuming STT and restarting stuck timer');
-      interruptHint();
-      log('Calling resumeRecognition from finishHint, sttActive:', sttActive);
-      sttActionsRef.current.resumeRecognition?.(sttActive);
+      log('Hint ended, resuming STT and notifying hint ended');
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+        blobUrl = null;
+      }
+      hintAudioRef.current = null;
+      // Reset all hint evaluation refs in useStuckDetection.
+      sttActionsRef.current.notifyHintEnded?.();
+      // Immediately re-arm speech recognition so accuracy scoring continues.
+      sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
     };
 
     hintAudio.onended = () => {
@@ -209,14 +205,18 @@ const PartnerSession = ({
     };
     hintAudio.onerror = (e) => {
       log('Hint audio onerror:', e);
-      // Only surface the "Audio Unavailable" modal if .play() was actually
-      // attempted. Preload/buffering errors during idle setup are suppressed.
-      if (playAttempted) {
-        setAudioError(true);
-      }
       finishHint();
     };
-  }, [activeChunkSlice, params.reciter, interruptHint, setAudioError, expectedText, turn]);
+
+    try {
+      await hintAudio.play();
+      log('Hint audio started playing');
+    } catch (e) {
+      log('Failed to play hint audio:', e);
+      setAudioError(true);
+      finishHint();
+    }
+  }, [activeChunkSlice, params.reciter, interruptHint, setAudioError, turn]);
 
   // STT error detection — active during user's recitation turn only
   // onAutoFinish fires automatically after silence, triggering handleFinishedTurn
@@ -233,6 +233,7 @@ const PartnerSession = ({
     pauseRecognition,
     resumeRecognition,
     notifyHintEnded,
+    hintedVerseIndexRef,
   } = useRecitationCheck(
     sttActive,
     expectedText,
@@ -246,6 +247,8 @@ const PartnerSession = ({
 
   sttActionsRef.current = { pauseRecognition, resumeRecognition, notifyHintEnded };
   transcriptRef.current = transcript;
+  sttActiveRef.current = !!(enableErrorDetection && subView === 'mudarasa' && turn === 'user');
+  hintedVerseIndexRefProxy.current = hintedVerseIndexRef;
 
   useEffect(() => {
     clearResultsRef.current = clearResults;
