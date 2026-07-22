@@ -94,6 +94,7 @@ const PartnerSession = ({
   const hintFallbackTimerRef = useRef(null);
   const sttActionsRef = useRef({});
   const hintStartTranscriptLengthRef = useRef(0);
+  const transcriptRef = useRef('');
 
   const clearResultsRef = useRef(null);
 
@@ -139,7 +140,7 @@ const PartnerSession = ({
 
     // Save the transcript length at the start of the hint so we can detect
     // whether the user spoke during the 3-second window.
-    hintStartTranscriptLengthRef.current = transcript.length;
+    hintStartTranscriptLengthRef.current = transcriptRef.current.length;
 
     // Pause STT for the first 3 seconds so the hint plays without being cut.
     sttActionsRef.current.pauseRecognition?.();
@@ -162,8 +163,8 @@ const PartnerSession = ({
     //   Let the hint finish playing the full verse, then resume STT
     //   and let the normal scoring loop continue.
     hintResumeTimerRef.current = setTimeout(() => {
-      const userSpoke = transcript.length > hintStartTranscriptLengthRef.current;
-      log('Hint 3-sec timer fired, userSpoke:', userSpoke, 'transcript length:', transcript.length, 'start length:', hintStartTranscriptLengthRef.current);
+      const userSpoke = transcriptRef.current.length > hintStartTranscriptLengthRef.current;
+      log('Hint 3-sec timer fired, userSpoke:', userSpoke, 'transcript length:', transcriptRef.current.length, 'start length:', hintStartTranscriptLengthRef.current);
       if (userSpoke) {
         // User spoke during the 3-second window — stop hint and resume STT
         log('User spoke during hint — stopping hint and resuming STT');
@@ -202,7 +203,7 @@ const PartnerSession = ({
       setAudioError(true);
       finishHint();
     };
-  }, [activeChunkSlice, params.reciter, interruptHint, setAudioError, expectedText, transcript, turn]);
+  }, [activeChunkSlice, params.reciter, interruptHint, setAudioError, expectedText, turn]);
 
   // STT error detection — active during user's recitation turn only
   // onAutoFinish fires automatically after silence, triggering handleFinishedTurn
@@ -230,6 +231,7 @@ const PartnerSession = ({
   );
 
   sttActionsRef.current = { pauseRecognition, resumeRecognition, notifyHintEnded };
+  transcriptRef.current = transcript;
 
   useEffect(() => {
     clearResultsRef.current = clearResults;

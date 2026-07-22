@@ -7,6 +7,7 @@ import PartnerSession from './components/PartnerSession';
 import MutashabihatSession from './components/MutashabihatSession';
 import MutashabihSelection from './components/MutashabihSelection';
 import WeaknessTracker from './components/WeaknessTracker';
+import ErrorBoundary from './components/ErrorBoundary';
 import { useQuranData } from './hooks/useQuranData';
 import { useMusaffa } from './hooks/useMusaffa';
 import { useQuiz } from './hooks/useQuiz';
@@ -282,47 +283,49 @@ const App = () => {
             )}
             
             {view === 'partner' && (
-              <PartnerSession
-                key="partner-view"
-                subView={partnerSubView}
-                setSubView={setPartnerSubView}
-                params={musaffaParams}
-                setParams={setMusaffaParams}
-                surahs={surahs}
-                startMusaffa={startMusaffa}
-                startQuiz={startQuiz}
-                chunks={chunks}
-                currentChunkIndex={currentChunkIndex}
-                currentAyahNumber={currentAyahNumber}
-                turn={mudarasaTurn}
-                handleNextTurn={handleNextTurnManual}
-                logStumble={logStumble}
-                setView={setView}
-                questions={dynamicMutashabihat}
-                quizScore={quizScore}
-                quizFeedback={quizFeedback}
-                handleQuizAnswer={(a) => handleQuizAnswer(a, () => setPartnerSubView('quiz-result'))}
-                currentQuizIndex={currentQuizIndex}
-                reciter={reciter}
-                setReciter={setReciter}
-                activeQuizType={activeQuizType}
-                handleMusaffaParamChange={handleMusaffaParamChange}
-                savedMusaffaSession={savedMusaffaSession}
-                saveMusaffaSession={saveMusaffaSession}
-                clearMusaffaSession={clearMusaffaSession}
-                resumeMusaffaSession={resumeMusaffaSession}
-                pauseMusaffa={pauseMusaffa}
-                resumeMusaffa={resumeMusaffa}
-                stopMusaffa={stopMusaffa}
-                isPaused={isPaused}
-                audioError={audioError}
-                setAudioError={setAudioError}
-                audioDownloadControls={audioDownloadControls}
-                enableErrorDetection={musaffaParams.errorDetection}
-                quranSimple={quranSimple}
-                presetEditingIndex={presetEditingIndex}
-                onSavePreset={handleSavePreset}
-              />
+              <ErrorBoundary>
+                <PartnerSession
+                  key="partner-view"
+                  subView={partnerSubView}
+                  setSubView={setPartnerSubView}
+                  params={musaffaParams}
+                  setParams={setMusaffaParams}
+                  surahs={surahs}
+                  startMusaffa={startMusaffa}
+                  startQuiz={startQuiz}
+                  chunks={chunks}
+                  currentChunkIndex={currentChunkIndex}
+                  currentAyahNumber={currentAyahNumber}
+                  turn={mudarasaTurn}
+                  handleNextTurn={handleNextTurnManual}
+                  logStumble={logStumble}
+                  setView={setView}
+                  questions={dynamicMutashabihat}
+                  quizScore={quizScore}
+                  quizFeedback={quizFeedback}
+                  handleQuizAnswer={(a) => handleQuizAnswer(a, () => setPartnerSubView('quiz-result'))}
+                  currentQuizIndex={currentQuizIndex}
+                  reciter={reciter}
+                  setReciter={setReciter}
+                  activeQuizType={activeQuizType}
+                  handleMusaffaParamChange={handleMusaffaParamChange}
+                  savedMusaffaSession={savedMusaffaSession}
+                  saveMusaffaSession={saveMusaffaSession}
+                  clearMusaffaSession={clearMusaffaSession}
+                  resumeMusaffaSession={resumeMusaffaSession}
+                  pauseMusaffa={pauseMusaffa}
+                  resumeMusaffa={resumeMusaffa}
+                  stopMusaffa={stopMusaffa}
+                  isPaused={isPaused}
+                  audioError={audioError}
+                  setAudioError={setAudioError}
+                  audioDownloadControls={audioDownloadControls}
+                  enableErrorDetection={musaffaParams.errorDetection}
+                  quranSimple={quranSimple}
+                  presetEditingIndex={presetEditingIndex}
+                  onSavePreset={handleSavePreset}
+                />
+              </ErrorBoundary>
             )}
             
             {view === 'mutashabihat-session' && selectedSurah && waqarData && waqarData[selectedSurah.number] && (
