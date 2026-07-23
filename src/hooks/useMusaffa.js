@@ -136,33 +136,28 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
   };
 
   const playAyahWithRetry = async (ayah) => {
-    let attempt = 0;
-    while (true) {
-      // Respect stop/pause signals
-      if (shouldStopRef.current) return false;
-
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       try {
         await playAyahAudioAsync(ayah);
         return true; // Success
       } catch (err) {
         console.warn('Audio playback failed:', err);
-
         if (attempt < MAX_RETRIES) {
-          // Initial fast retries with exponential backoff: 1s, 2s, 3s
           setAudioError('retrying');
           setRetryCount(attempt + 1);
+          // Exponential backoff: 1s, 2s, 3s
           await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
         } else {
-          // Persistent background retry with increasing backoff, capped at 30s
-          setAudioError('retrying');
-          setRetryCount(attempt + 1);
-          const backoff = Math.min(1000 * Math.pow(1.5, attempt - MAX_RETRIES), 30000);
-          await new Promise(resolve => setTimeout(resolve, backoff));
+          setAudioError('failed');
+          setRetryCount(0);
+          // Wait a moment so the user sees the failed state, then clear
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          setAudioError(null);
+          return false; // Failed after all retries
         }
-
-        attempt++;
       }
     }
+    return false;
   };
 
   const playCurrentIndex = async (currentChunks = chunks, startFromAyahIndex = 0) => {
@@ -218,8 +213,8 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
 
       const success = await playAyahWithRetry(ayah);
       if (!success) {
-        // Stopped by user (pause/stop) — exit the playback loop
-        return;
+        // Auto-skip to next ayah after max retries
+        continue;
       }
     }
 

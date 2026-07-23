@@ -143,7 +143,9 @@ const MudarasaView = ({
       {audioError && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 text-xs font-medium text-amber-900 bg-amber-50 border border-amber-200 rounded-full shadow-sm animate-fade-in">
           <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-          Audio failed to load. Retrying playback...
+          {audioError === 'retrying'
+            ? "Audio failed to load. Retrying download..."
+            : "Couldn't load audio. Auto-skipping ayah..."}
         </div>
       )}
 
