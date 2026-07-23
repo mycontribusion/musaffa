@@ -304,7 +304,9 @@ export const useSpeechRecognition = ({
   const resumeRecognition = useCallback((isActive) => {
     log('resumeRecognition called, isActive:', isActive);
     if (!isActive) {
-      console.warn('[SpeechRecognition] resumeRecognition called without isActive — recognition will NOT resume!');
+      // isActive is false when STT should not be running (e.g. app's turn,
+      // error detection disabled, or component unmounting). Silently return —
+      // not resuming is the correct behavior in these cases.
       return;
     }
     // Recreate the instance — reusing a stopped instance is the Web Speech dead-state bug

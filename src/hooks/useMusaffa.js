@@ -142,10 +142,13 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
         playAudio.onerror = () => {
           playAudio.onended = null;
           playAudio.onerror = null;
-          log('playAyahAudioAsync ERROR (preload)', { ayahNumber: ayah.number });
+          log('playAyahAudioAsync ERROR (preload)', { ayahNumber: ayah.number, url });
           reject(new Error('Audio playback failed'));
         };
-        playAudio.play().catch(() => reject(new Error('Audio playback failed')));
+        playAudio.play().catch((e) => {
+          log('playAyahAudioAsync play() rejected (preload)', { ayahNumber: ayah.number, url, error: e.name, message: e.message });
+          reject(new Error('Audio playback failed'));
+        });
       } else {
         const playAudio = audio;
         playAudio.src = url;
@@ -162,10 +165,13 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
         playAudio.onerror = () => {
           playAudio.onended = null;
           playAudio.onerror = null;
-          log('playAyahAudioAsync ERROR (direct)', { ayahNumber: ayah.number });
+          log('playAyahAudioAsync ERROR (direct)', { ayahNumber: ayah.number, url });
           reject(new Error('Audio playback failed'));
         };
-        playAudio.play().catch(() => reject(new Error('Audio playback failed')));
+        playAudio.play().catch((e) => {
+          log('playAyahAudioAsync play() rejected (direct)', { ayahNumber: ayah.number, url, error: e.name, message: e.message });
+          reject(new Error('Audio playback failed'));
+        });
       }
     });
   };
@@ -281,7 +287,10 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     setMudarasaTurn('user');
   };
 
-  const startMusaffa = (overrideChunks, startChunkIndex = 0, initialTurn, overrideParams) => {
+  const startMusaffa = async (overrideChunks, startChunkIndex = 0, initialTurn, overrideParams) => {
+    // Clear any stale audio error from a previous session
+    setAudioError(false);
+
     // Attempt to unlock audio elements for Safari/Chrome autoplay policy
     try {
       const a1 = getAudio(audioRef);
@@ -290,8 +299,12 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
       const silentWav = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
       if (!a1.src) a1.src = silentWav;
       if (!a2.src) a2.src = silentWav;
-      a1.play().then(() => a1.pause()).catch(() => {});
-      a2.play().then(() => a2.pause()).catch(() => {});
+      // Await both plays so the user-gesture token is still valid when
+      // playCurrentIndex() tries to play the actual ayah audio.
+      await Promise.all([
+        a1.play().then(() => a1.pause()).catch(() => {}),
+        a2.play().then(() => a2.pause()).catch(() => {}),
+      ]);
     } catch (e) {}
 
     // If overrideParams is provided, use it to create chunks; otherwise use overrideChunks or createChunks()
