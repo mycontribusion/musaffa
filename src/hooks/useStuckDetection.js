@@ -77,62 +77,6 @@ export const useStuckDetection = ({
     return { ...payload, results: newResults, verseStats: newVerseStats, accuracy };
   }, []);
 
-  const restartStuckTimer = useCallback((transcriptRef, setLiveResults) => {
-    clearStuckTimer();
-
-    // ── Adaptive silence threshold ─────────────────────────────────────────
-    // Short verses (e.g. Al-Fatiha 1) need only 4.5s; dense multi-verse
-    // chunks (e.g. Al-Baqarah page) should allow up to 9s before firing.
-    const totalWords = ayahWordCounts.reduce((sum, n) => sum + n, 0);
-    const STUCK_MS = Math.min(9000, Math.max(4500, totalWords * 500));
-
-    stuckTimerRef.current = setTimeout(() => {
-      const payload = latestPayloadRef.current;
-      if (!payload || !onStuckRef.current) return;
-
-      // ── Frontier-based stuck verse detection ───────────────────────────
-      // Use the DP's lastMatchedExpIdx (word-level) rather than inferring
-      // the stuck verse from per-verse booleans. This is immune to
-      // shared-word ambiguity (e.g. "الله", "كلا", mutashabihat) where the
-      // DP can credit verse N+1's slots with words spoken in verse N.
-      const frontier = payload.lastMatchedExpIdx ?? -1;
-      const totalExpected = payload.results?.length ?? 0;
-
-      // Nothing pending after the frontier → user has finished
-      if (totalExpected === 0 || frontier >= totalExpected - 1) return;
-
-      // Find which verse contains the first unmatched word (frontier + 1)
-      const firstPendingWordIdx = frontier + 1;
-      let stuckVerseIndex = -1;
-      let wordOffset = 0;
-      for (let i = 0; i < ayahWordCounts.length; i++) {
-        wordOffset += ayahWordCounts[i];
-        if (firstPendingWordIdx < wordOffset) {
-          stuckVerseIndex = i;
-          break;
-        }
-      }
-      if (stuckVerseIndex === -1) return;
-
-      // Only fire if the stuck verse is actually below threshold
-      const verseStat = latestVerseStatsRef.current?.[stuckVerseIndex];
-      if (!verseStat || verseStat.accuracy >= threshold) return;
-
-      // Standard guards: no duplicate hints for same verse, none already playing
-      if (isHintPlayingRef.current) return;
-      if (hintedVerseIndexRef.current === stuckVerseIndex) return;
-
-      isHintPlayingRef.current = true;
-      hintPassedRef.current = false;
-
-      const resetPayload = resetVerseInPayload(payload, stuckVerseIndex, ayahWordCounts);
-      setLiveResults(resetPayload);
-
-      hintedVerseIndexRef.current = stuckVerseIndex;
-      hintTranscriptSnapshotRef.current = transcriptRef.current;
-      onStuckRef.current(stuckVerseIndex);
-    }, STUCK_MS);
-  }, [clearStuckTimer, threshold, ayahWordCounts, resetVerseInPayload]);
 
   const triggerHint = useCallback((verseIndex, transcriptRef, setLiveResults) => {
     if (!onStuckRef.current || isHintPlayingRef.current || hintedVerseIndexRef.current === verseIndex) return;
@@ -187,7 +131,6 @@ export const useStuckDetection = ({
   return {
     clearStuckTimer,
     clearSilenceTimer,
-    restartStuckTimer,
     triggerHint,
     notifyHintEnded,
     clearStuckState,

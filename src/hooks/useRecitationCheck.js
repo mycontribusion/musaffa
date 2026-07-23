@@ -16,7 +16,6 @@ export const useRecitationCheck = (
   const {
     clearStuckTimer,
     clearSilenceTimer,
-    restartStuckTimer,
     triggerHint,
     notifyHintEnded,
     clearStuckState,
@@ -46,9 +45,8 @@ export const useRecitationCheck = (
 
   const onResultCallback = useCallback((combined) => {
     if (combined) dispatchLiveCompareRef.current?.(combined);
-    restartStuckTimer(transcriptRef, setLiveResults);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [restartStuckTimer]);
+  }, []);
 
   const onSpeechStartCallback = useCallback(() => {
     clearStuckTimer();
@@ -57,11 +55,9 @@ export const useRecitationCheck = (
   }, [clearStuckTimer, clearSilenceTimer, interruptHintRef]);
 
   const onSpeechEndCallback = useCallback(() => {
-    // Use transcriptRef.current — always the latest value, no stale closure risk.
-    restartStuckTimer(transcriptRef, setLiveResults);
     clearSilenceTimer();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [restartStuckTimer, clearSilenceTimer]);
+  }, [clearSilenceTimer]);
 
   const {
     isSupported,

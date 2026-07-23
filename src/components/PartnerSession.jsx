@@ -111,15 +111,14 @@ const PartnerSession = ({
     sttActionsRef.current.notifyHintEnded?.();
   }, []);
 
-  const handleStuck = useCallback((stuckIndex) => {
-    // Guard: do not play a new hint if one is already playing.
-    // The hook sets its in-flight lock BEFORE calling onStuck, so if we bail out
-    // here without playing we must release that lock — otherwise no further hints
-    // could ever fire.
+  const handleStuck = useCallback(async (stuckIndex) => {
     if (hintAudioRef.current || !activeChunkSlice[stuckIndex]) {
       sttActionsRef.current.notifyHintEnded?.();
       return;
     }
+
+    // Set placeholder to prevent concurrent hints while checking cache
+    hintAudioRef.current = { pause: () => {} };
 
     const ayah = activeChunkSlice[stuckIndex];
     const reciterSlug = params.reciter || 'ar.alafasy';
@@ -128,7 +127,27 @@ const PartnerSession = ({
     // Pause STT for the first 3 seconds so the hint plays without being cut.
     sttActionsRef.current.pauseRecognition?.();
 
-    const hintAudio = new Audio(url);
+    let audioSrc = url;
+    try {
+      if ('caches' in window) {
+        const cache = await caches.open('quran-audio-v1');
+        const response = await cache.match(url);
+        if (response) {
+          const blob = await response.blob();
+          audioSrc = URL.createObjectURL(blob);
+        } else {
+          // Pre-fetch so it caches for next time
+          fetch(url, { mode: 'no-cors' }).catch(() => {});
+        }
+      }
+    } catch (e) {
+      console.warn('Cache check failed:', e);
+    }
+
+    // Double check if interrupted during async cache check
+    if (!hintAudioRef.current) return;
+
+    const hintAudio = new Audio(audioSrc);
     hintAudioRef.current = hintAudio;
     hintAudio.play().catch(e => {
       console.warn('Failed to play hint audio:', e);

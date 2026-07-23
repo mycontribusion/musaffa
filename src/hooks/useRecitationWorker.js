@@ -63,17 +63,7 @@ export const useRecitationWorker = ({
         
         if (activeVerseIndex < verseStats.length) {
           const activeVerseStat = verseStats[activeVerseIndex];
-          if (activeVerseStat?.hasPending) {
-            let plowedAhead = false;
-            for (let i = activeVerseIndex + 1; i < verseStats.length; i++) {
-              const stat = verseStats[i];
-              const hasStarted = stat.hasStarted !== undefined ? stat.hasStarted : !stat.hasPending;
-              if (hasStarted) { plowedAhead = true; break; }
-            }
-            if (plowedAhead) { 
-                triggerHint(activeVerseIndex, null, setLiveResults); 
-            }
-          } else if (
+          if (
             activeVerseStat?.hasStarted &&
             !activeVerseStat?.hasPending &&
             activeVerseStat?.accuracy < threshold
