@@ -6,7 +6,7 @@ import { hasBismillahHeader, BISMILLAH_SIMPLE, removeTashkeel, normalizeArabic, 
 
 // New Extracted Components & Hooks
 import { MudarasaHeader } from './mudarasa/MudarasaHeader';
-import { AudioErrorModal } from './mudarasa/AudioErrorModal';
+// import { AudioErrorModal } from './mudarasa/AudioErrorModal';
 import { RetryPrompt } from './mudarasa/RetryPrompt';
 import { AyahCard } from './mudarasa/AyahCard';
 import { useActiveVerseIndex } from './mudarasa/hooks/useActiveVerseIndex';
@@ -26,8 +26,8 @@ const MudarasaView = ({
   isPaused,
   onPause,
   onResume,
-  audioError,
-  setAudioError,
+  // audioError,
+  // setAudioError,
   enableErrorDetection,
   isSttListening,
   liveResults,        
@@ -132,12 +132,12 @@ const MudarasaView = ({
     }
   });
 
-  const showInternetBanner = enableErrorDetection && mudarasaTurn === 'user' && !isSttListening;
+  // const showInternetBanner = enableErrorDetection && mudarasaTurn === 'user' && !isSttListening;
 
   return (
     <>
       <RecitationStatusOverlay mode={overlayMode} />
-      {showInternetBanner && (
+      {/* {showInternetBanner && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, padding: '0.5rem 1rem',
           background: 'rgba(255,165,0,0.2)', borderBottom: '1px solid rgba(255,165,0,0.5)',
@@ -145,7 +145,7 @@ const MudarasaView = ({
         }}>
           Smart Error Detection requires internet (Web Speech API)
         </div>
-      )}
+      )} */}
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', minHeight: '80vh' }}>
         <MudarasaHeader
@@ -162,12 +162,12 @@ const MudarasaView = ({
           sensitivity={sensitivity}
         />
 
-        <AudioErrorModal 
-          audioError={audioError} 
-          setAudioError={setAudioError} 
-          onResume={onResume} 
-          onNext={onNext} 
-        />
+        {/* <AudioErrorModal
+          audioError={audioError}
+          setAudioError={setAudioError}
+          onResume={onResume}
+          onNext={onNext}
+        /> */}
 
         <div style={{ flex: 1, padding: '1rem 0 6rem 0' }}>
           <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '3rem' }}>
