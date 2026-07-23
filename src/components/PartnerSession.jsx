@@ -156,28 +156,28 @@ const PartnerSession = ({
       console.warn('Failed to play hint audio:', e);
       setAudioError(true);
       interruptHint();
-      sttActionsRef.current.resumeRecognition?.();
+      sttActionsRef.current.resumeRecognition?.(sttActive);
     });
 
     // Resume STT after 3 seconds regardless of whether audio is still playing
     hintResumeTimerRef.current = setTimeout(() => {
-      sttActionsRef.current.resumeRecognition?.();
+      sttActionsRef.current.resumeRecognition?.(sttActive);
     }, 3000);
 
     // 5-second fallback in case onended/onerror never fire due to network hang
     hintFallbackTimerRef.current = setTimeout(() => {
       interruptHint();
-      sttActionsRef.current.resumeRecognition?.();
+      sttActionsRef.current.resumeRecognition?.(sttActive);
     }, 5000);
 
     hintAudio.onended = () => {
       interruptHint();
-      sttActionsRef.current.resumeRecognition?.();
+      sttActionsRef.current.resumeRecognition?.(sttActive);
     };
     hintAudio.onerror = () => {
       setAudioError(true);
       interruptHint();
-      sttActionsRef.current.resumeRecognition?.();
+      sttActionsRef.current.resumeRecognition?.(sttActive);
     };
   }, [activeChunkSlice, params.reciter, interruptHint, setAudioError]);
 
