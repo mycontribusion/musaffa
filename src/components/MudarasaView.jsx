@@ -40,6 +40,7 @@ const MudarasaView = ({
   retryStartIndex = 0,
   setRetryStartIndex,
   completedResults,
+  isHintActive,
 }) => {
   const [showText, setShowText] = useState(() => {
     try { return JSON.parse(localStorage.getItem('quran_musaffa_show_text') ?? 'true'); } catch { return true; }
@@ -246,7 +247,7 @@ const MudarasaView = ({
           <AnimatePresence mode="wait">
             {mudarasaTurn === 'user' && (
               <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-                {enableErrorDetection && isSttListening ? (
+                {(enableErrorDetection && isSttListening) || isHintActive ? (
                   <>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.6rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>

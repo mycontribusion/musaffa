@@ -39,61 +39,19 @@ export const useStuckDetection = ({
     }
   }, []);
 
-  const resetVerseInPayload = useCallback((payload, hintedVerseIndex, counts) => {
-    if (!payload || !payload.results || !counts || counts.length === 0) return payload;
-    
-    const newResults = [...payload.results];
-    let wordOffset = 0;
-    for (let i = 0; i < hintedVerseIndex; i++) wordOffset += counts[i] || 0;
-    const verseWordCount = counts[hintedVerseIndex] || 0;
-    
-    for (let i = wordOffset; i < wordOffset + verseWordCount && i < newResults.length; i++) {
-      newResults[i] = { ...newResults[i], status: 'pending', spokenWord: null };
-    }
-    
-    let wordIdx = 0;
-    const newVerseStats = [];
-    for (let idx = 0; idx < counts.length; idx++) {
-      const count = counts[idx];
-      if (count === 0) {
-        newVerseStats.push({ index: idx, accuracy: 0, hasPending: false, hasStarted: false });
-        wordIdx += count;
-        continue;
-      }
-      const verseSlice = newResults.slice(wordIdx, wordIdx + count);
-      const verseCorrect = verseSlice.filter(r => r.status === 'correct').length;
-      const verseAccuracy = Math.round((verseCorrect / count) * 100);
-      const hasPending = verseSlice.some(r => r.status === 'pending');
-      const hasStarted = verseSlice.some(r => r.status !== 'pending');
-      
-      newVerseStats.push({ index: idx, accuracy: verseAccuracy, hasPending, hasStarted });
-      wordIdx += count;
-    }
-    
-    const correct = newResults.filter(r => r.status === 'correct').length;
-    const total = newResults.length;
-    const accuracy = total > 0 ? Math.round((correct / total) * 100) : 100;
-    
-    return { ...payload, results: newResults, verseStats: newVerseStats, accuracy };
-  }, []);
 
 
-  const triggerHint = useCallback((verseIndex, transcriptRef, setLiveResults) => {
+
+  const triggerHint = useCallback((verseIndex) => {
     if (!onStuckRef.current || isHintPlayingRef.current || hintedVerseIndexRef.current === verseIndex) return;
 
     clearStuckTimer();
     isHintPlayingRef.current = true;
     hintPassedRef.current = false;
-
-    const resetPayload = resetVerseInPayload(latestPayloadRef.current, verseIndex, ayahWordCounts);
-    setLiveResults(resetPayload);
-
     hintedVerseIndexRef.current = verseIndex;
-    hintTranscriptSnapshotRef.current = transcriptRef.current;
-    hintPayloadSnapshotRef.current = latestPayloadRef.current;
 
     onStuckRef.current(verseIndex);
-  }, [clearStuckTimer, ayahWordCounts, resetVerseInPayload]);
+  }, [clearStuckTimer]);
 
   const notifyHintEnded = useCallback(() => {
     isHintPlayingRef.current = false;
@@ -143,7 +101,6 @@ export const useStuckDetection = ({
     hintTranscriptSnapshotRef,
     hintPayloadSnapshotRef,
     hintPassedRef,
-    isHintPlayingRef,
-    resetVerseInPayload
+    isHintPlayingRef
   };
 };

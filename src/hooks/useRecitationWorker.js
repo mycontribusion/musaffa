@@ -34,26 +34,10 @@ export const useRecitationWorker = ({
         let processedPayload = payload;
         if (hintedVerseIndexRef.current !== null && payload && payload.results) {
           const verseIdx = hintedVerseIndexRef.current;
-          if (hintPayloadSnapshotRef.current) {
-            let passedWordCount = 0;
-            const counts = ayahWordCounts || [];
-            for (let i = 0; i < verseIdx; i++) passedWordCount += counts[i] || 0;
-            for (let i = 0; i < passedWordCount && i < payload.results.length && i < hintPayloadSnapshotRef.current.results.length; i++) {
-              payload.results[i] = hintPayloadSnapshotRef.current.results[i];
-            }
-            if (payload.verseStats && hintPayloadSnapshotRef.current.verseStats) {
-              for (let i = 0; i < verseIdx && i < payload.verseStats.length && i < hintPayloadSnapshotRef.current.verseStats.length; i++) {
-                payload.verseStats[i] = hintPayloadSnapshotRef.current.verseStats[i];
-              }
-            }
-            const correct = payload.results.filter(r => r.status === 'correct').length;
-            payload.accuracy = payload.results.length > 0 ? Math.round((correct / payload.results.length) * 100) : 100;
-          }
           const rawStat = payload.verseStats?.[verseIdx];
           if (!hintPassedRef.current && rawStat && !rawStat.hasPending && rawStat.accuracy >= threshold) {
             hintPassedRef.current = true;
           }
-          processedPayload = payload;
         }
 
         setLiveResults(processedPayload);
@@ -94,16 +78,6 @@ export const useRecitationWorker = ({
     liveDebounceRef.current = setTimeout(() => {
       const id = ++pendingIdRef.current;
       let spokenForWorker = spoken;
-      if (hintedVerseIndexRef.current !== null && hintTranscriptSnapshotRef.current !== undefined) {
-        const hintVerseIdx = hintedVerseIndexRef.current;
-        const snapshot = hintTranscriptSnapshotRef.current;
-        const newWords = spoken.length > snapshot.length ? spoken.slice(snapshot.length).trim() : '';
-        const expWords = expectedText.trim().split(/\s+/).filter(Boolean);
-        let passedWordCount = 0;
-        for (let i = 0; i < hintVerseIdx; i++) passedWordCount += (ayahWordCounts || [])[i] || 0;
-        const passedExpected = expWords.slice(0, passedWordCount).join(' ');
-        spokenForWorker = passedExpected + (newWords ? ' ' + newWords : '');
-      }
       workerRef.current.postMessage({
         type: 'COMPARE',
         expected: expectedText,

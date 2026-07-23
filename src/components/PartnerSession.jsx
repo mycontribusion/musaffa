@@ -67,6 +67,7 @@ const PartnerSession = ({
 
   const [retryStartIndex, setRetryStartIndex] = useState(0);
   const [completedResults, setCompletedResults] = useState(null);
+  const [isHintActive, setIsHintActive] = useState(false);
 
   // Reset retryStartIndex and completedResults on chunk index change
   useEffect(() => {
@@ -109,6 +110,7 @@ const PartnerSession = ({
     // Release the hook's authoritative in-flight lock so the trigger paths and
     // the audio element stay in agreement (prevents overlapping hint playback).
     sttActionsRef.current.notifyHintEnded?.();
+    setIsHintActive(false);
   }, []);
 
   const handleStuck = useCallback(async (stuckIndex) => {
@@ -128,6 +130,7 @@ const PartnerSession = ({
     sttActionsRef.current.pauseRecognition?.();
 
     let audioSrc = url;
+    setIsHintActive(true);
     try {
       if ('caches' in window) {
         const cache = await caches.open('quran-audio-v1');
@@ -348,6 +351,7 @@ const PartnerSession = ({
       retryStartIndex={retryStartIndex}
       setRetryStartIndex={setRetryStartIndex}
       completedResults={completedResults}
+      isHintActive={isHintActive}
     />
   );
 
