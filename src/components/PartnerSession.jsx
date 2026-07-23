@@ -10,11 +10,6 @@ import { getAudioUrl, buildExpectedText, buildAyahWordCounts, getCachedAudioBlob
 const DEBUG = true;
 const log = (...args) => { if (DEBUG) console.log('[PartnerSession]', ...args); };
 
-// Diagnostic: log turn changes
-useEffect(() => {
-  log('TURN CHANGED:', turn);
-}, [turn]);
-
 const PartnerSession = ({
   subView,
   surahs,
@@ -55,6 +50,11 @@ const PartnerSession = ({
   presetEditingIndex,
   onSavePreset,
 }) => {
+  // Diagnostic: log turn changes
+  useEffect(() => {
+    log('TURN CHANGED:', turn);
+  }, [turn]);
+
   // Auto-scroll: fire whenever the active ayah changes (only set during app playback)
   useEffect(() => {
     if (!currentAyahNumber) return;
