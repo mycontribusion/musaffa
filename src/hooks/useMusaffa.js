@@ -112,38 +112,60 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
       const url = getAudioUrl(ayah.number, reciter, ayah.surahNumber, ayah.numberInSurah);
       log('playAyahAudioAsync', { ayahNumber: ayah.number, ayahSurah: ayah.surahNumber, ayahInSurah: ayah.numberInSurah, url, nextAudioSrc: nextAudio.src, usePreload: nextAudio.src === url });
 
+      // Clear any stale event handlers on both audio elements before proceeding
+      if (audioRef.current) {
+        audioRef.current.onended = null;
+        audioRef.current.onerror = null;
+      }
+      if (nextAudioRef.current) {
+        nextAudioRef.current.onended = null;
+        nextAudioRef.current.onerror = null;
+      }
+
       // Use preloaded audio ONLY if it perfectly matches the requested URL (including reciter)
       if (nextAudio.src === url) {
         const temp = audioRef.current;
         audioRef.current = nextAudioRef.current;
         nextAudioRef.current = temp;
-        audioRef.current.onended = () => {
-          audioRef.current.onended = null;
-          audioRef.current.onerror = null;
+        
+        // Ensure the swapped-in audio is in a clean state before playing
+        const playAudio = audioRef.current;
+        playAudio.pause();
+        playAudio.currentTime = 0;
+        
+        playAudio.onended = () => {
+          playAudio.onended = null;
+          playAudio.onerror = null;
           log('playAyahAudioAsync END (preload)', { ayahNumber: ayah.number });
           resolve();
         };
-        audioRef.current.onerror = () => {
-          audioRef.current.onended = null;
-          audioRef.current.onerror = null;
+        playAudio.onerror = () => {
+          playAudio.onended = null;
+          playAudio.onerror = null;
           log('playAyahAudioAsync ERROR (preload)', { ayahNumber: ayah.number });
           reject(new Error('Audio playback failed'));
         };
-        audioRef.current.play().catch(() => reject(new Error('Audio playback failed')));
+        playAudio.play().catch(() => reject(new Error('Audio playback failed')));
       } else {
-        audio.onended = () => {
-          audio.onended = null;
-          audio.onerror = null;
+        const playAudio = audio;
+        playAudio.src = url;
+        playAudio.load();
+        playAudio.pause();
+        playAudio.currentTime = 0;
+        
+        playAudio.onended = () => {
+          playAudio.onended = null;
+          playAudio.onerror = null;
           log('playAyahAudioAsync END (direct)', { ayahNumber: ayah.number });
           resolve();
         };
-        audio.onerror = () => {
-          audio.onended = null;
-          audio.onerror = null;
+        playAudio.onerror = () => {
+          playAudio.onended = null;
+          playAudio.onerror = null;
           log('playAyahAudioAsync ERROR (direct)', { ayahNumber: ayah.number });
           reject(new Error('Audio playback failed'));
         };
-        audio.play().catch(() => reject(new Error('Audio playback failed')));
+        playAudio.play().catch(() => reject(new Error('Audio playback failed')));
       }
     });
   };
@@ -215,6 +237,8 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
         }
       }
 
+      // Explicitly await full playback completion of the current ayah
+      // before advancing the loop index to the next verse.
       try {
         await playAyahAudioAsync(ayah);
       } catch (err) {
