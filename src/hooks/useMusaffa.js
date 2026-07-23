@@ -7,10 +7,7 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
   const [currentAyahNumber, setCurrentAyahNumber] = useState(null);
   const [mudarasaTurn, setMudarasaTurn] = useState('app');
   const [isPaused, setIsPaused] = useState(false);
-  const [audioError, setAudioError] = useState(null); // 'retrying' | 'failed' | null
-  const [retryCount, setRetryCount] = useState(0);
-
-  const MAX_RETRIES = 3;
+  const [audioError, setAudioError] = useState(false);
 
   const audioRef = useRef(null);
   const nextAudioRef = useRef(null);
@@ -105,11 +102,6 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     return finalChunks;
   };
 
-  const handleAudioPlaySuccess = () => {
-    setAudioError(null);
-    setRetryCount(0);
-  };
-
   const playAyahAudioAsync = (ayah) => {
     return new Promise((resolve, reject) => {
       const audio = getAudio(audioRef);
@@ -123,41 +115,14 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
         nextAudioRef.current = temp;
         audioRef.current.onended = resolve;
         audioRef.current.onerror = () => reject(new Error('Audio playback failed'));
-        audioRef.current.onplay = handleAudioPlaySuccess;
         audioRef.current.play().catch(() => reject(new Error('Audio playback failed')));
       } else {
         audio.src = url;
         audio.onended = resolve;
         audio.onerror = () => reject(new Error('Audio playback failed'));
-        audio.onplay = handleAudioPlaySuccess;
         audio.play().catch(() => reject(new Error('Audio playback failed')));
       }
     });
-  };
-
-  const playAyahWithRetry = async (ayah) => {
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        await playAyahAudioAsync(ayah);
-        return true; // Success
-      } catch (err) {
-        console.warn('Audio playback failed:', err);
-        if (attempt < MAX_RETRIES) {
-          setAudioError('retrying');
-          setRetryCount(attempt + 1);
-          // Exponential backoff: 1s, 2s, 3s
-          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
-        } else {
-          setAudioError('failed');
-          setRetryCount(0);
-          // Wait a moment so the user sees the failed state, then clear
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          setAudioError(null);
-          return false; // Failed after all retries
-        }
-      }
-    }
-    return false;
   };
 
   const playCurrentIndex = async (currentChunks = chunks, startFromAyahIndex = 0) => {
@@ -211,10 +176,21 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
         na.load();
       }
 
-      const success = await playAyahWithRetry(ayah);
-      if (!success) {
-        // Auto-skip to next ayah after max retries
-        continue;
+      try {
+        await playAyahAudioAsync(ayah);
+      } catch (err) {
+        // Pause session and expose error state
+        setAudioError(true);
+        pausedAyahIndexRef.current = i;
+        setCurrentAyahNumber(null);
+        isPlayingRef.current = false;
+        
+        // Manual pause logic to prevent stale state issues
+        if (audioRef.current) audioRef.current.pause();
+        if (nextAudioRef.current) nextAudioRef.current.pause();
+        releaseWakeLock();
+        setIsPaused(true);
+        return;
       }
     }
 
@@ -307,7 +283,7 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
 
   // Resume musaffa - re-acquire wake lock and continue playback from where it was paused
   const resumeMusaffa = useCallback(() => {
-    setAudioError(null);
+    setAudioError(false);
     acquireWakeLock();
     setIsPaused(false);
     // Resume playback if we were in the middle of app playback
@@ -326,20 +302,17 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
       audioRef.current.src = '';
       audioRef.current.onended = null;
       audioRef.current.onerror = null;
-      audioRef.current.onplay = null;
     }
     if (nextAudioRef.current) {
       nextAudioRef.current.pause();
       nextAudioRef.current.src = '';
       nextAudioRef.current.onended = null;
       nextAudioRef.current.onerror = null;
-      nextAudioRef.current.onplay = null;
     }
     releaseWakeLock();
     isPlayingRef.current = false;
     setIsPaused(false);
-    setAudioError(null);
-    setRetryCount(0);
+    setAudioError(false);
   }, []);
 
   // Cleanup on unmount — stop audio and release screen lock
@@ -352,7 +325,7 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
   }, []);
 
   return {
-    chunks, currentChunkIndex, currentAyahNumber, mudarasaTurn, isPaused, audioError, setAudioError, retryCount,
+    chunks, currentChunkIndex, currentAyahNumber, mudarasaTurn, isPaused, audioError, setAudioError,
     startMusaffa, handleNextTurnManual, pauseMusaffa, resumeMusaffa, stopMusaffa
   };
 };
