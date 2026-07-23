@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { ChevronLeft, BookOpen, BookX, BrainCircuit } from 'lucide-react';
 
 export const MudarasaHeader = ({
@@ -13,6 +14,19 @@ export const MudarasaHeader = ({
   currentVolume,
   sensitivity
 }) => {
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   return (
     <div style={{ position: 'sticky', top: '70px', zIndex: 90, padding: '1rem 0' }}>
       <div className="glass-card" style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--glass-bg)', backdropFilter: 'blur(20px)' }}>
@@ -54,13 +68,13 @@ export const MudarasaHeader = ({
             <div style={{
               display: 'flex', alignItems: 'center', gap: '0.3rem',
               padding: '0.25rem 0.5rem', borderRadius: '999px',
-              background: isSttListening ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.05)',
-              border: `1px solid ${isSttListening ? 'rgba(16,185,129,0.4)' : 'var(--glass-border)'}`,
+              background: !isOnline ? 'rgba(239,68,68,0.15)' : (isSttListening ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.05)'),
+              border: `1px solid ${!isOnline ? 'rgba(239,68,68,0.4)' : (isSttListening ? 'rgba(16,185,129,0.4)' : 'var(--glass-border)')}`,
               transition: 'all 0.3s',
             }}>
-              <BrainCircuit size={10} color={isSttListening ? 'var(--accent-emerald)' : 'var(--text-muted)'} />
-              <span style={{ fontSize: '0.5rem', fontWeight: '800', color: isSttListening ? 'var(--accent-emerald)' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                {isSttListening ? 'Checking' : 'Ready'}
+              <BrainCircuit size={10} color={!isOnline ? 'var(--accent-red)' : (isSttListening ? 'var(--accent-emerald)' : 'var(--text-muted)')} />
+              <span style={{ fontSize: '0.5rem', fontWeight: '800', color: !isOnline ? 'var(--accent-red)' : (isSttListening ? 'var(--accent-emerald)' : 'var(--text-muted)'), textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                {!isOnline ? 'Offline' : (isSttListening ? 'Checking' : 'Ready')}
               </span>
             </div>
           )}

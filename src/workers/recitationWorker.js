@@ -158,8 +158,22 @@ const compareRecitation = (expectedText, spokenText, ayahWordCounts = []) => {
     }
   }
 
+  // Prefix Alignment: find the best ending position in the expected text
+  let bestI = expLen;
+  let minCost = dp[expLen][spkLen];
+  
+  for (let i = 0; i <= expLen; i++) {
+    // Add a tiny bonus for longer alignments to prefer consuming expected words
+    // if the actual edit cost (substitutions/insertions) is equal.
+    const cost = dp[i][spkLen] - (i * 0.0001); 
+    if (cost < minCost) {
+      minCost = cost;
+      bestI = i;
+    }
+  }
+
   const alignment = [];
-  let i = expLen;
+  let i = bestI;
   let j = spkLen;
   
   while (i > 0 || j > 0) {
