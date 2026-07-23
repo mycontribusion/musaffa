@@ -4,7 +4,7 @@ import RecitationStatusOverlay from './RedBlinkOverlay';
 import { Mic, CheckCircle2 } from 'lucide-react';
 import { hasBismillahHeader, BISMILLAH_SIMPLE, removeTashkeel, normalizeArabic, expandMuqattaat } from '../utils/quranUtils';
 
-// New Extracted Components & Hooks
+// New Extracted Components & Hooks, Alhamdulillah
 import { MudarasaHeader } from './mudarasa/MudarasaHeader';
 // import { AudioErrorModal } from './mudarasa/AudioErrorModal';
 import { RetryPrompt } from './mudarasa/RetryPrompt';
