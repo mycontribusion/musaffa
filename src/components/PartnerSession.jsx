@@ -132,7 +132,6 @@ const PartnerSession = ({
     hintAudioRef.current = hintAudio;
     hintAudio.play().catch(e => {
       console.warn('Failed to play hint audio:', e);
-      setAudioError(true);
       interruptHint();
       sttActionsRef.current.resumeRecognition?.();
     });
@@ -153,11 +152,10 @@ const PartnerSession = ({
       sttActionsRef.current.resumeRecognition?.();
     };
     hintAudio.onerror = () => {
-      setAudioError(true);
       interruptHint();
       sttActionsRef.current.resumeRecognition?.();
     };
-  }, [activeChunkSlice, params.reciter, interruptHint, setAudioError]);
+  }, [activeChunkSlice, params.reciter, interruptHint]);
 
   // STT error detection — active during user's recitation turn only
   // onAutoFinish fires automatically after silence, triggering handleFinishedTurn

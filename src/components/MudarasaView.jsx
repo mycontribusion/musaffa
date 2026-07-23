@@ -11,6 +11,7 @@ import { RetryPrompt } from './mudarasa/RetryPrompt';
 import { AyahCard } from './mudarasa/AyahCard';
 import { useActiveVerseIndex } from './mudarasa/hooks/useActiveVerseIndex';
 import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
+import { MicStatusIndicator } from './MicStatusIndicator';
 
 const MudarasaView = ({
   chunks,
@@ -26,17 +27,17 @@ const MudarasaView = ({
   isPaused,
   onPause,
   onResume,
-  // audioError,
-  // setAudioError,
+  audioError,
+  setAudioError,
   enableErrorDetection,
   isSttListening,
-  liveResults,        
+  liveResults,
   transcript,
   onFinishedTurn,
-  onRetryTurn,        
+  onRetryTurn,
   onClearResults,
-  quranSimple,        
-  targetAccuracy,     
+  quranSimple,
+  targetAccuracy,
   retryStartIndex = 0,
   setRetryStartIndex,
   completedResults,
@@ -137,15 +138,14 @@ const MudarasaView = ({
   return (
     <>
       <RecitationStatusOverlay mode={overlayMode} />
-      {/* {showInternetBanner && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, padding: '0.5rem 1rem',
-          background: 'rgba(255,165,0,0.2)', borderBottom: '1px solid rgba(255,165,0,0.5)',
-          color: '#fff', textAlign: 'center', zIndex: 300, fontWeight: '600'
-        }}>
-          Smart Error Detection requires internet (Web Speech API)
+
+      {/* Subtle Toast Notification for Audio Errors */}
+      {audioError && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 text-xs font-medium text-amber-900 bg-amber-50 border border-amber-200 rounded-full shadow-sm animate-fade-in">
+          <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+          Audio failed to load. Retrying playback...
         </div>
-      )} */}
+      )}
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', minHeight: '80vh' }}>
         <MudarasaHeader
@@ -161,13 +161,6 @@ const MudarasaView = ({
           currentVolume={currentVolume}
           sensitivity={sensitivity}
         />
-
-        {/* <AudioErrorModal
-          audioError={audioError}
-          setAudioError={setAudioError}
-          onResume={onResume}
-          onNext={onNext}
-        /> */}
 
         <div style={{ flex: 1, padding: '1rem 0 6rem 0' }}>
           <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '3rem' }}>
@@ -308,10 +301,12 @@ const MudarasaView = ({
                   </>
                 )}
                 {isListening && !enableErrorDetection && (
-                  <p style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: '600', letterSpacing: '0.05em', margin: 0 }}>
-                    <Mic size={10} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-                    LISTENING: TURN SWITCHES AFTER SILENCE
-                  </p>
+                  <MicStatusIndicator>
+                    <p style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: '600', letterSpacing: '0.05em', margin: 0 }}>
+                      <Mic size={10} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                      LISTENING: TURN SWITCHES AFTER SILENCE
+                    </p>
+                  </MicStatusIndicator>
                 )}
               </motion.div>
             )}
