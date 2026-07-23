@@ -1,7 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-
-const DEBUG = true;
-const log = (...args) => { if (DEBUG) console.log('[RecitationWorker]', ...args); };
+import { computeActiveVerseIndex } from '../utils/verseProgress';
 
 export const useRecitationWorker = ({
   expectedText,
@@ -13,8 +11,7 @@ export const useRecitationWorker = ({
   hintPassedRef,
   triggerHint,
   checkAutoFinish,
-  latestPayloadRef,
-  turn = 'user',
+  latestPayloadRef
 }) => {
   const [liveResults, setLiveResults] = useState(null);
   const [results, setResults] = useState(null);
@@ -22,9 +19,6 @@ export const useRecitationWorker = ({
   const workerRef = useRef(null);
   const pendingIdRef = useRef(0);
   const workerCompletedIdRef = useRef(0);
-  const turnRef = useRef(turn);
-
-  useEffect(() => { turnRef.current = turn; }, [turn]);
 
   useEffect(() => {
     const worker = new Worker(
@@ -33,14 +27,7 @@ export const useRecitationWorker = ({
     );
     worker.onmessage = (event) => {
       const { type, payload, id } = event.data;
-      log('Worker onmessage', { type, id, pendingId: pendingIdRef.current, turn: turnRef.current });
       if (type === 'RESULT' && id === pendingIdRef.current) {
-        // Guard: ignore worker results if it's not the user's turn
-        if (turnRef.current !== 'user') {
-          log('Worker result ignored - not user turn');
-          return;
-        }
-
         workerCompletedIdRef.current = id;
         latestPayloadRef.current = payload;
 
@@ -65,17 +52,35 @@ export const useRecitationWorker = ({
           const rawStat = payload.verseStats?.[verseIdx];
           if (!hintPassedRef.current && rawStat && !rawStat.hasPending && rawStat.accuracy >= threshold) {
             hintPassedRef.current = true;
-            log('Hint passed for verse:', verseIdx);
           }
           processedPayload = payload;
         }
 
         setLiveResults(processedPayload);
 
-        // NOTE: Plow-ahead hint dispatch has been removed.
-        // Audio hints now fire exclusively from the verse-boundary gate
-        // in useRecitationCheck.js when a verse is fully completed
-        // and its accuracy is strictly below the threshold.
+        const activeVerseIndex = computeActiveVerseIndex(processedPayload?.verseStats, threshold);
+        const verseStats = processedPayload?.verseStats || [];
+        
+        if (activeVerseIndex < verseStats.length) {
+          const activeVerseStat = verseStats[activeVerseIndex];
+          if (activeVerseStat?.hasPending) {
+            let plowedAhead = false;
+            for (let i = activeVerseIndex + 1; i < verseStats.length; i++) {
+              const stat = verseStats[i];
+              const hasStarted = stat.hasStarted !== undefined ? stat.hasStarted : !stat.hasPending;
+              if (hasStarted) { plowedAhead = true; break; }
+            }
+            if (plowedAhead) { 
+                triggerHint(activeVerseIndex, null, setLiveResults); 
+            }
+          } else if (
+            activeVerseStat?.hasStarted &&
+            !activeVerseStat?.hasPending &&
+            activeVerseStat?.accuracy < threshold
+          ) {
+            triggerHint(activeVerseIndex, null, setLiveResults);
+          }
+        }
 
         checkAutoFinish(processedPayload);
       } else if (type === 'RESULT_FINAL' && id === pendingIdRef.current) {
@@ -91,10 +96,9 @@ export const useRecitationWorker = ({
     };
   // Refs (hintedVerseIndexRef, hintPassedRef, etc.) are intentionally excluded
   // from deps — they are stable mutable objects, not reactive values.
-  }, [ayahWordCounts, checkAutoFinish, threshold, triggerHint, turn]);
+  }, [ayahWordCounts, checkAutoFinish, threshold, triggerHint]);
 
   const dispatchLiveCompare = useCallback((spoken) => {
-    log('dispatchLiveCompare', { spokenLength: spoken?.length, expectedTextLength: expectedText?.length, turn });
     if (!workerRef.current || !expectedText) return;
     if (liveDebounceRef.current) clearTimeout(liveDebounceRef.current);
     liveDebounceRef.current = setTimeout(() => {
@@ -117,12 +121,11 @@ export const useRecitationWorker = ({
         id,
         ayahWordCounts,
       });
-    }, 100); // Reduced from 350ms to 100ms for more immediate verse-boundary feedback
+    }, 350);
   // hintedVerseIndexRef and hintTranscriptSnapshotRef are refs — excluded from deps intentionally.
   }, [ayahWordCounts, expectedText]);
 
   const dispatchFinalCompare = useCallback((spoken) => {
-    log('dispatchFinalCompare', { spokenLength: spoken?.length, expectedTextLength: expectedText?.length, turn });
     if (liveDebounceRef.current) {
       clearTimeout(liveDebounceRef.current);
       liveDebounceRef.current = null;

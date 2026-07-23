@@ -1,15 +1,11 @@
 import { useRef, useCallback, useEffect } from 'react';
 
-const DEBUG = true;
-const log = (...args) => { if (DEBUG) console.log('[StuckDetection]', ...args); };
-
 export const useStuckDetection = ({
   onStuck,
   interruptHint,
   onAutoFinish,
   threshold,
   ayahWordCounts,
-  turn = 'user',
 }) => {
   const stuckTimerRef = useRef(null);
   const silenceTimerRef = useRef(null);
@@ -18,7 +14,6 @@ export const useStuckDetection = ({
   const onStuckRef = useRef(onStuck);
   const interruptHintRef = useRef(interruptHint);
   const onAutoFinishRef = useRef(onAutoFinish);
-  const turnRef = useRef(turn);
   
   const hintedVerseIndexRef = useRef(null);
   const hintTranscriptSnapshotRef = useRef('');
@@ -29,7 +24,6 @@ export const useStuckDetection = ({
   useEffect(() => { onStuckRef.current = onStuck; }, [onStuck]);
   useEffect(() => { interruptHintRef.current = interruptHint; }, [interruptHint]);
   useEffect(() => { onAutoFinishRef.current = onAutoFinish; }, [onAutoFinish]);
-  useEffect(() => { turnRef.current = turn; }, [turn]);
 
   const clearStuckTimer = useCallback(() => {
     if (stuckTimerRef.current) {
@@ -83,38 +77,66 @@ export const useStuckDetection = ({
     return { ...payload, results: newResults, verseStats: newVerseStats, accuracy };
   }, []);
 
-  // ── DISABLED: restartStuckTimer ─────────────────────────────────────────────
-  // Pauses, breaths, or silence during recitation must NEVER trigger an audio hint.
-  // Audio hints now fire exclusively from the verse-boundary gate in useRecitationCheck.
-  const restartStuckTimer = useCallback(() => {
+  const restartStuckTimer = useCallback((transcriptRef, setLiveResults) => {
     clearStuckTimer();
-    // No timer is set — silence during recitation is ignored.
-  }, [clearStuckTimer]);
+
+    // ── Adaptive silence threshold ─────────────────────────────────────────
+    // Short verses (e.g. Al-Fatiha 1) need only 4.5s; dense multi-verse
+    // chunks (e.g. Al-Baqarah page) should allow up to 9s before firing.
+    const totalWords = ayahWordCounts.reduce((sum, n) => sum + n, 0);
+    const STUCK_MS = Math.min(9000, Math.max(4500, totalWords * 500));
+
+    stuckTimerRef.current = setTimeout(() => {
+      const payload = latestPayloadRef.current;
+      if (!payload || !onStuckRef.current) return;
+
+      // ── Frontier-based stuck verse detection ───────────────────────────
+      // Use the DP's lastMatchedExpIdx (word-level) rather than inferring
+      // the stuck verse from per-verse booleans. This is immune to
+      // shared-word ambiguity (e.g. "الله", "كلا", mutashabihat) where the
+      // DP can credit verse N+1's slots with words spoken in verse N.
+      const frontier = payload.lastMatchedExpIdx ?? -1;
+      const totalExpected = payload.results?.length ?? 0;
+
+      // Nothing pending after the frontier → user has finished
+      if (totalExpected === 0 || frontier >= totalExpected - 1) return;
+
+      // Find which verse contains the first unmatched word (frontier + 1)
+      const firstPendingWordIdx = frontier + 1;
+      let stuckVerseIndex = -1;
+      let wordOffset = 0;
+      for (let i = 0; i < ayahWordCounts.length; i++) {
+        wordOffset += ayahWordCounts[i];
+        if (firstPendingWordIdx < wordOffset) {
+          stuckVerseIndex = i;
+          break;
+        }
+      }
+      if (stuckVerseIndex === -1) return;
+
+      // Only fire if the stuck verse is actually below threshold
+      const verseStat = latestVerseStatsRef.current?.[stuckVerseIndex];
+      if (!verseStat || verseStat.accuracy >= threshold) return;
+
+      // Standard guards: no duplicate hints for same verse, none already playing
+      if (isHintPlayingRef.current) return;
+      if (hintedVerseIndexRef.current === stuckVerseIndex) return;
+
+      isHintPlayingRef.current = true;
+      hintPassedRef.current = false;
+
+      const resetPayload = resetVerseInPayload(payload, stuckVerseIndex, ayahWordCounts);
+      setLiveResults(resetPayload);
+
+      hintedVerseIndexRef.current = stuckVerseIndex;
+      hintTranscriptSnapshotRef.current = transcriptRef.current;
+      onStuckRef.current(stuckVerseIndex);
+    }, STUCK_MS);
+  }, [clearStuckTimer, threshold, ayahWordCounts, resetVerseInPayload]);
 
   const triggerHint = useCallback((verseIndex, transcriptRef, setLiveResults) => {
-    // Guard: only trigger hints during the user's turn
-    if (turnRef.current !== 'user') {
-      log('triggerHint called but not user turn');
-      return;
-    }
+    if (!onStuckRef.current || isHintPlayingRef.current || hintedVerseIndexRef.current === verseIndex) return;
 
-    if (!onStuckRef.current) {
-      log('triggerHint called but no onStuck');
-      return;
-    }
-    // Allow re-triggering for the SAME verse only if the previous hint ended naturally.
-    // If a hint is already playing for a DIFFERENT verse, interrupt it and play the new hint.
-    if (isHintPlayingRef.current && hintedVerseIndexRef.current === verseIndex) {
-      log('triggerHint called but already hinted this verse:', verseIndex);
-      return;
-    }
-    if (isHintPlayingRef.current && hintedVerseIndexRef.current !== verseIndex) {
-      log('triggerHint: interrupting existing hint for verse', hintedVerseIndexRef.current, 'to play hint for verse', verseIndex);
-      // Interrupt the existing hint (stops audio, clears timers, releases hook lock)
-      interruptHintRef.current?.();
-    }
-
-    log('triggerHint firing for verse:', verseIndex, 'transcriptRef is null:', transcriptRef === null);
     clearStuckTimer();
     isHintPlayingRef.current = true;
     hintPassedRef.current = false;
@@ -123,19 +145,17 @@ export const useStuckDetection = ({
     setLiveResults(resetPayload);
 
     hintedVerseIndexRef.current = verseIndex;
-    hintTranscriptSnapshotRef.current = transcriptRef?.current ?? '';
+    hintTranscriptSnapshotRef.current = transcriptRef.current;
     hintPayloadSnapshotRef.current = latestPayloadRef.current;
 
     onStuckRef.current(verseIndex);
-  }, [clearStuckTimer, ayahWordCounts, resetVerseInPayload, turn]);
+  }, [clearStuckTimer, ayahWordCounts, resetVerseInPayload]);
 
   const notifyHintEnded = useCallback(() => {
-    log('notifyHintEnded called, hintedVerseIndex:', hintedVerseIndexRef.current);
     isHintPlayingRef.current = false;
   }, []);
-
+  
   const clearStuckState = useCallback(() => {
-    log('clearStuckState called');
     clearStuckTimer();
     clearSilenceTimer();
     hintedVerseIndexRef.current = null;
@@ -150,12 +170,11 @@ export const useStuckDetection = ({
       const { verseStats } = processedPayload;
       latestVerseStatsRef.current = verseStats;
       
-      const allPassed = verseStats && verseStats.length > 0 && verseStats.every(stat =>
+      const allPassed = verseStats && verseStats.length > 0 && verseStats.every(stat => 
         stat.accuracy >= threshold && !stat.hasPending
       );
 
       if (allPassed) {
-        log('checkAutoFinish: all verses passed');
         clearStuckTimer();
         clearSilenceTimer();
         silenceTimerRef.current = setTimeout(() => {

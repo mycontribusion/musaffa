@@ -1,9 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getAudioUrl } from '../utils/quranUtils';
 
-const DEBUG = true;
-const log = (...args) => { if (DEBUG) console.log('[useMusaffa]', ...args); };
-
 export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 'ar.alafasy') => {
   const [chunks, setChunks] = useState([]);
   const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
@@ -110,77 +107,26 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
       const audio = getAudio(audioRef);
       const nextAudio = getAudio(nextAudioRef);
       const url = getAudioUrl(ayah.number, reciter, ayah.surahNumber, ayah.numberInSurah);
-      log('playAyahAudioAsync', { ayahNumber: ayah.number, ayahSurah: ayah.surahNumber, ayahInSurah: ayah.numberInSurah, url, nextAudioSrc: nextAudio.src, usePreload: nextAudio.src === url });
-
-      // Clear any stale event handlers on both audio elements before proceeding
-      if (audioRef.current) {
-        audioRef.current.onended = null;
-        audioRef.current.onerror = null;
-      }
-      if (nextAudioRef.current) {
-        nextAudioRef.current.onended = null;
-        nextAudioRef.current.onerror = null;
-      }
 
       // Use preloaded audio ONLY if it perfectly matches the requested URL (including reciter)
       if (nextAudio.src === url) {
         const temp = audioRef.current;
         audioRef.current = nextAudioRef.current;
         nextAudioRef.current = temp;
-        
-        // Ensure the swapped-in audio is in a clean state before playing
-        const playAudio = audioRef.current;
-        playAudio.pause();
-        playAudio.currentTime = 0;
-        
-        playAudio.onended = () => {
-          playAudio.onended = null;
-          playAudio.onerror = null;
-          log('playAyahAudioAsync END (preload)', { ayahNumber: ayah.number });
-          resolve();
-        };
-        playAudio.onerror = () => {
-          playAudio.onended = null;
-          playAudio.onerror = null;
-          log('playAyahAudioAsync ERROR (preload)', { ayahNumber: ayah.number, url });
-          reject(new Error('Audio playback failed'));
-        };
-        playAudio.play().catch((e) => {
-          log('playAyahAudioAsync play() rejected (preload)', { ayahNumber: ayah.number, url, error: e.name, message: e.message });
-          reject(new Error('Audio playback failed'));
-        });
+        audioRef.current.onended = resolve;
+        audioRef.current.onerror = () => reject(new Error('Audio playback failed'));
+        audioRef.current.play().catch(() => reject(new Error('Audio playback failed')));
       } else {
-        const playAudio = audio;
-        playAudio.src = url;
-        playAudio.load();
-        playAudio.pause();
-        playAudio.currentTime = 0;
-        
-        playAudio.onended = () => {
-          playAudio.onended = null;
-          playAudio.onerror = null;
-          log('playAyahAudioAsync END (direct)', { ayahNumber: ayah.number });
-          resolve();
-        };
-        playAudio.onerror = () => {
-          playAudio.onended = null;
-          playAudio.onerror = null;
-          log('playAyahAudioAsync ERROR (direct)', { ayahNumber: ayah.number, url });
-          reject(new Error('Audio playback failed'));
-        };
-        playAudio.play().catch((e) => {
-          log('playAyahAudioAsync play() rejected (direct)', { ayahNumber: ayah.number, url, error: e.name, message: e.message });
-          reject(new Error('Audio playback failed'));
-        });
+        audio.src = url;
+        audio.onended = resolve;
+        audio.onerror = () => reject(new Error('Audio playback failed'));
+        audio.play().catch(() => reject(new Error('Audio playback failed')));
       }
     });
   };
 
   const playCurrentIndex = async (currentChunks = chunks, startFromAyahIndex = 0) => {
     if (currentChunks.length === 0) return;
-    // Reset active ayah so stale liveResults from the previous user turn
-    // cannot pin activeAyahIndex to the last verse during the app's turn.
-    setCurrentAyahNumber(null);
     isPlayingRef.current = true;
     shouldStopRef.current = false;
     // Keep screen on for the full session (both app-reading and user-reciting)
@@ -190,18 +136,15 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     let idx = currentIndexRef.current % currentChunks.length;
     setMudarasaTurn('app');
     const chunk = currentChunks[idx];
-    log('playCurrentIndex START', { chunkIndex: idx, chunkLength: chunk.length, startFrom: startFromAyahIndex, chunkAyahs: chunk.map(a => a.number) });
 
     // Start from the specified ayah index (for resume)
     for (let i = startFromAyahIndex; i < chunk.length; i++) {
-      log('playCurrentIndex LOOP', { i, total: chunk.length, ayahNumber: chunk[i].number, ayahSurah: chunk[i].surahNumber, ayahInSurah: chunk[i].numberInSurah });
       // Check if we should stop
       if (shouldStopRef.current) {
         // Save the current ayah index for resume
         pausedAyahIndexRef.current = i;
         setCurrentAyahNumber(null);
         isPlayingRef.current = false;
-        log('playCurrentIndex STOPPED at ayah index', i);
         return;
       }
       
@@ -210,14 +153,9 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
       // Play Bismillah for the start of any Surah (except Fatiha and Tawbah)
       if (ayah.numberInSurah === 1 && ayah.surahNumber !== 1 && ayah.surahNumber !== 9) {
         // Preload the actual first verse while Bismillah is playing
-        try {
-          const na = getAudio(nextAudioRef);
-          na.src = getAudioUrl(ayah.number, reciter, ayah.surahNumber, ayah.numberInSurah);
-          na.load();
-        } catch (e) {
-          // Silent preload failure — background network glitches should not
-          // interrupt the active recitation UI.
-        }
+        const na = getAudio(nextAudioRef);
+        na.src = getAudioUrl(ayah.number, reciter, ayah.surahNumber, ayah.numberInSurah);
+        na.load();
         
         try {
           setCurrentAyahNumber('bismillah-' + ayah.number);
@@ -230,21 +168,14 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
 
       setCurrentAyahNumber(ayah.number);
 
-      // Preload next ayah (silent — network glitches during background preload
-      // must not break the active recitation UI)
+      // Preload next ayah
       const nextAyah = chunk[i + 1];
       if (nextAyah) {
-        try {
-          const na = getAudio(nextAudioRef);
-          na.src = getAudioUrl(nextAyah.number, reciter, nextAyah.surahNumber, nextAyah.numberInSurah);
-          na.load();
-        } catch (e) {
-          // Silent preload failure
-        }
+        const na = getAudio(nextAudioRef);
+        na.src = getAudioUrl(nextAyah.number, reciter, nextAyah.surahNumber, nextAyah.numberInSurah);
+        na.load();
       }
 
-      // Explicitly await full playback completion of the current ayah
-      // before advancing the loop index to the next verse.
       try {
         await playAyahAudioAsync(ayah);
       } catch (err) {
@@ -254,29 +185,15 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
         setCurrentAyahNumber(null);
         isPlayingRef.current = false;
         
-        // Reset audio refs to clean state so subsequent recitation attempts
-        // aren't blocked by a broken media state.
-        if (audioRef.current) {
-          audioRef.current.pause();
-          audioRef.current.src = '';
-          audioRef.current.onended = null;
-          audioRef.current.onerror = null;
-          audioRef.current = null;
-        }
-        if (nextAudioRef.current) {
-          nextAudioRef.current.pause();
-          nextAudioRef.current.src = '';
-          nextAudioRef.current.onended = null;
-          nextAudioRef.current.onerror = null;
-          nextAudioRef.current = null;
-        }
+        // Manual pause logic to prevent stale state issues
+        if (audioRef.current) audioRef.current.pause();
+        if (nextAudioRef.current) nextAudioRef.current.pause();
         releaseWakeLock();
         setIsPaused(true);
         return;
       }
     }
 
-    log('playCurrentIndex END - all verses played, advancing to next chunk');
     setCurrentAyahNumber(null);
     isPlayingRef.current = false;
     // Do NOT release wake lock here — keep screen on during user's recitation turn
@@ -287,10 +204,7 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     setMudarasaTurn('user');
   };
 
-  const startMusaffa = async (overrideChunks, startChunkIndex = 0, initialTurn, overrideParams) => {
-    // Clear any stale audio error from a previous session
-    setAudioError(false);
-
+  const startMusaffa = (overrideChunks, startChunkIndex = 0, initialTurn, overrideParams) => {
     // Attempt to unlock audio elements for Safari/Chrome autoplay policy
     try {
       const a1 = getAudio(audioRef);
@@ -299,12 +213,8 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
       const silentWav = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
       if (!a1.src) a1.src = silentWav;
       if (!a2.src) a2.src = silentWav;
-      // Await both plays so the user-gesture token is still valid when
-      // playCurrentIndex() tries to play the actual ayah audio.
-      await Promise.all([
-        a1.play().then(() => a1.pause()).catch(() => {}),
-        a2.play().then(() => a2.pause()).catch(() => {}),
-      ]);
+      a1.play().then(() => a1.pause()).catch(() => {});
+      a2.play().then(() => a2.pause()).catch(() => {});
     } catch (e) {}
 
     // If overrideParams is provided, use it to create chunks; otherwise use overrideChunks or createChunks()
@@ -319,7 +229,6 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     setCurrentChunkIndex(startChunkIndex);
     pausedAyahIndexRef.current = 0; // Reset pause position for new session
     setPartnerSubView('mudarasa');
-    log('startMusaffa', { chunkCount: finalChunks.length, startChunkIndex, initialTurn, whoStarts: musaffaParams.whoStarts });
     // If initialTurn is provided (for resume), use it; otherwise check whoStarts
     if (initialTurn) {
       setMudarasaTurn(initialTurn);
@@ -340,24 +249,19 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     if (chunks.length === 0) return;
     if (window.navigator.vibrate) window.navigator.vibrate([40, 150]);
     
-    // The user just finished their turn on the current chunk.
+    // The user just finished their turn on the current chunk. 
     // Advance to the NEXT chunk before the app plays!
     const nextIdx = (currentIndexRef.current + 1) % chunks.length;
     currentIndexRef.current = nextIdx;
     setCurrentChunkIndex(nextIdx);
-    log('handleNextTurnManual advancing to chunk', nextIdx, 'of', chunks.length);
     
     // ---- NEW: Preload first ayah of the upcoming chunk ----
     const nextChunk = chunks[nextIdx];
     if (nextChunk && nextChunk.length > 0) {
-      try {
-        const firstAyah = nextChunk[0];
-        const preAudio = getAudio(nextAudioRef);
-        preAudio.src = getAudioUrl(firstAyah.number, reciter, firstAyah.surahNumber, firstAyah.numberInSurah);
-        preAudio.load(); // start downloading immediately
-      } catch (e) {
-        // Silent preload failure
-      }
+      const firstAyah = nextChunk[0];
+      const preAudio = getAudio(nextAudioRef);
+      preAudio.src = getAudioUrl(firstAyah.number, reciter, firstAyah.surahNumber, firstAyah.numberInSurah);
+      preAudio.load(); // start downloading immediately
     }
     // -----------------------------------------------------
     
@@ -382,7 +286,6 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     setAudioError(false);
     acquireWakeLock();
     setIsPaused(false);
-    log('resumeMusaffa', { mudarasaTurn, chunkCount: chunks.length, pausedAyahIndex: pausedAyahIndexRef.current });
     // Resume playback if we were in the middle of app playback
     if (mudarasaTurn === 'app' && chunks.length > 0) {
       playCurrentIndex(chunks, pausedAyahIndexRef.current);

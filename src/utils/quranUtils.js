@@ -301,21 +301,3 @@ export const buildAyahWordCounts = (chunk, quranSimple) => {
   });
 };
 
-/**
- * Check the quran-audio-v1 Cache API for a cached audio blob.
- * Returns a blob:// URL if cached, null otherwise.
- */
-export const getCachedAudioBlobUrl = async (url) => {
-  try {
-    const cache = await caches.open('quran-audio-v1');
-    const response = await cache.match(url);
-    if (response && response.ok) {
-      const blob = await response.blob();
-      return URL.createObjectURL(blob);
-    }
-  } catch (e) {
-    console.warn('[quranUtils] Failed to get cached audio blob:', e);
-  }
-  return null;
-};
-
