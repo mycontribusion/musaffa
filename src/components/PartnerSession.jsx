@@ -10,6 +10,11 @@ import { getAudioUrl, buildExpectedText, buildAyahWordCounts, getCachedAudioBlob
 const DEBUG = true;
 const log = (...args) => { if (DEBUG) console.log('[PartnerSession]', ...args); };
 
+// Diagnostic: log turn changes
+useEffect(() => {
+  log('TURN CHANGED:', turn);
+}, [turn]);
+
 const PartnerSession = ({
   subView,
   surahs,
@@ -258,6 +263,7 @@ const PartnerSession = ({
 
   // When feedback card "Continue" is clicked, clear and advance turn
   const handleContinueAfterFeedback = useCallback(() => {
+    log('handleContinueAfterFeedback');
     if (autoAdvanceTimerRef.current) {
       clearTimeout(autoAdvanceTimerRef.current);
       autoAdvanceTimerRef.current = null;
@@ -268,23 +274,21 @@ const PartnerSession = ({
 
   // Called when 100% accuracy is confirmed OR user taps "Tap to finish early"
   const handleFinishedTurn = useCallback(() => {
+    log('handleFinishedTurn', { enableErrorDetection, sttSupported, turn });
     if (enableErrorDetection && sttSupported) {
       if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
       stopAndCheck();
-      // Immediately stop any hint audio and clear worker results to prevent
-      // out-of-turn scoring and audio overlap during the 200ms transition.
       interruptHint();
-      clearResults();
-      // Advance immediately — if triggered by auto-finish, 100% is already confirmed.
-      // If triggered manually, we give a brief moment for final comparison to log.
+      clearResults(); // Synchronously flushes worker results and pending IDs
+      
       autoAdvanceTimerRef.current = setTimeout(() => {
-        setCompletedResults(liveResults);
+        setCompletedResults(null); // Ensure no stale result payload persists
         handleNextTurn();
       }, 200);
     } else {
       handleNextTurn();
     }
-  }, [enableErrorDetection, sttSupported, stopAndCheck, interruptHint, clearResults, handleNextTurn, liveResults]);
+  }, [enableErrorDetection, sttSupported, stopAndCheck, interruptHint, clearResults, handleNextTurn]);
 
   // Keep the ref in sync so the onAutoFinish closure always calls the latest version
   handleFinishedTurnRef.current = handleFinishedTurn;

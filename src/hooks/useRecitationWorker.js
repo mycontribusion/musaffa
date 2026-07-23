@@ -33,6 +33,7 @@ export const useRecitationWorker = ({
     );
     worker.onmessage = (event) => {
       const { type, payload, id } = event.data;
+      log('Worker onmessage', { type, id, pendingId: pendingIdRef.current, turn: turnRef.current });
       if (type === 'RESULT' && id === pendingIdRef.current) {
         // Guard: ignore worker results if it's not the user's turn
         if (turnRef.current !== 'user') {
@@ -93,6 +94,7 @@ export const useRecitationWorker = ({
   }, [ayahWordCounts, checkAutoFinish, threshold, triggerHint, turn]);
 
   const dispatchLiveCompare = useCallback((spoken) => {
+    log('dispatchLiveCompare', { spokenLength: spoken?.length, expectedTextLength: expectedText?.length, turn });
     if (!workerRef.current || !expectedText) return;
     if (liveDebounceRef.current) clearTimeout(liveDebounceRef.current);
     liveDebounceRef.current = setTimeout(() => {
@@ -120,6 +122,7 @@ export const useRecitationWorker = ({
   }, [ayahWordCounts, expectedText]);
 
   const dispatchFinalCompare = useCallback((spoken) => {
+    log('dispatchFinalCompare', { spokenLength: spoken?.length, expectedTextLength: expectedText?.length, turn });
     if (liveDebounceRef.current) {
       clearTimeout(liveDebounceRef.current);
       liveDebounceRef.current = null;

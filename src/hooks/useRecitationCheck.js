@@ -16,6 +16,7 @@ export const useRecitationCheck = (
   interruptHint = null,
   turn = 'user',
 ) => {
+  log('useRecitationCheck INIT/RENDER', { isActive, turn, expectedTextLength: expectedText?.length, ayahWordCountsLength: ayahWordCounts?.length });
   const {
     clearStuckTimer,
     clearSilenceTimer,
@@ -130,6 +131,7 @@ export const useRecitationCheck = (
   }, [clearStuckState, clearWorkerResults]);
 
   useEffect(() => {
+    log('useRecitationCheck isActive effect', { isActive, turn });
     if (isActive) {
       startListening();
     } else {
@@ -148,6 +150,7 @@ export const useRecitationCheck = (
   //   2. The final accuracy for that completed verse is strictly below threshold.
   // This is the ONLY trigger path — silence timers and plow-ahead are disabled.
   useEffect(() => {
+    log('useRecitationCheck verse-boundary effect', { hasLiveResults: !!liveResults, turn, lastMatchedExpIdx: liveResults?.lastMatchedExpIdx });
     if (!liveResults?.verseStats || liveResults.verseStats.length === 0 || liveResults.lastMatchedExpIdx === undefined) {
       prevLastMatchedExpIdxRef.current = -1;
       return;
