@@ -22,3 +22,20 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Temporary development/test files
+check_bismillah.cjs
+check_bytes.py
+fetch_quran.js
+generate_icons.py
+scratch.js
+scratch.md
+screenshot_initial.png
+test.js
+testWorker.js
+test_muqattaat.cjs
+test_muqattaat.js
+test_app_turn.js
+test_app_turn.cjs
+clean_bismillah.py
+generate_android_icons.py
