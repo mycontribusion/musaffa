@@ -43,3 +43,9 @@ generate_android_icons.py
 # Personal plans and notes
 .plans/
 plans/
+
+# Android platform (regenerated with capacitor add android)
+android/
+
+# Root assets (app icons/splash)
+assets/
