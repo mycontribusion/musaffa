@@ -39,3 +39,7 @@ test_app_turn.js
 test_app_turn.cjs
 clean_bismillah.py
 generate_android_icons.py
+
+# Personal plans and notes
+.plans/
+plans/
