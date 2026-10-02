@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { VoskSpeechRecognition } from '@deentech/vosk-speech-recognition';
+import { VoskSpeechRecognition } from '../platform/voskPlugin';
 
 const getSpeechRecognition = () =>
   typeof window !== 'undefined'

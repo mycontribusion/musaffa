@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { VoskSpeechRecognition } from '@deentech/vosk-speech-recognition';
 import { Capacitor } from '@capacitor/core';
+import { VoskSpeechRecognition } from '../platform/voskPlugin';
 
 /**
  * Hook to manage Vosk speech recognition model.
