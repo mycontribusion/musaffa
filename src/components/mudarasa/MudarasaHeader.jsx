@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, BookOpen, BookX, BrainCircuit } from 'lucide-react';
 
-export const MudarasaHeader = ({
-  onBack,
-  mudarasaTurn,
-  currentChunkIndex,
-  chunksLength,
-  showText,
-  setShowText,
-  enableErrorDetection,
-  isSttListening,
-  isListening,
-  currentVolume,
-  sensitivity
-}) => {
+ export const MudarasaHeader = ({
+   onBack,
+   mudarasaTurn,
+   currentChunkIndex,
+   chunksLength,
+   showText,
+   setShowText,
+   enableErrorDetection,
+   isSttListening,
+   isListening,
+   currentVolume,
+   sensitivity,
+   modelStatus = 'idle'
+ }) => {
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
   useEffect(() => {
@@ -68,14 +69,19 @@ export const MudarasaHeader = ({
             <div style={{
               display: 'flex', alignItems: 'center', gap: '0.3rem',
               padding: '0.25rem 0.5rem', borderRadius: '999px',
-              background: !isOnline ? 'rgba(239,68,68,0.15)' : (isSttListening ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.05)'),
-              border: `1px solid ${!isOnline ? 'rgba(239,68,68,0.4)' : (isSttListening ? 'rgba(16,185,129,0.4)' : 'var(--glass-border)')}`,
+              background: isSttListening ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.05)',
+              border: `1px solid ${isSttListening ? 'rgba(16,185,129,0.4)' : 'var(--glass-border)'}`,
               transition: 'all 0.3s',
             }}>
-              <BrainCircuit size={10} color={!isOnline ? 'var(--accent-red)' : (isSttListening ? 'var(--accent-emerald)' : 'var(--text-muted)')} />
-              <span style={{ fontSize: '0.5rem', fontWeight: '800', color: !isOnline ? 'var(--accent-red)' : (isSttListening ? 'var(--accent-emerald)' : 'var(--text-muted)'), textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                {!isOnline ? 'Offline' : (isSttListening ? 'Checking' : 'Ready')}
-              </span>
+              <BrainCircuit size={10} color={isSttListening ? 'var(--accent-emerald)' : 'var(--text-muted)'} />
+               <span style={{ fontSize: '0.5rem', fontWeight: '800', color: isSttListening ? 'var(--accent-emerald)' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                 {modelStatus === 'installing' || modelStatus === 'needs_install'
+                   ? 'Installing Model...'
+                   : isSttListening
+                     ? (!isOnline ? 'Checking (Offline)' : 'Checking')
+                     : 'Ready'
+                 }
+               </span>
             </div>
           )}
           <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: mudarasaTurn === 'app' ? 'var(--accent-gold)' : 'var(--bg-accent)', boxShadow: mudarasaTurn === 'app' ? '0 0 10px var(--accent-gold)' : 'none' }} />

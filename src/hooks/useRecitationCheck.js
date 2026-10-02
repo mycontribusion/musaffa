@@ -1,7 +1,9 @@
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useMemo } from 'react';
 import { useSpeechRecognition } from './useSpeechRecognition';
 import { useRecitationWorker } from './useRecitationWorker';
 import { useStuckDetection } from './useStuckDetection';
+import { buildVoskGrammar, getSingleAyahGrammar } from '../utils/quranUtils';
+import { computeActiveVerseIndex } from '../utils/verseProgress';
 
 export const useRecitationCheck = (
   isActive,
@@ -12,6 +14,11 @@ export const useRecitationCheck = (
   onStuck = null,
   interruptHint = null,
   onUserSpeechAfterHint = null,
+  modelReady = false,
+  modelStatus = 'idle',
+  ensureModelReady = null,
+  activeChunkSlice = [],
+  quranSimple = null,
 ) => {
   const {
     clearStuckTimer,
@@ -42,6 +49,7 @@ export const useRecitationCheck = (
   // exist before the worker effect captures it. Callbacks are defined after
   // both hooks; they read transcriptRef.current (always fresh, no stale closure).
   const dispatchLiveCompareRef = useRef(null);
+  const liveResultsRef = useRef(null);
 
   const onResultCallback = useCallback((combined) => {
     if (combined) dispatchLiveCompareRef.current?.(combined);
@@ -59,21 +67,48 @@ export const useRecitationCheck = (
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clearSilenceTimer]);
 
+  // Compute active verse index reactively from liveResults state.
+  // Using liveResults (state) rather than liveResultsRef.current ensures this
+  // useMemo re-evaluates on every worker update — fixes the chicken-and-egg
+  // where liveResultsRef was null at session start causing grammar to fall back
+  // to the full-chunk vocabulary for the entire first verse.
+  const activeVerseIndex = useMemo(() => {
+    return computeActiveVerseIndex(liveResults?.verseStats, accuracyThreshold);
+  }, [liveResults, accuracyThreshold]);
+
+  // Build single-verse Vosk grammar restricted strictly to active Ayah words.
+  // On session start (liveResults === null), activeVerseIndex=0, so we immediately
+  // scope to the first verse's words without waiting for the first worker result.
+  const grammar = useMemo(() => {
+    if (activeChunkSlice && activeChunkSlice.length > 0) {
+      const idx = Math.min(activeVerseIndex, activeChunkSlice.length - 1);
+      const activeAyah = activeChunkSlice[idx];
+      const singleGrammar = getSingleAyahGrammar(activeAyah, quranSimple);
+      if (singleGrammar) return singleGrammar;
+    }
+    return buildVoskGrammar(expectedText);
+  }, [activeChunkSlice, activeVerseIndex, quranSimple, expectedText]);
+
   const {
     isSupported,
     isListening,
     transcript,
     transcriptRef,
     startListening: startSTT,
+    resumeListening: resumeSTT,
     stopRecognition,
     pauseRecognition,
-    resumeRecognition,
     setIsListening,
-    setTranscript
+    setTranscript,
+    clearTranscript
   } = useSpeechRecognition({
     onResult: onResultCallback,
     onSpeechStart: onSpeechStartCallback,
     onSpeechEnd: onSpeechEndCallback,
+    modelReady,
+    modelStatus,
+    ensureModelReady,
+    grammar,
   });
 
   const {
@@ -101,6 +136,9 @@ export const useRecitationCheck = (
     latestPayloadRef
   });
 
+  // Keep liveResultsRef updated so activeVerseIndex and grammar stay in sync
+  liveResultsRef.current = liveResults;
+
   dispatchLiveCompareRef.current = dispatchLiveCompare;
 
   const startListening = useCallback(() => {
@@ -122,6 +160,14 @@ export const useRecitationCheck = (
     clearWorkerResults();
   }, [clearStuckState, clearWorkerResults]);
 
+  // Resume without clearing stuck/worker state or resetting the transcript.
+  // This preserves the full conversation history across temporary pauses
+  // (e.g. hint playback) during the user's recitation turn.
+  const resumeRecognition = useCallback(async (isActive) => {
+    if (!isActive) return;
+    await resumeSTT();
+  }, [resumeSTT]);
+
   useEffect(() => {
     if (isActive) {
       startListening();
@@ -132,19 +178,20 @@ export const useRecitationCheck = (
       clearWorkerResults();
       setLiveResults(null);
     }
-  }, [isActive]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isActive, startListening]);
 
-  return { 
-    isSupported, 
-    isListening, 
-    transcript, 
-    liveResults, 
-    results, 
-    startListening, 
-    stopAndCheck, 
-    clearResults,
-    pauseRecognition,
-    resumeRecognition,
-    notifyHintEnded,
-  };
+   return {
+     isSupported,
+     isListening,
+     transcript,
+     liveResults,
+     results,
+     startListening,
+     stopAndCheck,
+     clearResults,
+     pauseRecognition,
+     resumeRecognition,
+     notifyHintEnded,
+     clearTranscript,
+   };
 };

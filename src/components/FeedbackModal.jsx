@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Link, Database } from 'lucide-react';
+import { X, Mail, Link, Database, Download, Loader, CheckCircle, AlertCircle } from 'lucide-react';
 
-export default function FeedbackModal({ onClose }) {
+export default function FeedbackModal({ onClose, modelStatus, installProgress, installMessage, confirmInstall, isNative }) {
   return (
     <AnimatePresence>
       <motion.div
@@ -147,6 +147,123 @@ export default function FeedbackModal({ onClose }) {
               </div>
             </a>
           </div>
+
+          {/* SDK Download Section */}
+          {isNative && modelStatus !== 'idle' && (
+            <div style={{
+              padding: '1rem',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--glass-bg)',
+              border: '1px solid var(--glass-border)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.6rem' }}>
+                <Download size={12} color="var(--accent-gold)" />
+                <span style={{
+                  fontSize: '0.6rem', fontWeight: '900',
+                  textTransform: 'uppercase', letterSpacing: '0.12em',
+                  color: 'var(--text-muted)',
+                }}>
+                  Speech Recognition SDK
+                </span>
+              </div>
+
+              {modelStatus === 'needs_install' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                    The offline speech recognition model is bundled in the app and will be installed on first use (~40MB).
+                  </p>
+                  <button
+                    onClick={() => confirmInstall()}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                      padding: '0.75rem 1rem',
+                      borderRadius: 'var(--radius-md)',
+                      background: 'linear-gradient(135deg, var(--accent-gold), #2563eb)',
+                      color: '#fff',
+                      border: 'none',
+                      fontSize: '0.8rem',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18), 0 4px 12px rgba(0,0,0,0.15)',
+                    }}
+                  >
+                    <Download size={16} />
+                    Install Speech SDK
+                  </button>
+                </div>
+              )}
+
+              {modelStatus === 'installing' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Loader size={16} className="animate-spin" style={{ color: 'var(--accent-gold)' }} />
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      {installMessage || 'Installing...'}
+                    </span>
+                  </div>
+                  <div style={{
+                    width: '100%',
+                    height: '8px',
+                    borderRadius: '99px',
+                    background: 'rgba(255,255,255,0.1)',
+                    overflow: 'hidden',
+                  }}>
+                    <motion.div
+                      animate={{ width: `${installProgress}%` }}
+                      transition={{ type: 'spring', stiffness: 50, damping: 20 }}
+                      style={{
+                        height: '100%',
+                        borderRadius: '99px',
+                        background: 'linear-gradient(90deg, var(--accent-gold), #2563eb)',
+                      }}
+                    />
+                  </div>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'right' }}>
+                    {installProgress}%
+                  </span>
+                </div>
+              )}
+
+              {modelStatus === 'error' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <AlertCircle size={16} style={{ color: '#ef4444' }} />
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      {installMessage || 'Installation failed'}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => confirmInstall()}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                      padding: '0.6rem 1rem',
+                      borderRadius: 'var(--radius-md)',
+                      background: 'var(--glass-bg)',
+                      color: 'var(--text-primary)',
+                      border: '1px solid var(--glass-border)',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <Download size={14} />
+                    Retry Install
+                  </button>
+                </div>
+              )}
+
+              {modelStatus === 'ready' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <CheckCircle size={16} style={{ color: '#22c55e' }} />
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    Speech recognition SDK is ready
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Data Sources */}
           <div style={{

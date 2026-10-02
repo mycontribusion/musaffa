@@ -12,36 +12,37 @@ import { AyahCard } from './mudarasa/AyahCard';
 import { useActiveVerseIndex } from './mudarasa/hooks/useActiveVerseIndex';
 import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
 
-const MudarasaView = ({
-  chunks,
-  currentChunkIndex,
-  currentAyahNumber,
-  mudarasaTurn,
-  onNext,
-  onBack,
-  onLogStumble,
-  isListening,
-  currentVolume,
-  sensitivity,
-  isPaused,
-  onPause,
-  onResume,
-  // audioError,
-  // setAudioError,
-  enableErrorDetection,
-  isSttListening,
-  liveResults,        
-  transcript,
-  onFinishedTurn,
-  onRetryTurn,        
-  onClearResults,
-  quranSimple,        
-  targetAccuracy,     
-  retryStartIndex = 0,
-  setRetryStartIndex,
-  completedResults,
-  isHintActive,
-}) => {
+ const MudarasaView = ({
+   chunks,
+   currentChunkIndex,
+   currentAyahNumber,
+   mudarasaTurn,
+   onNext,
+   onBack,
+   onLogStumble,
+   isListening,
+   currentVolume,
+   sensitivity,
+   isPaused,
+   onPause,
+   onResume,
+   // audioError,
+   // setAudioError,
+   enableErrorDetection,
+   isSttListening,
+   liveResults,
+   transcript,
+   onFinishedTurn,
+   onRetryTurn,
+   onClearResults,
+   quranSimple,
+   targetAccuracy,
+   retryStartIndex = 0,
+   setRetryStartIndex,
+   completedResults,
+   isHintActive,
+   modelStatus,
+ }) => {
   const [showText, setShowText] = useState(() => {
     try { return JSON.parse(localStorage.getItem('quran_musaffa_show_text') ?? 'true'); } catch { return true; }
   });
@@ -149,19 +150,20 @@ const MudarasaView = ({
       )} */}
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', minHeight: '80vh' }}>
-        <MudarasaHeader
-          onBack={onBack}
-          mudarasaTurn={mudarasaTurn}
-          currentChunkIndex={currentChunkIndex}
-          chunksLength={chunks.length}
-          showText={showText}
-          setShowText={setShowText}
-          enableErrorDetection={enableErrorDetection}
-          isSttListening={isSttListening}
-          isListening={isListening}
-          currentVolume={currentVolume}
-          sensitivity={sensitivity}
-        />
+         <MudarasaHeader
+           onBack={onBack}
+           mudarasaTurn={mudarasaTurn}
+           currentChunkIndex={currentChunkIndex}
+           chunksLength={chunks.length}
+           showText={showText}
+           setShowText={setShowText}
+           enableErrorDetection={enableErrorDetection}
+           isSttListening={isSttListening}
+           isListening={isListening}
+           currentVolume={currentVolume}
+           sensitivity={sensitivity}
+           modelStatus={modelStatus}
+         />
 
         {/* <AudioErrorModal
           audioError={audioError}

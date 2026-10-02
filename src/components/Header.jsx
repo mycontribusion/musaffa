@@ -3,7 +3,7 @@ import { Moon, Sun, PlayCircle, Pause, User, BookOpen, Settings, X, MessageCircl
 import { RECITERS } from '../utils/quranUtils';
 import FeedbackModal from './FeedbackModal';
 
-const Header = ({ theme, setTheme, view, setView, setPartnerSubView, isInMusaffaSession, isPaused, onPauseMusaffa, onResumeMusaffa, reciter, setReciter }) => {
+const Header = ({ theme, setTheme, view, setView, setPartnerSubView, isInMusaffaSession, isPaused, onPauseMusaffa, onResumeMusaffa, reciter, setReciter, modelStatus, installProgress, installMessage, showInstallPrompt, confirmInstall, setShowInstallPrompt, isNative }) => {
   const isDark = theme === 'dark';
   const [showReciterDropdown, setShowReciterDropdown] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(() => typeof window !== 'undefined' && window.location.pathname === '/settings');
@@ -135,60 +135,7 @@ const Header = ({ theme, setTheme, view, setView, setPartnerSubView, isInMusaffa
 
             {settingsOpen ? (
               <div className="relative flex items-center gap-2 md:gap-4">
-                <button
-                  onClick={() => {
-                    setShowReciterDropdown(false);
-                    if (window.location.pathname !== '/settings' && window.location.pathname !== '/feedback') {
-                      setPreviousPath(window.location.pathname);
-                    }
-                    setFeedbackOpen((open) => !open);
-                  }}
-                  className="icon-btn"
-                  title="Feedback"
-                >
-                  <MessageCircleQuestion size={16} strokeWidth={2} />
-                </button>
-
-                <button
-                  onClick={() => setTheme(isDark ? 'light' : 'dark')}
-                  className="icon-btn"
-                  title="Toggle Theme"
-                >
-                  {isDark ? <Moon size={16} strokeWidth={2} /> : <Sun size={16} strokeWidth={2} />}
-                </button>
-
-                <button
-                  onClick={() => {
-                    setSettingsOpen(false);
-                    setFeedbackOpen(false);
-                    setPreviousPath('');
-                    setShowReciterDropdown(false);
-                  }}
-                  className="icon-btn"
-                  title="Close Settings"
-                >
-                  <X size={16} strokeWidth={2} />
-                </button>
-
-                {feedbackOpen && (
-                  <FeedbackModal onClose={() => {
-                    setFeedbackOpen(false);
-                    setPreviousPath('');
-                  }} />
-                )}
-              </div>
-            ) : (
-              <>
-                <button
-                  onClick={() => setView('weaknesses')}
-                  className="icon-btn"
-                  title="Mistake Book (Weaknesses)"
-                  style={{ position: 'relative' }}
-                >
-                  <BookOpen size={16} strokeWidth={2} />
-                </button>
-
-                {/* Reciter Dropdown */}
+                {/* Reciter Dropdown — moved into the settings area */}
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setShowReciterDropdown(!showReciterDropdown)}
@@ -247,6 +194,68 @@ const Header = ({ theme, setTheme, view, setView, setPartnerSubView, isInMusaffa
                     </div>
                   )}
                 </div>
+
+                <button
+                  onClick={() => {
+                    setShowReciterDropdown(false);
+                    if (window.location.pathname !== '/settings' && window.location.pathname !== '/feedback') {
+                      setPreviousPath(window.location.pathname);
+                    }
+                    setFeedbackOpen((open) => !open);
+                  }}
+                  className="icon-btn"
+                  title="Feedback"
+                >
+                  <MessageCircleQuestion size={16} strokeWidth={2} />
+                </button>
+
+                <button
+                  onClick={() => {
+                    setSettingsOpen(false);
+                    setFeedbackOpen(false);
+                    setPreviousPath('');
+                    setShowReciterDropdown(false);
+                  }}
+                  className="icon-btn"
+                  title="Close Settings"
+                >
+                  <X size={16} strokeWidth={2} />
+                </button>
+
+                {feedbackOpen && (
+                  <FeedbackModal
+                    onClose={() => {
+                      setFeedbackOpen(false);
+                      setPreviousPath('');
+                    }}
+                    modelStatus={modelStatus}
+                    installProgress={installProgress}
+                    installMessage={installMessage}
+                    showInstallPrompt={showInstallPrompt}
+                    confirmInstall={confirmInstall}
+                    setShowInstallPrompt={setShowInstallPrompt}
+                    isNative={isNative}
+                  />
+                )}
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={() => setView('weaknesses')}
+                  className="icon-btn"
+                  title="Mistake Book (Weaknesses)"
+                  style={{ position: 'relative' }}
+                >
+                  <BookOpen size={16} strokeWidth={2} />
+                </button>
+
+                <button
+                  onClick={() => setTheme(isDark ? 'light' : 'dark')}
+                  className="icon-btn"
+                  title="Toggle Theme"
+                >
+                  {isDark ? <Moon size={16} strokeWidth={2} /> : <Sun size={16} strokeWidth={2} />}
+                </button>
 
                 <button
                   onClick={() => {

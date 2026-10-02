@@ -301,3 +301,72 @@ export const buildAyahWordCounts = (chunk, quranSimple) => {
   });
 };
 
+/**
+ * Build a Vosk grammar JSON string from the expected (normalized) text.
+ *
+ * Vosk grammar restricts the recognizer to only output words present in the
+ * provided list, dramatically improving accuracy for domain-specific speech
+ * (e.g. Quranic recitation).
+ *
+ * The grammar is a JSON array of unique words: ["word1", "word2", ...]
+ *
+ * @param {string} expectedText - Normalized expected text (space-separated words)
+ * @param {number} [maxWords=500] - Safety cap to avoid excessive grammar size
+ * @returns {string} JSON array string suitable for Vosk Recognizer, or null if empty
+ */
+export const buildVoskGrammar = (expectedText, maxWords = 500) => {
+  if (!expectedText || expectedText.trim().length === 0) return null;
+
+  // Split on whitespace, filter empty, deduplicate while preserving order
+  const seen = new Set();
+  const words = [];
+  for (const word of expectedText.trim().split(/\s+/)) {
+    if (word && !seen.has(word)) {
+      seen.add(word);
+      words.push(word);
+      if (words.length >= maxWords) break;
+    }
+  }
+
+  if (words.length === 0) return null;
+
+  // NOTE: Do NOT add "[unk]" here. The vosk-model-ar-mgb2-0.4 model's
+  // words.txt has no <unk> symbol entry. When Kaldi receives a grammar
+  // JSON containing an unknown symbol, it silently drops the constrained
+  // decoding graph and falls back to full-vocabulary recognition — which
+  // is the opposite of what we want. The word-list constraint alone is
+  // sufficient for proper grammar scoping on this model.
+
+  try {
+    return JSON.stringify(words);
+  } catch (e) {
+    console.warn('[quranUtils] Failed to build Vosk grammar:', e);
+    return null;
+  }
+};
+
+/**
+ * Build single-Ayah Vosk grammar string for a specific active verse object.
+ * Extracts normalized text (handling Bismillah header if present) and returns JSON string.
+ */
+export const getSingleAyahGrammar = (ayah, quranSimple = null) => {
+  if (!ayah) return null;
+  let text = ayah.text || '';
+  if (quranSimple) {
+    const key = `${ayah.surahNumber}|${ayah.numberInSurah}`;
+    if (quranSimple[key]) text = quranSimple[key];
+  }
+  if (hasBismillahHeader(ayah.surahNumber, ayah.numberInSurah)) {
+    if (text.startsWith(BISMILLAH_SIMPLE)) {
+      text = text.slice(BISMILLAH_SIMPLE.length).trim();
+    }
+    const bNorm = normalizeArabic(BISMILLAH_SIMPLE);
+    const bodyNorm = normalizeArabic(expandMuqattaat(removeTashkeel(text)));
+    return buildVoskGrammar(bNorm + ' ' + bodyNorm);
+  }
+  const clean = removeTashkeel(text);
+  const normalized = normalizeArabic(expandMuqattaat(clean));
+  return buildVoskGrammar(normalized);
+};
+
+

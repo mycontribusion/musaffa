@@ -46,7 +46,10 @@ const PartnerSession = ({
   quranSimple,
   presetEditingIndex,
   onSavePreset,
-}) => {
+   modelReady,
+   modelStatus,
+   ensureModelReady,
+ }) => {
   // Auto-scroll: fire whenever the active ayah changes (only set during app playback)
   useEffect(() => {
     if (!currentAyahNumber) return;
@@ -184,26 +187,33 @@ const PartnerSession = ({
   // STT error detection — active during user's recitation turn only
   // onAutoFinish fires automatically after silence, triggering handleFinishedTurn
   const sttActive = !!(enableErrorDetection && subView === 'mudarasa' && turn === 'user');
-  const {
-    isSupported: sttSupported,
-    isListening: isSttListening,
-    transcript,
-    liveResults,
-    results: recitationResults,
-    stopAndCheck,
-    clearResults,
-    pauseRecognition,
-    resumeRecognition,
-    notifyHintEnded,
-  } = useRecitationCheck(
-    sttActive,
-    expectedText,
-    useCallback(() => { handleFinishedTurnRef.current?.(); }, []),
-    params.errorThreshold ?? 50,
-    ayahWordCounts,
-    handleStuck,
-    interruptHint
-  );
+   const {
+     isSupported: sttSupported,
+     isListening: isSttListening,
+     transcript,
+     liveResults,
+     results: recitationResults,
+     stopAndCheck,
+     clearResults,
+     pauseRecognition,
+     resumeRecognition,
+     notifyHintEnded,
+     clearTranscript,
+    } = useRecitationCheck(
+     sttActive,
+     expectedText,
+     useCallback(() => { handleFinishedTurnRef.current?.(); }, []),
+     params.errorThreshold ?? 50,
+     ayahWordCounts,
+     handleStuck,
+     interruptHint,
+     null,
+     modelReady,
+     modelStatus,
+     ensureModelReady,
+     activeChunkSlice,
+     quranSimple
+   );
 
   sttActionsRef.current = { pauseRecognition, resumeRecognition, notifyHintEnded };
 
@@ -251,12 +261,22 @@ const PartnerSession = ({
     };
   }, [interruptHint]);
 
-  // Stop hint audio if the turn changes or we exit Mudarasa view
-  useEffect(() => {
-    if (!sttActive) {
-      interruptHint();
-    }
-  }, [sttActive, interruptHint]);
+   // Stop hint audio if the turn changes or we exit Mudarasa view
+   useEffect(() => {
+     if (!sttActive) {
+       interruptHint();
+     }
+   }, [sttActive, interruptHint]);
+
+   // Clear the speech transcript when the app takes its turn
+   // (audio playback / prompt). This ensures the user's next
+   // recitation starts with a clean slate instead of carrying
+   // over stale partial or confirmed text from the previous turn.
+   useEffect(() => {
+     if (turn === 'app') {
+       clearTranscript();
+     }
+   }, [turn, clearTranscript]);
 
   // Automatically log stumbles and store recitation history in localStorage when results are computed
   useEffect(() => {

@@ -14,6 +14,7 @@ import { useAudioDownload } from './hooks/useAudioDownload';
 import { useLocalStorageState } from './hooks/useLocalStorageState';
 import { useMusaffaSession } from './hooks/useMusaffaSession';
 import { usePresets } from './hooks/usePresets';
+import { useVoskModelDownload } from './hooks/useVoskModelDownload';
 
 const App = () => {
   const [view, setView] = useState('list');
@@ -22,6 +23,7 @@ const App = () => {
   const [partnerSubView, setPartnerSubView] = useState('config');
   const [activeQuizType, setActiveQuizType] = useState('all');
   const [multiSurahSession, setMultiSurahSession] = useState(null);
+  const [targetAyah, setTargetAyah] = useState(null);
 
   const DEFAULT_PARAMS = { startSurah: 1, startAyah: 1, endSurah: 2, endAyah: 286, portion: 'page', whoStarts: 'app', autoNext: true, micSensitivity: 15, errorDetection: false, errorThreshold: 50 };
   
@@ -75,6 +77,17 @@ const App = () => {
   const { dynamicMutashabihat, setDynamicMutashabihat, currentQuizIndex, setCurrentQuizIndex, quizScore, setQuizScore, quizFeedback, setQuizFeedback, generateDynamicQuiz, handleQuizAnswer } = useQuiz(mutashabihatData, quranAr, surahs, selectedSurah);
   
   const audioDownloadControls = useAudioDownload(quranAr, reciter);
+
+   const {
+     modelStatus,
+     installProgress,
+     installMessage,
+     showInstallPrompt,
+     confirmInstall,
+     downloadAndInitModel,
+     setShowInstallPrompt,
+     isNative,
+   } = useVoskModelDownload();
 
   const { savedMusaffaSession, saveMusaffaSession, clearMusaffaSession, resumeMusaffaSession } = useMusaffaSession(
     selectedSurah, musaffaParams, chunks, currentChunkIndex, mudarasaTurn, partnerSubView, view, surahs, startMusaffa, stopMusaffa, setSelectedSurah, setMusaffaParams, setView
@@ -132,7 +145,24 @@ const App = () => {
       const updated = [s, ...p.filter(x => x.number !== s.number)].slice(0, 5);
       return updated;
     });
+    // Clear any search-directed ayah jump; normal browsing resumes last-read behaviour.
+    setTargetAyah(null);
     setMusaffaParams(p => ({ ...p, startSurah: s.number, startAyah: 1, endSurah: s.number, endAyah: s.numberOfAyahs }));
+  };
+
+  /**
+   * Open a surah and scroll straight to a specific ayah.
+   * Used by Quran search results. Reuses the existing detail view and the
+   * existing `targetAyah` scroll mechanism in SurahDetail — no parallel
+   * navigation system. A null targetAyah means "use last-read behaviour".
+   */
+  const handleOpenAyah = (surahNumber, ayahNumber) => {
+    const s = surahs.find(x => x.number === surahNumber);
+    if (!s) return;
+    setSelectedSurah(s);
+    setRecentSurahs(p => [s, ...p.filter(x => x.number !== s.number)].slice(0, 5));
+    setTargetAyah(ayahNumber || null);
+    setView('detail');
   };
 
   const handleMusaffaParamChange = (key, value) => {
@@ -193,13 +223,15 @@ const App = () => {
     );
   }
 
+  const modelReady = modelStatus === 'ready';
+
   return (
     <>
-      <Header 
-        theme={theme} 
-        setTheme={setTheme} 
-        view={view} 
-        setView={setView} 
+      <Header
+        theme={theme}
+        setTheme={setTheme}
+        view={view}
+        setView={setView}
         setPartnerSubView={setPartnerSubView}
         isInMusaffaSession={view === 'partner' && partnerSubView === 'mudarasa'}
         isPaused={isPaused}
@@ -207,15 +239,26 @@ const App = () => {
         onResumeMusaffa={resumeMusaffa}
         reciter={reciter}
         setReciter={setReciter}
+        // Vosk model install props
+        modelStatus={modelStatus}
+        installProgress={installProgress}
+        installMessage={installMessage}
+        showInstallPrompt={showInstallPrompt}
+        confirmInstall={confirmInstall}
+        setShowInstallPrompt={setShowInstallPrompt}
+        isNative={isNative}
       />
       <div className="app-container">
         <main className="pb-24">
           <AnimatePresence mode="wait">
             {view === 'list' && (
-              <SurahList 
-                surahs={surahs} 
-                recentSurahs={recentSurahs} 
-                handleSelectSurah={handleSelectSurah} 
+              <SurahList
+                surahs={surahs}
+                quranAr={quranAr}
+                quranEn={quranEn}
+                recentSurahs={recentSurahs}
+                handleSelectSurah={handleSelectSurah}
+                openAyah={handleOpenAyah}
                 setView={setView} 
                 audioDownloadControls={audioDownloadControls} 
                 savedMusaffaSession={savedMusaffaSession} 
@@ -264,9 +307,10 @@ const App = () => {
             )}
             
             {view === 'detail' && selectedSurah && (
-              <SurahDetail 
-                selectedSurah={selectedSurah} 
-                surahs={surahs} 
+              <SurahDetail
+                selectedSurah={selectedSurah}
+                surahs={surahs}
+                targetAyah={targetAyah}
                 handleSelectSurah={handleSelectSurah} 
                 quranAr={quranAr} 
                 quranEn={quranEn} 
@@ -322,7 +366,10 @@ const App = () => {
                 quranSimple={quranSimple}
                 presetEditingIndex={presetEditingIndex}
                 onSavePreset={handleSavePreset}
-              />
+                 modelReady={modelReady}
+                 modelStatus={modelStatus}
+                 ensureModelReady={downloadAndInitModel}
+               />
             )}
             
             {view === 'mutashabihat-session' && selectedSurah && waqarData && waqarData[selectedSurah.number] && (
