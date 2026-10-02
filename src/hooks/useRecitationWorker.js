@@ -11,9 +11,13 @@ export const useRecitationWorker = ({
   hintPassedRef,
   triggerHint,
   checkAutoFinish,
-  latestPayloadRef
+  latestPayloadRef,
+  // Injected by useRecitationCheck, which owns the liveResults state. It must be
+  // owned there because activeVerseIndex/grammar are derived from liveResults and
+  // must be computed BEFORE useSpeechRecognition runs, i.e. before this hook is
+  // called. setLiveResults is a stable useState setter, so it is safe to close over.
+  setLiveResults,
 }) => {
-  const [liveResults, setLiveResults] = useState(null);
   const [results, setResults] = useState(null);
   const liveDebounceRef = useRef(null);
   const workerRef = useRef(null);
@@ -110,11 +114,9 @@ export const useRecitationWorker = ({
     pendingIdRef.current++;
     setResults(null);
     setLiveResults(null);
-  }, []);
+  }, [setLiveResults]);
 
   return {
-    liveResults,
-    setLiveResults,
     results,
     dispatchLiveCompare,
     dispatchFinalCompare,

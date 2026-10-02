@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef, useMemo } from 'react';
+import { useEffect, useCallback, useRef, useMemo, useState } from 'react';
 import { useSpeechRecognition } from './useSpeechRecognition';
 import { useRecitationWorker } from './useRecitationWorker';
 import { useStuckDetection } from './useStuckDetection';
@@ -49,7 +49,23 @@ export const useRecitationCheck = (
   // exist before the worker effect captures it. Callbacks are defined after
   // both hooks; they read transcriptRef.current (always fresh, no stale closure).
   const dispatchLiveCompareRef = useRef(null);
-  const liveResultsRef = useRef(null);
+
+  // ── liveResults state is OWNED HERE, not inside useRecitationWorker ────────
+  // `grammar` is an input to useSpeechRecognition, `grammar` needs
+  // `activeVerseIndex`, and `activeVerseIndex` needs `liveResults` — but
+  // liveResults used to be produced by the useRecitationWorker() call further
+  // DOWN this function. Reading it from the memos above therefore hit the
+  // temporal dead zone on every single render:
+  //
+  //   ReferenceError: Cannot access 'liveResults' before initialization
+  //
+  // which crashed PartnerSession and therefore the whole Musaffa route.
+  //
+  // Owning the state here breaks that render-order cycle: it is declared before
+  // both memos, and useRecitationWorker only ever needs its setter — a stable
+  // useState reference that it invokes from worker.onmessage — which is now
+  // passed in as a parameter. No behaviour changes; only ownership does.
+  const [liveResults, setLiveResults] = useState(null);
 
   const onResultCallback = useCallback((combined) => {
     if (combined) dispatchLiveCompareRef.current?.(combined);
@@ -68,10 +84,10 @@ export const useRecitationCheck = (
   }, [clearSilenceTimer]);
 
   // Compute active verse index reactively from liveResults state.
-  // Using liveResults (state) rather than liveResultsRef.current ensures this
-  // useMemo re-evaluates on every worker update — fixes the chicken-and-egg
-  // where liveResultsRef was null at session start causing grammar to fall back
-  // to the full-chunk vocabulary for the entire first verse.
+  // Reading liveResults as *state* (not a ref snapshot) ensures this useMemo
+  // re-evaluates on every worker update, so the grammar is re-scoped to the
+  // currently active ayah instead of staying pinned to the full-chunk
+  // vocabulary for the entire session.
   const activeVerseIndex = useMemo(() => {
     return computeActiveVerseIndex(liveResults?.verseStats, accuracyThreshold);
   }, [liveResults, accuracyThreshold]);
@@ -112,8 +128,6 @@ export const useRecitationCheck = (
   });
 
   const {
-    liveResults,
-    setLiveResults,
     results,
     dispatchLiveCompare,
     dispatchFinalCompare,
@@ -133,11 +147,12 @@ export const useRecitationCheck = (
     // the current transcript without creating a stale-closure dependency.
     triggerHint: (idx) => triggerHint(idx, transcriptRef, setLiveResults),
     checkAutoFinish,
-    latestPayloadRef
+    latestPayloadRef,
+    // The worker owns no liveResults state of its own — the setter is supplied
+    // by this hook (see the ownership note above) so that activeVerseIndex and
+    // grammar can be derived before useRecitationWorker is ever called.
+    setLiveResults,
   });
-
-  // Keep liveResultsRef updated so activeVerseIndex and grammar stay in sync
-  liveResultsRef.current = liveResults;
 
   dispatchLiveCompareRef.current = dispatchLiveCompare;
 
@@ -176,7 +191,6 @@ export const useRecitationCheck = (
       clearStuckState();
       if (liveDebounceRef.current) clearTimeout(liveDebounceRef.current);
       clearWorkerResults();
-      setLiveResults(null);
     }
   }, [isActive, startListening]);
 
