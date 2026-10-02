@@ -1,11 +1,15 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Search, Download, CheckCircle, Loader, BrainCircuit, Zap, Pencil, Play, Mic, Hand } from 'lucide-react';
+import { Search, Download, CheckCircle, Loader, BrainCircuit, Zap, Pencil, Play, Mic, Hand, BookOpen, ScrollText } from 'lucide-react';
+import { useQuranSearch } from '../hooks/useQuranSearch';
 
 const SurahList = ({
   surahs,
+  quranAr,
+  quranEn,
   recentSurahs,
   handleSelectSurah,
+  openAyah,
   setView,
   audioDownloadControls,
   savedMusaffaSession,
@@ -21,6 +25,9 @@ const SurahList = ({
 }) => {
   const [searchQuery, setSearchQuery] = React.useState('');
 
+  const { isSearching, surahResults, ayahResults, totalAyahMatches, isTruncated } =
+    useQuranSearch(searchQuery, { quranAr, quranEn, surahs });
+
   // Guard against empty surahs array
   if (!surahs || surahs.length === 0) {
     return (
@@ -30,10 +37,19 @@ const SurahList = ({
     );
   }
 
-  const filteredSurahs = surahs.filter((s) => {
-    const matchesSearch = s.englishName.toLowerCase().includes(searchQuery.toLowerCase()) || s.name.includes(searchQuery);
-    return matchesSearch;
-  });
+  // With no query the search hook returns an empty result set (it only reports
+  // *matches*), so fall back to the full library. This preserves the original
+  // behaviour where an empty search box renders all 114 surahs.
+  const filteredSurahs = isSearching ? surahResults : surahs;
+  const hasAyahResults = ayahResults.length > 0;
+  const noResults = isSearching && filteredSurahs.length === 0 && !hasAyahResults;
+
+  const getSurahMeta = (num) => surahs.find(s => s.number === num);
+
+  const highlightColor = (arabic) =>
+    arabic
+      ? { color: 'var(--accent-gold)', fontWeight: '800' }
+      : { color: 'var(--accent-emerald)', fontWeight: '700' };
 
   const getModeLabel = (preset) => {
     if (preset.errorDetection) return { label: 'Smart', color: '#818cf8', Icon: BrainCircuit };
@@ -163,13 +179,95 @@ const SurahList = ({
           <Search className="search-icon" size={18} strokeWidth={2} />
           <input
             type="text"
-            placeholder="Search Surah..."
+            placeholder="Search surah, ayah or word..."
             className="search-input"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
       </div>
+
+      {/* Ayah / Content Results */}
+      {hasAyahResults && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0 0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className="section-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <ScrollText size={13} color="var(--accent-gold)" />
+              Ayahs
+            </div>
+            <span style={{ fontSize: '0.65rem', fontWeight: '700', color: 'var(--text-muted)' }}>
+              {totalAyahMatches} match{totalAyahMatches === 1 ? '' : 'es'}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            {ayahResults.map((r) => {
+              const meta = getSurahMeta(r.surahNumber);
+              return (
+                <motion.button
+                  key={`${r.surahNumber}:${r.ayahNumber}`}
+                  layout
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  onClick={() => openAyah(r.surahNumber, r.ayahNumber)}
+                  className="glass-card"
+                  style={{
+                    padding: '1rem',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    border: '1px solid var(--glass-border)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.6rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span className="arabic" style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                      {meta ? meta.name : `Surah ${r.surahNumber}`}
+                    </span>
+                    <span style={{ fontSize: '0.6rem', fontWeight: '800', color: 'var(--text-muted)' }}>
+                      {meta ? meta.englishName : ''} · Ayah {r.ayahNumber}
+                    </span>
+                  </div>
+
+                  <p className="arabic" style={{ fontSize: '1.05rem', lineHeight: 2, color: 'var(--text-primary)', margin: 0 }}>
+                    {r.arabic.clippedStart && <span style={{ opacity: 0.45 }}>… </span>}
+                    {r.arabic.segments.map((seg, i) => (
+                      <span key={i} style={seg.match ? highlightColor(true) : undefined}>{seg.text}{' '}</span>
+                    ))}
+                    {r.arabic.clippedEnd && <span style={{ opacity: 0.45 }}>…</span>}
+                  </p>
+
+                  <p style={{ fontSize: '0.8rem', lineHeight: 1.5, color: 'var(--text-secondary)', margin: 0 }}>
+                    {r.english.clippedStart && <span style={{ opacity: 0.45 }}>… </span>}
+                    {r.english.segments.map((seg, i) => (
+                      <span key={i} style={seg.match ? highlightColor(false) : undefined}>{seg.text}{' '}</span>
+                    ))}
+                    {r.english.clippedEnd && <span style={{ opacity: 0.45 }}>…</span>}
+                  </p>
+                </motion.button>
+              );
+            })}
+          </div>
+
+          {isTruncated && (
+            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'center', padding: '0.5rem' }}>
+              Showing first {ayahResults.length} of {totalAyahMatches} matches — refine your search to narrow it down.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* No Results */}
+      {noResults && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', padding: '3rem 1rem', textAlign: 'center' }}>
+          <Search size={28} color="var(--text-muted)" />
+          <p style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-secondary)', margin: 0 }}>No results</p>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
+            Try a surah name, or a word from the Arabic text or the translation.
+          </p>
+        </div>
+      )}
 
       {/* Resume Session Banner */}
       {savedMusaffaSession && searchQuery === '' && (
@@ -231,8 +329,13 @@ const SurahList = ({
       {/* Main Grid */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.5rem' }}>
-          <div className="section-label">Surah Library</div>
-          <span style={{ fontSize: '0.65rem', fontWeight: '700', color: 'var(--text-muted)' }}>{filteredSurahs.length} Chapters</span>
+          <div className="section-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            {isSearching && filteredSurahs.length > 0 && <BookOpen size={13} color="var(--accent-gold)" />}
+            {isSearching ? 'Surahs' : 'Surah Library'}
+          </div>
+          <span style={{ fontSize: '0.65rem', fontWeight: '700', color: 'var(--text-muted)' }}>
+            {filteredSurahs.length} {isSearching ? (filteredSurahs.length === 1 ? 'Match' : 'Matches') : 'Chapters'}
+          </span>
         </div>
 
         <div className="grid md:grid-cols-2" style={{ gap: '1rem' }}>

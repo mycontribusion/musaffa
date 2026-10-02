@@ -4,9 +4,9 @@ import { ChevronLeft, Zap, Download, Trash2, Play, Pause, SkipBack, SkipForward,
 import { useAudioDownload } from '../hooks/useAudioDownload';
 import { getAudioUrl } from '../utils/quranUtils';
 
-const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranEn, setView, openMusaffaConfig, waqarData, lastRead, setLastRead, reciter, audioDownloadControls }) => {
+const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranEn, setView, openMusaffaConfig, waqarData, lastRead, setLastRead, reciter, audioDownloadControls, targetAyah = null }) => {
   const scrollTrackerRef = useRef(null);
-  const scrollEffectRef = useRef({ surahNumber: null, hasScrolled: false });
+  const scrollEffectRef = useRef({ surahNumber: null, ayahNumber: null, hasScrolled: false });
   const { downloadStatus, downloadSurahAudio, deleteSurahAudio, isSurahAudioDownloaded } = audioDownloadControls;
 
   // ── Smart Header (hide on scroll down, show on scroll up) ────────────────────
@@ -151,36 +151,45 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Feature 3: Auto-scroll to last-read ayah when returning to a surah, or top if no last-read
+  // Auto-scroll on entry: to an explicit target ayah (e.g. from Quran search),
+  // otherwise to the last-read ayah, otherwise to the top of the surah.
   useEffect(() => {
     if (!selectedSurah || !quranAr || !quranEn) return;
 
-    // Check if we've already scrolled for this surah
-    if (scrollEffectRef.current.surahNumber === selectedSurah.number && scrollEffectRef.current.hasScrolled) {
+    // Check if we've already scrolled to this exact destination
+    if (
+      scrollEffectRef.current.surahNumber === selectedSurah.number &&
+      scrollEffectRef.current.ayahNumber === (targetAyah || null) &&
+      scrollEffectRef.current.hasScrolled
+    ) {
       return;
     }
 
-    // Update the ref to track this surah
+    // Update the ref to track this destination
     scrollEffectRef.current.surahNumber = selectedSurah.number;
+    scrollEffectRef.current.ayahNumber = targetAyah || null;
     scrollEffectRef.current.hasScrolled = true;
 
-    if (lastRead && lastRead.surahNumber === selectedSurah.number) {
-      // Scroll to last-read ayah - wait for DOM to render
+    // Priority: explicit target ayah → last-read ayah → top
+    const destination = targetAyah
+      || (lastRead && lastRead.surahNumber === selectedSurah.number ? lastRead.ayahNumber : null);
+
+    if (destination) {
+      // Wait for DOM to render before scrolling
       const attemptScroll = (attempts = 0) => {
-        const el = document.getElementById(`surah-ayah-${lastRead.ayahNumber}`);
+        const el = document.getElementById(`surah-ayah-${destination}`);
         if (el) {
           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } else if (attempts < 10) {
+        } else if (attempts < 20) {
           // Retry if element not found yet
           setTimeout(() => attemptScroll(attempts + 1), 50);
         }
       };
       attemptScroll();
     } else {
-      // No last-read for this surah, scroll to top
       window.scrollTo({ top: 0, behavior: 'instant' });
     }
-  }, [selectedSurah ? selectedSurah.number : null]);
+  }, [selectedSurah ? selectedSurah.number : null, targetAyah]);
 
   // Feature 3: Track scroll position and save last-read ayah
   const trackScroll = useCallback(() => {
