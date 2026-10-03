@@ -54,8 +54,13 @@ const QuizEngine = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        style={{ minHeight: '100vh', paddingTop: 'var(--space-8)', paddingBottom: '10rem', padding: 'var(--space-4)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+        style={{ minHeight: '100vh', paddingTop: 'var(--space-8)', paddingRight: 'var(--space-4)', paddingBottom: '10rem', paddingLeft: 'var(--space-4)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
       >
+        {/* Directional padding only: this declaration previously ended with the
+            `padding` shorthand, which overrode the `paddingTop` /
+            `paddingBottom` written just before it and silently flattened the
+            whole box to --space-4. Same four intended values, no shorthand left
+            to shadow them. */}
         {/* Immersive Progress Header */}
         <div style={{ width: '100%', maxWidth: '48rem', marginBottom: 'var(--space-8)', display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 'var(--space-2)', paddingRight: 'var(--space-2)' }}>
