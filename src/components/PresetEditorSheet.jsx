@@ -135,7 +135,7 @@ const PresetEditorSheet = ({ preset, presetIndex, surahs, onSave, onClose }) => 
               {[
                 { label: 'Manual Tap', desc: 'Advance turns manually', autoNext: false, errorDetection: false, icon: <Hand size={15} />, color: 'var(--accent-gold)' },
                 { label: 'Hands-Free', desc: 'Auto-advance on silence', autoNext: true, errorDetection: false, icon: <Mic size={15} />, color: 'var(--accent-emerald)' },
-                { label: 'Smart Detection', desc: 'Auto-advance + accuracy check', autoNext: true, errorDetection: true, icon: <BrainCircuit size={15} />, color: '#818cf8' },
+                { label: 'Smart Detection', desc: 'Auto-advance + accuracy check', autoNext: true, errorDetection: true, icon: <BrainCircuit size={15} />, color: 'var(--accent-gold)' },
               ].map(m => {
                 const active = modeActive(m.autoNext, m.errorDetection);
                 return (
@@ -156,7 +156,7 @@ const PresetEditorSheet = ({ preset, presetIndex, surahs, onSave, onClose }) => 
                       background: active ? m.color : 'transparent',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                     }}>
-                      {active && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#000' }} />}
+                      {active && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--text-on-gold)' }} />}
                     </div>
                   </button>
                 );

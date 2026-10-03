@@ -2,7 +2,7 @@ import { AlertCircle } from 'lucide-react';
 
 const selectStyle = {
   background: 'var(--bg-accent)', color: 'var(--text-primary)',
-  border: 'var(--border-hairline)', padding: '0.75rem 0.5rem',
+  border: '1px solid var(--glass-border)', padding: '0.75rem 0.5rem',
   borderRadius: 'var(--radius-md)', outline: 'none', fontSize: '0.85rem',
   minWidth: 0,
 };

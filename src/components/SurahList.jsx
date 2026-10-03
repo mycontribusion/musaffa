@@ -54,7 +54,7 @@ const SurahList = ({
       : { color: 'var(--accent-emerald)', fontWeight: '700' };
 
   const getModeLabel = (preset) => {
-    if (preset.errorDetection) return { label: 'Smart', color: '#818cf8', Icon: BrainCircuit };
+    if (preset.errorDetection) return { label: 'Smart', color: 'var(--accent-emerald)', Icon: BrainCircuit };
     if (preset.autoNext) return { label: 'Hands-Free', color: 'var(--accent-emerald)', Icon: Mic };
     return { label: 'Manual', color: 'var(--accent-gold)', Icon: Hand };
   };
@@ -135,7 +135,8 @@ const SurahList = ({
               return (
                 <div key={idx} style={{
                   flexShrink: 0, minWidth: '200px', maxWidth: '220px',
-                  background: 'var(--glass-bg)', border: 'var(--border-hairline)',
+                  background: 'var(--glass-bg)', border: '1px solid var(--glass-border)',
+                  boxShadow: 'var(--glass-shadow)',
                   borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)',
                   display: 'flex', flexDirection: 'column', gap: 'var(--space-3)',
                 }}>
@@ -145,7 +146,7 @@ const SurahList = ({
                       <p style={{ fontWeight: 'var(--fw-strong)', fontSize: 'var(--fs-body)', color: 'var(--text-primary)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {preset.label}
                       </p>
-                      <p style={{ fontSize: 'var(--fs-label)', color: 'var(--text-muted)', margin: '0.2rem 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <p style={{ fontSize: 'var(--fs-meta)', color: 'var(--text-muted)', margin: '0.2rem 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {rangeLabel}
                       </p>
                     </div>
@@ -163,11 +164,11 @@ const SurahList = ({
                       display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
                       padding: '0.25rem 0.6rem', borderRadius: 'var(--radius-full)',
                       background: `${mode.color}18`, border: `1px solid ${mode.color}40`,
-                      fontSize: 'var(--fs-micro)', fontWeight: '800', color: mode.color,
+                      fontSize: 'var(--fs-meta)', fontWeight: '800', color: mode.color,
                     }}>
-                      <ModeIcon size={10} /> {mode.label}
+                      <ModeIcon size={12} /> {mode.label}
                     </span>
-                    <span style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-muted)' }}>{preset.portion === 'page' ? 'Full Pg' : preset.portion === 'half' ? '½ Pg' : preset.portion === 'verse' ? '1 Verse' : preset.portion}</span>
+                    <span style={{ fontSize: 'var(--fs-meta)', fontWeight: '600', color: 'var(--text-muted)' }}>{preset.portion === 'page' ? 'Full Pg' : preset.portion === 'half' ? '½ Pg' : preset.portion === 'verse' ? '1 Verse' : preset.portion}</span>
                   </div>
 
                   {/* Start button */}
@@ -175,13 +176,13 @@ const SurahList = ({
                     onClick={() => startMusaffaFromPreset(preset)}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
-                      background: 'var(--accent-gold)', color: '#000',
+                      background: 'var(--gold-gradient)', color: 'var(--text-on-gold)',
                       border: 'none', borderRadius: 'var(--radius-md)', padding: '0.6rem',
                       fontWeight: 'var(--fw-strong)', fontSize: 'var(--fs-secondary)', cursor: 'pointer', width: '100%',
                       transition: 'opacity 0.2s',
                     }}
                   >
-                    <Play size={13} /> Start
+                    <Play size={13} fill="currentColor" /> Start
                   </button>
                 </div>
               );
@@ -310,8 +311,8 @@ const SurahList = ({
               fontWeight: '700', cursor: 'pointer',
             }}>Dismiss</button>
             <button onClick={resumeMusaffaSession} style={{
-              padding: '0.5rem 0.8rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-gold)',
-              background: 'var(--accent-gold)', color: '#000', fontSize: 'var(--fs-secondary)',
+              padding: '0.5rem 0.8rem', borderRadius: 'var(--radius-md)', border: 'none',
+              background: 'var(--gold-gradient)', color: 'var(--text-on-gold)', fontSize: 'var(--fs-secondary)',
               fontWeight: '800', cursor: 'pointer',
             }}>Resume</button>
           </div>
@@ -332,11 +333,11 @@ const SurahList = ({
                 style={{ flexShrink: 0, width: '150px', padding: 'var(--space-4)', textAlign: 'left', cursor: 'pointer', border: 'var(--border-hairline)' }}
               >
                 <div style={{ marginBottom: 'var(--space-3)' }}>
-                  <span style={{ fontSize: 'var(--fs-label)', fontWeight: '800', color: 'var(--accent-gold)', opacity: 0.6 }}>{s.number}</span>
+                  <span style={{ fontSize: 'var(--fs-meta)', fontWeight: '800', color: 'var(--accent-gold)' }}>{s.number}</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
                   <p className="arabic" style={{ fontSize: '1.1rem', color: 'var(--text-primary)' }}>{s.name}</p>
-                  <p style={{ fontSize: 'var(--fs-label)', fontWeight: '500', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.englishName}</p>
+                  <p style={{ fontSize: 'var(--fs-secondary)', fontWeight: '600', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.englishName}</p>
                 </div>
               </motion.button>
             ))}
@@ -351,7 +352,7 @@ const SurahList = ({
             {isSearching && filteredSurahs.length > 0 && <BookOpen size={13} color="var(--accent-gold)" />}
             {isSearching ? 'Surahs' : 'Surah Library'}
           </div>
-          <span style={{ fontSize: 'var(--fs-label)', fontWeight: '700', color: 'var(--text-muted)' }}>
+          <span style={{ fontSize: 'var(--fs-meta)', fontWeight: '700', color: 'var(--text-muted)' }}>
             {filteredSurahs.length} {isSearching ? (filteredSurahs.length === 1 ? 'Match' : 'Matches') : 'Chapters'}
           </span>
         </div>
@@ -371,13 +372,13 @@ const SurahList = ({
               style={{ padding: '1.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '0.75rem', background: 'var(--bg-accent)', border: 'var(--border-hairline)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--fs-body-sm)', fontWeight: '800', color: 'var(--text-secondary)' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '0.75rem', background: 'var(--bg-accent)', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--fs-body-sm)', fontWeight: '800', color: 'var(--text-primary)' }}>
                   {surah.number}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
                   <h3 style={{ fontSize: 'var(--fs-card)', fontWeight: '700', color: 'var(--text-primary)' }}>{surah.englishName}</h3>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-muted)' }}>{surah.numberOfAyahs} Ayahs</span>
+                    <span style={{ fontSize: 'var(--fs-meta)', fontWeight: '500', color: 'var(--text-muted)' }}>{surah.numberOfAyahs} Ayahs</span>
                   </div>
                 </div>
               </div>
@@ -388,7 +389,7 @@ const SurahList = ({
                     is rendered (no empty action slot) for surahs that are not downloaded. */}
                 {audioDownloadControls?.isSurahAudioDownloaded(surah.number) && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
-                    <CheckCircle size={14} style={{ color: 'var(--accent-emerald)', opacity: 0.8 }} />
+                    <CheckCircle size={14} style={{ color: 'var(--accent-emerald)' }} />
                   </div>
                 )}
               </div>

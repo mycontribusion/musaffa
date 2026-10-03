@@ -18,6 +18,30 @@ import { useMusaffaSession } from './hooks/useMusaffaSession';
 import { usePresets } from './hooks/usePresets';
 import { useVoskModelDownload } from './hooks/useVoskModelDownload';
 
+/**
+ * Views that ship their own top-level header inside the normal page flow.
+ *
+ * The global `<Header />` is not rendered for these, so the local bar is the
+ * only header on screen and starts at the top of the viewport:
+ *
+ *  - `weaknesses`             — Mistake Book     (`WeaknessTracker`)
+ *  - `audio-manager`          — Audio Manager    (`AudioManager`)
+ *  - `detail`                 — Surah Detail     (`SurahDetail`)
+ *  - `mutashabihat-selection` — Mutashabih Quiz (`MutashabihSelection`)
+ *  - `mutashabihat-multi-session` — Mutashabih Quiz session (`MutashabihatSession`)
+ *
+ * Every other view keeps the global header exactly as it is today. The local
+ * headers of those views no longer need to offset themselves past the global
+ * header, so they pin to `top: 0` instead.
+ */
+const VIEWS_WITHOUT_GLOBAL_HEADER = new Set([
+  'weaknesses',
+  'audio-manager',
+  'detail',
+  'mutashabihat-selection',
+  'mutashabihat-multi-session',
+]);
+
 const App = () => {
   const [view, setView] = useState('list');
   const [theme, setTheme] = useState(() => window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
@@ -220,7 +244,7 @@ const App = () => {
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}>{error}</p>
           <button
             onClick={() => window.location.reload()}
-            style={{ padding: '0.75rem 1.5rem', background: 'var(--accent-gold)', color: '#000', borderRadius: '0.75rem', fontWeight: 500, border: 'none', cursor: 'pointer' }}
+            style={{ padding: '0.75rem 1.5rem', background: 'var(--gold-gradient)', color: 'var(--text-on-gold)', borderRadius: '0.75rem', fontWeight: 'var(--fw-strong)', border: 'none', cursor: 'pointer' }}
           >
             Try Again
           </button>
@@ -231,21 +255,25 @@ const App = () => {
 
   const modelReady = modelStatus === 'ready';
 
+  const showGlobalHeader = !VIEWS_WITHOUT_GLOBAL_HEADER.has(view);
+
   return (
     <>
-      <Header
-        theme={theme}
-        setTheme={setTheme}
-        setView={setView}
-        // Vosk model install props
-        modelStatus={modelStatus}
-        installProgress={installProgress}
-        installMessage={installMessage}
-        showInstallPrompt={showInstallPrompt}
-        confirmInstall={confirmInstall}
-        setShowInstallPrompt={setShowInstallPrompt}
-        isNative={isNative}
-      />
+      {showGlobalHeader && (
+        <Header
+          theme={theme}
+          setTheme={setTheme}
+          setView={setView}
+          // Vosk model install props
+          modelStatus={modelStatus}
+          installProgress={installProgress}
+          installMessage={installMessage}
+          showInstallPrompt={showInstallPrompt}
+          confirmInstall={confirmInstall}
+          setShowInstallPrompt={setShowInstallPrompt}
+          isNative={isNative}
+        />
+      )}
       <div className="app-container">
         <main className="pb-24">
           {/* Homepage controls sit directly below the global header. */}
@@ -326,17 +354,16 @@ const App = () => {
                 selectedSurah={selectedSurah}
                 surahs={surahs}
                 targetAyah={targetAyah}
-                handleSelectSurah={handleSelectSurah} 
-                quranAr={quranAr} 
-                quranEn={quranEn} 
-                setView={setView} 
-                openMusaffaConfig={(s) => { handleSelectSurah(s); setPartnerSubView('config'); setView('partner'); }} 
-                startQuiz={startQuiz} 
-                waqarData={waqarData} 
-                lastRead={lastRead} 
-                setLastRead={setLastRead} 
-                reciter={reciter} 
-                audioDownloadControls={audioDownloadControls} 
+                handleSelectSurah={handleSelectSurah}
+                quranAr={quranAr}
+                quranEn={quranEn}
+                setView={setView}
+                openMusaffaConfig={(s) => { handleSelectSurah(s); setPartnerSubView('config'); setView('partner'); }}
+                startQuiz={startQuiz}
+                waqarData={waqarData}
+                lastRead={lastRead}
+                setLastRead={setLastRead}
+                reciter={reciter}
               />
             )}
             

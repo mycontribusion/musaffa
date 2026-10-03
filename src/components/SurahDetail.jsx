@@ -1,23 +1,15 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Download, Play, Pause, SkipBack, SkipForward, Volume2, X, Users, BrainCircuit } from 'lucide-react';
-import { useAudioDownload } from '../hooks/useAudioDownload';
+import { ChevronLeft, Play, Pause, SkipBack, SkipForward, Volume2, X, Users, CircleHelp } from 'lucide-react';
 import { getAudioUrl } from '../utils/quranUtils';
 
-const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranEn, setView, openMusaffaConfig, waqarData, lastRead, setLastRead, reciter, audioDownloadControls, targetAyah = null }) => {
+const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranEn, setView, openMusaffaConfig, waqarData, lastRead, setLastRead, reciter, targetAyah = null }) => {
   const scrollTrackerRef = useRef(null);
   const scrollEffectRef = useRef({ surahNumber: null, ayahNumber: null, hasScrolled: false });
-  const { downloadStatus, cancelDownload } = audioDownloadControls;
 
-  // ── Audio download status presentation ─────────────────────────────────────
-  const downloadText = downloadStatus.notice || downloadStatus.message;
-  const dlTone = downloadStatus.error
-    ? { bg: 'rgba(185, 28, 28, 0.85)', border: 'rgba(220, 38, 38, 0.6)' }
-    : downloadStatus.status === 'cancelled'
-      ? { bg: 'rgba(87, 83, 78, 0.9)', border: 'rgba(168, 162, 158, 0.6)' }
-      : downloadStatus.isDownloading
-        ? { bg: 'rgba(30, 58, 138, 0.85)', border: 'rgba(59, 130, 246, 0.6)' }
-        : { bg: 'rgba(16, 185, 129, 0.85)', border: 'rgba(16, 185, 129, 0.6)' };
+  /* The download status card that used to sit under the surah title has been
+     removed: download progress and its cancel control now live solely in the
+     Audio Manager, so this view no longer consumes `audioDownloadControls`. */
 
   // ── Smart Header (hide on scroll down, show on scroll up) ────────────────────
   const [headerVisible, setHeaderVisible] = useState(true);
@@ -270,61 +262,73 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
       whileTap={{ cursor: 'grabbing' }}
     >
       {/* Header — hides on scroll down, shows on scroll up */}
-      {/* Offset by the global header's rendered height so this bar parks directly
-          beneath it at every viewport: `--control-md-h` (36px, 42px from 640px up)
-          + `py-2` (--space-4) + the 1px hairline border. The previous fixed 4.5rem
-          resolved to 63px/72px, leaving a 12-13px gap under the real header. */}
+      {/* Full-bleed top-level header. The global header is not rendered on the
+          Surah Detail view, so this bar is the page's only header: it pins at
+          `top: 0` and breaks out of `.app-container` (`100vw` plus a centred
+          negative margin) so its background and hairline span the whole
+          viewport. Inside, `.app-container` restores the standard page gutter,
+          and `py-2` around a 36/42px `.icon-btn` row reproduces the global
+          header's exact height. The previous offset
+          `calc(var(--control-md-h) + var(--space-4) + 1px)` — and the fixed
+          4.5rem before it — existed only to clear the global header. */}
       <motion.div
         animate={{ y: headerVisible ? 0 : -80, opacity: headerVisible ? 1 : 0 }}
         transition={{ duration: 0.25, ease: 'easeInOut' }}
-        style={{ position: 'sticky', top: 'calc(var(--control-md-h) + var(--space-4) + 1px)', zIndex: 'var(--z-sticky)' }}
+        style={{
+          position: 'sticky', top: 0, zIndex: 'var(--z-header)',
+          width: '100vw', marginLeft: 'calc(50% - 50vw)', flexShrink: 0,
+          backgroundColor: 'var(--bg-primary)', borderBottom: 'var(--border-hairline)',
+        }}
       >
-        <div className="glass-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem' }}>
-          <button onClick={() => setView('list')} className="icon-btn">
-            <ChevronLeft size={18} />
-          </button>
-          <div style={{ textAlign: 'center' }}>
-            <h2 style={{ fontSize: 'var(--fs-page)', fontWeight: '800', color: 'var(--text-primary)' }}>{selectedSurah.englishName}</h2>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-            {/* Mutashabih Quiz — same destination as the homepage "Mutashabih Quiz"
-                card. `BrainCircuit` is the icon already used for "Mutashabihat
-                Quiz" in PartnerMenu. Only rendered when the currently selected
-                surah has Mutashabihat data, reusing the exact same smart
-                condition as the previous below-title Mutashabihat Session
-                button (`waqarData && waqarData[selectedSurah.number]`). */}
-            {waqarData && waqarData[selectedSurah.number] && (
+        <div className="app-container">
+          <div className="flex items-center justify-between py-2" style={{ paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>
+            <button onClick={() => setView('list')} className="icon-btn">
+              <ChevronLeft size={18} />
+            </button>
+            <div style={{ textAlign: 'center' }}>
+              <h2 style={{ fontSize: 'var(--fs-page)', fontWeight: '800', color: 'var(--text-primary)' }}>{selectedSurah.englishName}</h2>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              {/* Mutashabih Quiz — same destination as the homepage "Mutashabih Quiz"
+                  card. `CircleHelp` is the icon already used for "Mutashabihat
+                  Quiz" in PartnerMenu and MutashabihSelection. Only rendered when
+                  the currently selected surah has Mutashabihat data, reusing the
+                  exact same smart condition as the previous below-title
+                  Mutashabihat Session button
+                  (`waqarData && waqarData[selectedSurah.number]`). */}
+              {waqarData && waqarData[selectedSurah.number] && (
+                <button
+                  onClick={() => setView('mutashabihat-selection')}
+                  className="icon-btn"
+                  aria-label="Open Mutashabih Quiz"
+                  title="Mutashabih Quiz"
+                >
+                  <CircleHelp size={18} />
+                </button>
+              )}
+              {/* Musaffa — reuses the `openMusaffaConfig` navigation handed down by
+                  App (selects this surah, then opens the existing Partner config
+                  screen). `Users` is the icon already used for "Start Musaffa" in
+                  PartnerMenu, so the feature keeps one glyph. */}
               <button
-                onClick={() => setView('mutashabihat-selection')}
+                onClick={() => openMusaffaConfig(selectedSurah)}
                 className="icon-btn"
-                aria-label="Open Mutashabih Quiz"
-                title="Mutashabih Quiz"
+                aria-label="Open Musaffa for this Surah"
+                title="Musaffa"
               >
-                <BrainCircuit size={18} />
+                <Users size={18} />
               </button>
-            )}
-            {/* Musaffa — reuses the `openMusaffaConfig` navigation handed down by
-                App (selects this surah, then opens the existing Partner config
-                screen). `Users` is the icon already used for "Start Musaffa" in
-                PartnerMenu, so the feature keeps one glyph. */}
-            <button
-              onClick={() => openMusaffaConfig(selectedSurah)}
-              className="icon-btn"
-              aria-label="Open Musaffa for this Surah"
-              title="Musaffa"
-            >
-              <Users size={18} />
-            </button>
-            {/* Play Surah button */}
-            <button
-              onClick={handlePlaySurah}
-              className="icon-btn"
-              title="Play Surah"
-              style={{ color: isPlaying ? 'var(--accent-gold)' : 'var(--text-secondary)' }}
-            >
-              {isPlaying ? <Pause size={18} /> : <Play size={18} />}
-            </button>
-            {/* Audio download/delete controls live in the Audio Manager, not in this header. */}
+              {/* Play Surah button */}
+              <button
+                onClick={handlePlaySurah}
+                className="icon-btn"
+                title="Play Surah"
+                style={{ color: isPlaying ? 'var(--accent-gold)' : 'var(--text-secondary)' }}
+              >
+                {isPlaying ? <Pause size={18} /> : <Play size={18} />}
+              </button>
+              {/* Audio download/delete controls live in the Audio Manager, not in this header. */}
+            </div>
           </div>
         </div>
       </motion.div>
@@ -337,74 +341,20 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
           </h1>
           <div style={{ height: '2px', width: '60%', background: 'linear-gradient(90deg, transparent, var(--accent-gold), transparent)', margin: '0 auto' }} />
         </div>
-        {/* Download Status */}
-        {downloadText && (
-          <div
-            role="status"
-            aria-live="polite"
-            style={{
-              background: dlTone.bg,
-              color: 'white',
-              padding: downloadStatus.isDownloading ? '0.6rem 0.9rem' : '0.5rem 1rem',
-              borderRadius: 'var(--radius-full)',
-              fontSize: '0.85rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 'var(--space-2)',
-              alignSelf: 'center',
-              width: 'fit-content',
-              maxWidth: 'min(32rem, 92vw)',
-              backdropFilter: 'blur(4px)',
-              WebkitBackdropFilter: 'blur(4px)',
-              border: `1px solid ${dlTone.border}`,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-              {(downloadStatus.isDownloading || downloadStatus.notice) && (
-                <div className="dl-pulse" style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(255,255,255,0.3)', flexShrink: 0 }}></div>
-              )}
-              {downloadStatus.status === 'cancelled' && <X size={16} strokeWidth={1.5} />}
-              {downloadStatus.error && <span role="img" aria-label="error">⚠️</span>}
-              {!downloadStatus.isDownloading && !downloadStatus.error && downloadStatus.status !== 'cancelled' && (
-                <Download size={16} strokeWidth={1.5} />
-              )}
-              <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>{downloadText}</span>
-              {downloadStatus.isDownloading && (
-                <button type="button" onClick={cancelDownload} className="dl-pill-btn">
-                  Cancel
-                </button>
-              )}
-            </div>
-            {downloadStatus.isDownloading && downloadStatus.total > 0 && (
-              <>
-                <div
-                  aria-hidden="true"
-                  style={{ height: '3px', borderRadius: 'var(--radius-full)', background: 'rgba(255,255,255,0.28)', overflow: 'hidden' }}
-                >
-                  <div style={{
-                    height: '100%',
-                    width: `${Math.min(100, Math.max(0, downloadStatus.progress))}%`,
-                    background: 'var(--accent-gold)',
-                    borderRadius: 'var(--radius-full)',
-                    transition: 'width 0.2s ease',
-                  }} />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--space-3)', fontSize: 'var(--fs-meta)', fontWeight: '700', opacity: 0.9 }}>
-                  <span>{downloadStatus.completed} / {downloadStatus.total} ayahs</span>
-                  <span>{downloadStatus.progress}%</span>
-                </div>
-              </>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Ayahs List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-10)', maxWidth: '800px', margin: '0 auto', padding: '2rem 0 10rem' }}>
+      {/* Inter-ayah gap. Combined with each card's 0.25rem bottom padding this
+          gives 2.25rem of space between a translation and the next ayah's divider
+          row — exactly half the 4.5rem it was before, while the Arabic→translation
+          gap inside each card was doubled. The result is a deliberate 5rem-above /
+          2.25rem-below ratio, so the translation now sits visually closer to the
+          next ayah than to its own Arabic. */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', maxWidth: '800px', margin: '0 auto', padding: '2rem 0 10rem' }}>
         {/* Unnumbered Bismillah */}
         {selectedSurah.number !== 1 && selectedSurah.number !== 9 && (
           <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-            <p className="arabic-text" style={{ fontSize: '2.5rem', color: 'var(--accent-gold)', opacity: 0.8 }}>بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</p>
+            <p className="arabic-text" style={{ fontSize: '2.5rem', color: 'var(--accent-gold)' }}>بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</p>
           </div>
         )}
 
@@ -420,8 +370,14 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
               key={ayah.number}
               id={`surah-ayah-${ayah.numberInSurah}`} data-ayah-num={ayah.numberInSurah}
               onClick={() => handleAyahTap(idx)}
+              /* `gap: var(--space-5)` spaces the divider row off the Arabic. The
+                 Arabic→translation gap is doubled separately below (via the
+                 translation's `marginTop`), and the bottom padding is cut to
+                 `var(--space-1)` so a translation no longer trails a large empty
+                 gap before the next ayah. */
               style={{
-                display: 'flex', flexDirection: 'column', gap: 'var(--space-5)', padding: '1.25rem 0.75rem',
+                display: 'flex', flexDirection: 'column', gap: 'var(--space-5)',
+                padding: '1.25rem 0.75rem var(--space-1)',
                 borderRadius: 'var(--radius-md)', cursor: 'pointer', transition: 'background 0.3s',
                 background: isActive ? 'var(--accent-gold-soft)' : 'transparent',
                 border: isActive ? '1px solid rgba(212,175,55,0.3)' : '1px solid transparent',
@@ -433,9 +389,9 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
                 <div style={{
                   padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-full)',
                   border: `1px solid ${isActive ? 'var(--accent-gold)' : 'var(--glass-border)'}`,
-                  background: isActive ? 'var(--accent-gold)' : 'var(--glass-bg)',
+                  background: isActive ? 'var(--gold-gradient)' : 'var(--glass-bg)',
                   fontSize: 'var(--fs-micro)', fontWeight: '800',
-                  color: isActive ? '#000' : 'var(--text-muted)',
+                  color: isActive ? 'var(--text-on-gold)' : 'var(--text-muted)',
                   display: 'flex', alignItems: 'center', gap: '0.3rem'
                 }}>
                   {isActive && isPlaying && <Volume2 size={9} />}
@@ -444,13 +400,16 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
                 <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to left, transparent, var(--glass-border), transparent)' }} />
               </div>
 
-              {/* Arabic */}
-              <div className="arabic-text" style={{ fontSize: 'clamp(1.75rem, 5vw, 2.5rem)', lineHeight: '1.8', color: isActive ? 'var(--accent-gold)' : 'var(--text-primary)', textAlign: 'center', transition: 'color 0.3s' }}>
+              {/* Arabic — flush right (RTL), opposite the translation below */}
+              <div className="arabic-text" style={{ fontSize: 'clamp(1.75rem, 5vw, 2.5rem)', lineHeight: '1.8', color: isActive ? 'var(--accent-gold)' : 'var(--text-primary)', textAlign: 'right', transition: 'color 0.3s' }}>
                 {displayText}
               </div>
 
-              {/* Translation */}
-              <div style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-card)', fontWeight: '300', lineHeight: '1.5', padding: '0 1rem', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
+              {/* Translation — flush left, opposite the Arabic above. `marginTop`
+                  stacks on the container's `gap: var(--space-5)` (1.5rem), taking
+                  the Arabic→translation distance to 5rem — double the 2.5rem it
+                  measured before this change. */}
+              <div style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-card)', fontWeight: '450', lineHeight: '1.5', padding: '0 1rem', textAlign: 'left', maxWidth: '600px', marginTop: '3.5rem' }}>
                 {englishAyahs[idx]?.text}
               </div>
             </motion.div>
@@ -468,29 +427,30 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
             style={{
               position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 'var(--z-fixed)',
               padding: '0.75rem 1rem 1.25rem',
-              background: 'var(--bg-primary)',
-              borderTop: 'var(--border-hairline)',
+              background: 'var(--glass-bg)',
+              borderTop: '1px solid var(--glass-border)',
+              boxShadow: '0 -4px 24px rgba(0, 0, 0, 0.18)',
               backdropFilter: 'blur(20px)',
             }}
           >
             <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
               {/* Ayah label + close */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 'var(--fs-label)', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                <span style={{ fontSize: 'var(--fs-meta)', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                   {selectedSurah.englishName}
                 </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                  <span style={{ fontSize: 'var(--fs-label)', fontWeight: '700', color: playingAyahIdx !== null ? 'var(--accent-gold)' : 'var(--text-muted)' }}>
+                  <span style={{ fontSize: 'var(--fs-meta)', fontWeight: '700', color: playingAyahIdx !== null ? 'var(--accent-gold)' : 'var(--text-muted)' }}>
                     {playingAyahIdx !== null
                       ? `Ayah ${arabicAyahs[playingAyahIdx]?.numberInSurah} of ${arabicAyahs.length}`
                       : `${arabicAyahs.length} Ayahs`}
                   </span>
                   <button
                     onClick={handleClosePlayer}
-                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.15rem', display: 'flex', alignItems: 'center' }}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.4rem', display: 'flex', alignItems: 'center' }}
                     title="Close player"
                   >
-                    <X size={14} />
+                    <X size={16} />
                   </button>
                 </div>
               </div>
@@ -508,14 +468,14 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
                   onClick={handlePlayPause}
                   style={{
                     width: '52px', height: '52px', borderRadius: '50%',
-                    background: 'var(--accent-gold)', border: 'none', cursor: 'pointer',
+                    background: 'var(--gold-gradient)', border: 'none', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 4px 20px rgba(212,175,55,0.4)',
+                    boxShadow: '0 4px 20px var(--accent-gold-soft)',
                   }}
                 >
                   {isPlaying
-                    ? <Pause size={22} color="#000" fill="#000" />
-                    : <Play size={22} color="#000" fill="#000" style={{ marginLeft: '2px' }} />}
+                    ? <Pause size={22} color="var(--text-on-gold)" fill="var(--text-on-gold)" />
+                    : <Play size={22} color="var(--text-on-gold)" fill="var(--text-on-gold)" style={{ marginLeft: '2px' }} />}
                 </button>
 
                 <button

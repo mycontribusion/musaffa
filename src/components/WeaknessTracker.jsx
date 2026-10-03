@@ -73,26 +73,31 @@ const WeaknessTracker = ({
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="pb-24">
       {/* Header */}
-      {/* Sticky offset mirrors the global header's rendered height so this card
-          parks below it instead of sliding underneath: the header row is
-          `--control-md-h` (36px, then 42px from 640px up) tall, plus its `py-2`
-          (2 x 0.5rem = `--space-4`) and the 1px `--border-hairline` bottom
-          border. Expressed as a calc rather than a fixed rem so it tracks both
-          breakpoints — 51px below 640px, 57px at 640px itself, 59px above it —
-          whereas a single rem value cannot cover all three.
-          `--z-sticky` (90) stays as-is: now that the two no longer overlap, the
-          lower layer is harmless and still lets the list scroll beneath. */}
-      <div style={{ position: 'sticky', top: 'calc(var(--control-md-h) + var(--space-4) + 1px)', zIndex: 'var(--z-sticky)', padding: '1rem 0' }}>
-        <div className="glass-card" style={{ padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-            <button onClick={() => setView('list')} className="icon-btn" style={{ width: 'var(--control-md-h)', height: 'var(--control-md-h)' }}>
-              <ChevronLeft size={18} />
-            </button>
-            <div>
+      {/* Full-bleed top-level header. The global header is not rendered on the
+          Mistake Book view, so this bar is the page's only header: it pins at
+          `top: 0` and breaks out of `.app-container` (`100vw` plus a centred
+          negative margin) so its background and hairline span the whole
+          viewport. Inside, `.app-container` restores the standard page gutter
+          and `py-2` around the 36/42px `.icon-btn` reproduces the global
+          header's exact height — which is also why the row is single-line: the
+          former two-line title block (title + subtitle) was what made this bar
+          taller than the global header. The old offset
+          `calc(var(--control-md-h) + var(--space-4) + 1px)` existed only to
+          clear the global header and is gone. */}
+      <div style={{
+        position: 'sticky', top: 0, zIndex: 'var(--z-header)',
+        width: '100vw', marginLeft: 'calc(50% - 50vw)', flexShrink: 0,
+        backgroundColor: 'var(--bg-primary)', borderBottom: 'var(--border-hairline)',
+      }}>
+        <div className="app-container">
+          <div className="flex items-center justify-between py-2" style={{ paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+              <button onClick={() => setView('list')} className="icon-btn">
+                <ChevronLeft size={18} />
+              </button>
               <h1 style={{ fontSize: 'var(--fs-page)', fontWeight: 'var(--fw-strong)', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                 <BookOpen size={18} color="var(--accent-gold)" /> Mistake Book
               </h1>
-              <p style={{ fontSize: 'var(--fs-secondary)', color: 'var(--text-secondary)', margin: 0 }}>Review and master your weak points</p>
             </div>
           </div>
         </div>
@@ -127,8 +132,8 @@ const WeaknessTracker = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
             <AnimatePresence>
               {groupedStumbles.length === 0 ? (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ textAlign: 'center', padding: '4rem 1rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-lg)', border: 'var(--border-hairline)' }}>
-                  <CheckCircle size={48} color="var(--accent-emerald)" style={{ marginBottom: 'var(--space-4)', opacity: 0.5 }} />
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ textAlign: 'center', padding: '4rem 1rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--glass-border)' }}>
+                  <CheckCircle size={48} color="var(--accent-emerald)" style={{ marginBottom: 'var(--space-4)' }} />
                   <h3 style={{ fontSize: 'var(--fs-page)', fontWeight: '800', color: 'var(--text-primary)' }}>No Stumbles Recorded</h3>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', maxWidth: '300px', margin: '0.5rem auto 0' }}>Your mistake book is empty! Use the Smart Musaffa mode to track your recitation accuracy.</p>
                 </motion.div>
@@ -147,10 +152,10 @@ const WeaknessTracker = ({
                       </div>
                       <button onClick={() => handlePractice(group.surahNumber, group.ayahs)} style={{
                         display: 'flex', alignItems: 'center', gap: 'var(--space-2)', padding: '0.6rem 1rem', borderRadius: 'var(--radius-md)',
-                        background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#818cf8',
+                        background: 'var(--accent-gold-soft)', border: '1px solid var(--accent-gold)', color: 'var(--accent-gold)',
                         fontWeight: '800', fontSize: 'var(--fs-secondary)', cursor: 'pointer', transition: 'all 0.2s'
                       }} className="hover-scale">
-                        <BrainCircuit size={14} /> Practice
+                        <BrainCircuit size={15} /> Practice
                       </button>
                     </div>
                     

@@ -83,7 +83,7 @@ const QuizEngine = ({
             </div>
           </div>
 
-          <div style={{ height: '0.5rem', width: '100%', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 'var(--radius-full)', overflow: 'hidden', border: '1px solid rgba(255, 255, 255, 0.05)', padding: '2px' }}>
+          <div style={{ height: '0.5rem', width: '100%', background: 'var(--bg-accent)', borderRadius: 'var(--radius-full)', overflow: 'hidden', border: '1px solid var(--glass-border)', padding: '2px' }}>
             <motion.div 
               style={{ height: '100%', background: `linear-gradient(to right, var(--accent-gold), var(--accent-emerald))`, borderRadius: 'var(--radius-full)', boxShadow: '0 0 15px rgba(212, 175, 55, 0.3)' }}
               initial={{ width: 0 }} 
@@ -113,7 +113,7 @@ const QuizEngine = ({
                 >
                   <div style={{ position: 'absolute', inset: 0, background: 'rgba(251, 191, 36, 0.1)', filter: 'blur(48px)', borderRadius: 'var(--radius-full)' }} />
                   <div className="glass-card" style={{ position: 'relative', padding: 'clamp(2rem, 6vw, 3rem)', border: '1px solid rgba(251, 191, 36, 0.2)', maxWidth: '42rem', margin: '0 auto', borderRadius: '2.5rem', background: 'rgba(251, 191, 36, 0.05)' }}>
-                    <span style={{ position: 'absolute', top: '-0.75rem', left: '50%', transform: 'translateX(-50%)', padding: '0 1rem', background: 'var(--accent-gold)', color: '#0a0a0f', fontSize: '0.625rem', fontWeight: 'var(--fw-strong)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', borderRadius: 'var(--radius-full)' }}>
+                    <span style={{ position: 'absolute', top: '-0.75rem', left: '50%', transform: 'translateX(-50%)', padding: '0.2rem 1rem', background: 'var(--gold-gradient)', color: 'var(--text-on-gold)', fontSize: '0.65rem', fontWeight: 'var(--fw-strong)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', borderRadius: 'var(--radius-full)' }}>
                       The Context Verse
                     </span>
                     <p className="arabic-text" style={{ fontSize: 'clamp(1.75rem, 5vw, 2.25rem)', lineHeight: 2, textAlign: 'right', color: 'var(--text-primary)' }}>
@@ -170,7 +170,7 @@ const QuizEngine = ({
                       <motion.div 
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        style={{ position: 'absolute', top: '1.5rem', left: '2rem', padding: '0.25rem 0.75rem', borderRadius: 'var(--radius-full)', fontSize: '0.625rem', fontWeight: 'var(--fw-strong)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', background: isCorrect ? 'var(--accent-emerald)' : 'rgba(239, 68, 68, 0.2)', color: isCorrect ? '#0a0a0f' : 'rgba(239, 68, 68, 0.7)' }}
+                        style={{ position: 'absolute', top: '1.5rem', left: '2rem', padding: '0.25rem 0.75rem', borderRadius: 'var(--radius-full)', fontSize: '0.625rem', fontWeight: 'var(--fw-strong)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', background: isCorrect ? 'var(--accent-emerald)' : 'rgba(239, 68, 68, 0.2)', color: isCorrect ? '#ffffff' : 'rgba(239, 68, 68, 0.9)' }}
                       >
                         Surah {opt.surahName}
                       </motion.div>
@@ -189,7 +189,7 @@ const QuizEngine = ({
                       </motion.div>
                     )}
                     {showWrong && (
-                      <XCircle size={32} style={{ color: 'rgba(239, 68, 68, 0.5)' }} />
+                      <XCircle size={32} style={{ color: 'var(--accent-red)' }} />
                     )}
                   </div>
                 </motion.button>
@@ -207,9 +207,9 @@ const QuizEngine = ({
               exit={{ opacity: 0, y: 100 }}
               style={{ position: 'fixed', bottom: '3rem', left: '1rem', right: '1rem', zIndex: 'var(--z-fixed)', maxWidth: '24rem', margin: '0 auto' }}
             >
-              <div style={{ padding: 'var(--space-6)', borderRadius: '2.5rem', border: '1px solid', background: quizFeedback === 'correct' ? 'rgba(62, 211, 153, 0.1)' : 'rgba(239, 68, 68, 0.1)', backdropFilter: 'blur(24px)', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)' }}>
+              <div style={{ padding: 'var(--space-6)', borderRadius: '2.5rem', border: quizFeedback === 'correct' ? '1px solid rgba(52, 211, 153, 0.35)' : '1px solid rgba(239, 68, 68, 0.25)', background: quizFeedback === 'correct' ? 'var(--glass-bg)' : 'var(--glass-bg)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', boxShadow: 'var(--glass-shadow)' }}>
                 <div style={{ display: 'flex', gap: '1.25rem' }}>
-                  <div style={{ width: '3.5rem', height: '3.5rem', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: quizFeedback === 'correct' ? 'var(--accent-emerald)' : 'var(--accent-red)', color: '#0a0a0f' }}>
+                  <div style={{ width: '3.5rem', height: '3.5rem', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: quizFeedback === 'correct' ? 'var(--accent-emerald)' : 'var(--accent-red)', color: '#ffffff' }}>
                     {quizFeedback === 'correct' ? <CheckCircle2 size={28} /> : <XCircle size={28} />}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
@@ -248,17 +248,17 @@ const QuizEngine = ({
               style={{ position: 'absolute', inset: 0, filter: 'blur(100px)', opacity: 0.3, background: isPassing ? 'var(--accent-emerald)' : 'var(--accent-gold)' }}
             />
             
-            <div style={{ position: 'relative', zIndex: 10, width: '12rem', height: '12rem', borderRadius: '4rem', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(24px)', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)' }}>
+            <div style={{ position: 'relative', zIndex: 10, width: '12rem', height: '12rem', borderRadius: '4rem', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(24px)', boxShadow: 'var(--glass-shadow)' }}>
               <span style={{ fontSize: '3rem', fontWeight: 'var(--fw-strong)', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{quizScore}</span>
-              <div style={{ height: '2px', width: '3rem', background: 'rgba(255, 255, 255, 0.2)', margin: '0.5rem 0' }} />
-              <span style={{ fontSize: '0.625rem', fontWeight: 'var(--fw-strong)', color: 'var(--text-primary)', opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.3em' }}>Perfect Marks</span>
+              <div style={{ height: '2px', width: '3rem', background: 'var(--glass-border)', margin: '0.5rem 0' }} />
+              <span style={{ fontSize: '0.6875rem', fontWeight: 'var(--fw-strong)', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.2em' }}>Marks</span>
             </div>
 
             {isPassing && (
               <motion.div 
                 initial={{ opacity: 0, scale: 0 }} 
                 animate={{ opacity: 1, scale: 1 }}
-                style={{ position: 'absolute', top: '-1rem', right: '-1rem', width: '3rem', height: '3rem', background: 'var(--accent-emerald)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0a0a0f', boxShadow: '0 8px 24px -4px rgba(0, 0, 0, 0.37)' }}
+                style={{ position: 'absolute', top: '-1rem', right: '-1rem', width: '3rem', height: '3rem', background: 'var(--accent-emerald)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', boxShadow: '0 8px 24px -4px rgba(0, 0, 0, 0.37)' }}
               >
                 <Sparkles size={24} />
               </motion.div>
@@ -277,7 +277,7 @@ const QuizEngine = ({
           <div style={{ display: 'grid', gap: 'var(--space-4)', padding: '0 1rem' }}>
             <button 
               onClick={() => startQuiz(activeQuizType)} 
-              style={{ position: 'relative', height: '5rem', background: 'var(--accent-emerald)', color: '#0a0a0f', borderRadius: 'var(--radius-xl)', fontWeight: 'var(--fw-strong)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', fontSize: '0.6875rem', border: 'none', cursor: 'pointer', overflow: 'hidden', transition: 'all 0.2s' }}
+              style={{ position: 'relative', height: '5rem', background: 'var(--accent-emerald)', color: '#ffffff', borderRadius: 'var(--radius-xl)', fontWeight: 'var(--fw-strong)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', fontSize: '0.6875rem', border: 'none', cursor: 'pointer', overflow: 'hidden', transition: 'all 0.2s' }}
             >
               <div style={{ position: 'absolute', inset: 0, background: 'rgba(255, 255, 255, 0.2)', transform: 'translateY(100%)', transition: 'transform 0.5s' }} />
               <span style={{ position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-3)' }}>
@@ -288,7 +288,7 @@ const QuizEngine = ({
 
             <button 
               onClick={() => setView('detail')} 
-              style={{ height: '5rem', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.1)', color: 'var(--text-primary)', borderRadius: 'var(--radius-xl)', fontWeight: 'var(--fw-strong)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', fontSize: '0.6875rem', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-3)' }}
+              style={{ height: '5rem', background: 'var(--bg-accent)', border: '1px solid var(--glass-border)', color: 'var(--text-primary)', borderRadius: 'var(--radius-xl)', fontWeight: 'var(--fw-strong)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', fontSize: '0.6875rem', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-3)' }}
             >
               <ArrowRight size={18} />
               Return to Surah

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { BrainCircuit, ChevronLeft, Target, Shuffle, List } from 'lucide-react';
+import { CircleHelp, ChevronLeft, Target, Shuffle, List } from 'lucide-react';
 
 const MutashabihatQuizConfig = ({
   surah,
@@ -15,7 +15,7 @@ const MutashabihatQuizConfig = ({
     { id: 'endings', label: 'Verse Finales', icon: <List size={14} />, description: 'Identify verses from their closing words' },
     { id: 'one-word', label: 'Subtle Distinctions', icon: <Target size={14} />, description: 'Spot the single-word difference' },
     { id: 'continue', label: 'Continuations', icon: <ChevronLeft size={14} />, description: 'Which verse follows the context?' },
-    { id: 'which-surah', label: 'Surah Identification', icon: <BrainCircuit size={14} />, description: 'Identify the correct Surah' },
+    { id: 'which-surah', label: 'Surah Identification', icon: <CircleHelp size={14} />, description: 'Identify the correct Surah' },
   ];
 
   const sectionLabel = {
@@ -78,8 +78,8 @@ const MutashabihatQuizConfig = ({
                   <div style={{
                     width: '32px', height: '32px', borderRadius: '8px', display: 'flex',
                     alignItems: 'center', justifyContent: 'center',
-                    background: quizType === type.id ? 'var(--accent-gold)' : 'rgba(255,255,255,0.05)',
-                    color: quizType === type.id ? '#000' : 'var(--text-muted)'
+                    background: quizType === type.id ? 'var(--gold-gradient)' : 'var(--bg-secondary)',
+                    color: quizType === type.id ? 'var(--text-on-gold)' : 'var(--text-muted)'
                   }}>
                     {type.icon}
                   </div>
@@ -100,7 +100,7 @@ const MutashabihatQuizConfig = ({
                   display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}>
                   {quizType === type.id && (
-                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#000' }} />
+                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--text-on-gold)' }} />
                   )}
                 </div>
               </button>

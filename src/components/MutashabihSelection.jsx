@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, Check, CheckSquare, Square, Zap } from 'lucide-react';
+import { ChevronLeft, Check, CheckSquare, Square, Zap, CircleHelp } from 'lucide-react';
 import { buildSessionCards } from '../utils/mutashabihatParser';
 
 const MutashabihSelection = ({ surahs, waqarData, quranAr, setView, setMultiSurahSession }) => {
@@ -65,47 +65,67 @@ const MutashabihSelection = ({ surahs, waqarData, quranAr, setView, setMultiSura
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column' }}>
 
-      {/* Header — offset by the global header's rendered height so it parks
-          below it instead of painting over it: `--control-md-h` (36px, 42px from
-          640px up) + `py-2` (--space-4) + the 1px hairline border. Same calc the
-          WeaknessTracker header uses. `--z-sticky` sits below `--z-header` so the
-          global header keeps stacking on top. */}
+      {/* Header — full-bleed top-level bar, identical to the Audio Manager,
+          Surah Detail and Mistake Book headers. The global `<Header />` is
+          suppressed for this view (see `VIEWS_WITHOUT_GLOBAL_HEADER` in App),
+          so this is the page's only header and pins at `top: 0`, breaking out of
+          `.app-container` (`100vw` plus a centred negative margin) so its
+          background and hairline span the whole viewport; `.app-container`
+          restores the standard page gutter. */}
+      {/* This bar previously carried a hardcoded `rgba(10,10,15,0.92)`
+          background, which stayed near-black in light mode while its title and
+          subtitle used the theme tokens — `--text-primary` is dark on the light
+          palette, so the text disappeared into the bar. Every other local header
+          uses `var(--bg-primary)`, which adapts per theme; this one does too now.
+          The row is also single-line for the same reason as the Mistake Book's:
+          a two-line title block made the bar taller than the global header's, so
+          the subtitle moved down into the body. */}
       <header style={{
-        position: 'sticky', top: 'calc(var(--control-md-h) + var(--space-4) + 1px)', zIndex: 'var(--z-sticky)',
-        background: 'rgba(10,10,15,0.92)', backdropFilter: 'blur(24px)',
-        borderBottom: 'var(--border-hairline)',
-        padding: '0.8rem 1.25rem', display: 'flex', alignItems: 'center', gap: 'var(--space-3)'
+        position: 'sticky', top: 0, zIndex: 'var(--z-header)',
+        width: '100vw', marginLeft: 'calc(50% - 50vw)', flexShrink: 0,
+        backgroundColor: 'var(--bg-primary)', borderBottom: 'var(--border-hairline)',
       }}>
-        <button onClick={() => setView('list')} style={{
-          width: 36, height: 36, borderRadius: '10px', flexShrink: 0,
-          border: 'var(--border-hairline)', background: 'var(--glass-bg)',
-          color: 'var(--text-muted)', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center'
-        }}>
-          <ChevronLeft size={18} />
-        </button>
-        <div style={{ flex: 1 }}>
-          <h1 style={{ fontSize: 'var(--fs-page)', fontWeight: 'var(--fw-strong)', color: 'var(--text-primary)', margin: 0 }}>
-            Custom Mutashabih Quiz
-          </h1>
-          <p style={{ fontSize: 'var(--fs-label)', color: 'var(--text-secondary)', margin: 0 }}>
-            Select Surahs to include
-          </p>
+        <div className="app-container">
+          <div className="flex items-center justify-between py-2" style={{ paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+              <button onClick={() => setView('list')} className="icon-btn" aria-label="Back" title="Back to home">
+                <ChevronLeft size={18} />
+              </button>
+              {/* `--fs-view` (1rem) rather than `--fs-page` (1.25rem): this title
+                  sits beside a Select All control on narrow screens, so it steps
+                  down one token to keep the row from wrapping. The glyph drops to
+                  16px to stay in proportion with the smaller text. */}
+              <h1 style={{
+                fontSize: 'var(--fs-view)', fontWeight: 'var(--fw-strong)', color: 'var(--text-primary)',
+                margin: 0, display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
+              }}>
+                <CircleHelp size={16} color="var(--accent-gold)" /> Mutashabih Quiz
+              </h1>
+            </div>
+            <button onClick={handleSelectAll} style={{
+              padding: '0.4rem 0.8rem', borderRadius: '8px', flexShrink: 0,
+              border: 'var(--border-hairline)', background: 'var(--bg-accent)',
+              color: 'var(--text-secondary)', fontSize: 'var(--fs-meta)', fontWeight: 700,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem'
+            }}>
+              {allSelected ? <CheckSquare size={14} /> : <Square size={14} />}
+              {allSelected ? 'Deselect All' : 'Select All'}
+            </button>
+          </div>
         </div>
-        <button onClick={handleSelectAll} style={{
-          padding: '0.4rem 0.8rem', borderRadius: '8px',
-          border: 'var(--border-hairline)', background: 'var(--bg-accent)',
-          color: 'var(--text-secondary)', fontSize: 'var(--fs-meta)', fontWeight: 700,
-          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem'
-        }}>
-          {allSelected ? <CheckSquare size={14} /> : <Square size={14} />}
-          {allSelected ? 'Deselect All' : 'Select All'}
-        </button>
       </header>
 
       {/* Main List */}
       <main style={{ flex: 1, overflowY: 'auto', padding: 'var(--space-4)', paddingBottom: '6rem' }}>
         <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+          {/* Carried over from the header's old second line, which had to leave
+              the header to keep it single-line. */}
+          <p style={{
+            fontSize: 'var(--fs-label)', color: 'var(--text-secondary)',
+            margin: 0, paddingBottom: 'var(--space-2)',
+          }}>
+            Select Surahs to include
+          </p>
           {availableSurahs.map(s => {
             const isSelected = selectedSurahs.has(s.number);
             return (
@@ -120,8 +140,8 @@ const MutashabihSelection = ({ surahs, waqarData, quranAr, setView, setMultiSura
                   <div style={{
                     width: '32px', height: '32px', borderRadius: '8px',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: isSelected ? 'var(--accent-gold)' : 'var(--bg-primary)',
-                    color: isSelected ? '#000' : 'var(--text-muted)',
+                    background: isSelected ? 'var(--gold-gradient)' : 'var(--bg-primary)',
+                    color: isSelected ? 'var(--text-on-gold)' : 'var(--text-muted)',
                     fontSize: 'var(--fs-secondary)', fontWeight: 800
                   }}>
                     {s.number}
@@ -168,12 +188,12 @@ const MutashabihSelection = ({ surahs, waqarData, quranAr, setView, setMultiSura
         <div style={{ maxWidth: '600px', width: '100%' }}>
           <button onClick={handleStartQuiz} disabled={selectedSurahs.size === 0} style={{
             width: '100%', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)',
-            background: 'var(--accent-gold)', color: '#000', border: 'none',
+            background: 'var(--gold-gradient)', color: 'var(--text-on-gold)', border: 'none',
             fontSize: 'var(--fs-body)', fontWeight: 'var(--fw-strong)', textTransform: 'uppercase', letterSpacing: '0.05em',
             cursor: selectedSurahs.size > 0 ? 'pointer' : 'not-allowed',
             opacity: selectedSurahs.size > 0 ? 1 : 0.5,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-2)',
-            boxShadow: '0 4px 14px rgba(212,175,55,0.2)'
+            boxShadow: '0 4px 14px var(--accent-gold-soft)'
           }}>
             <Zap size={18} />
             Start Quiz ({selectedSurahs.size} Selected)

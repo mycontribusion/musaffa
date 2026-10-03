@@ -206,7 +206,7 @@ export default function FeedbackModal({ onClose, modelStatus, installProgress, i
                     width: '100%',
                     height: '8px',
                     borderRadius: 'var(--radius-full)',
-                    background: 'rgba(255,255,255,0.1)',
+                    background: 'var(--bg-accent)',
                     overflow: 'hidden',
                   }}>
                     <motion.div
@@ -228,7 +228,7 @@ export default function FeedbackModal({ onClose, modelStatus, installProgress, i
               {modelStatus === 'error' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                    <AlertCircle size={16} style={{ color: '#ef4444' }} />
+                    <AlertCircle size={16} style={{ color: 'var(--accent-red)' }} />
                     <span style={{ fontSize: 'var(--fs-secondary)', color: 'var(--text-secondary)' }}>
                       {installMessage || 'Installation failed'}
                     </span>
@@ -256,7 +256,7 @@ export default function FeedbackModal({ onClose, modelStatus, installProgress, i
 
               {modelStatus === 'ready' && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                  <CheckCircle size={16} style={{ color: '#22c55e' }} />
+                  <CheckCircle size={16} style={{ color: 'var(--accent-emerald)' }} />
                   <span style={{ fontSize: 'var(--fs-secondary)', color: 'var(--text-secondary)' }}>
                     Speech recognition SDK is ready
                   </span>

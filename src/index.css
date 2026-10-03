@@ -4,19 +4,21 @@
   --bg-secondary: #1e293b;
   --bg-accent: #334155;
   --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
   --accent-gold: #fbbf24;
   --accent-gold-glow: rgba(251, 191, 36, 0.3);
   --accent-gold-soft: rgba(251, 191, 36, 0.15);
+  --gold-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  --text-on-gold: #ffffff;
   --accent-emerald: #10b981;
   --accent-emerald-glow: rgba(16, 185, 129, 0.3);
   --accent-red: #ef4444;
   --accent-red-soft: rgba(239, 68, 68, 0.12);
-  --glass-bg: rgba(30, 41, 59, 0.7);
-  --glass-hover: rgba(30, 41, 59, 0.9);
-  --glass-border: rgba(255, 255, 255, 0.05);
-  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --glass-bg: rgba(30, 41, 59, 0.8);
+  --glass-hover: rgba(30, 41, 59, 0.95);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
   --radius-sm: 0.5rem;
   --radius-md: 1rem;
   --radius-lg: 1.5rem;
@@ -33,13 +35,13 @@
   --fs-display: 2.5rem;
   --fs-page: 1.25rem;
   --fs-view: 1rem;
-  --fs-card: 0.95rem;
-  --fs-body: 0.9rem;
-  --fs-body-sm: 0.8rem;
-  --fs-secondary: 0.75rem;
-  --fs-meta: 0.7rem;
-  --fs-label: 0.65rem;
-  --fs-micro: 0.6rem;
+  --fs-card: 1rem;
+  --fs-body: 0.9375rem;
+  --fs-body-sm: 0.85rem;
+  --fs-secondary: 0.8rem;
+  --fs-meta: 0.75rem;
+  --fs-label: 0.7rem;
+  --fs-micro: 0.65rem;
 
   /* Typography — weights */
   --fw-light: 300;
@@ -72,21 +74,21 @@
   --space-10: 4rem;
 
   /* Control sizing */
-  --control-sm-h: 32px;
+  --control-sm-h: 36px;
   --control-sm-px: 14px;
-  --control-md-h: 36px;
-  --control-md-px: 16px;
-  --control-lg-h: 52px;
-  --control-lg-px: 22px;
+  --control-md-h: 44px;
+  --control-md-px: 18px;
+  --control-lg-h: 56px;
+  --control-lg-px: 24px;
 
   /* Icon sizing */
-  --icon-micro: 10px;
-  --icon-xs: 13px;
-  --icon-sm: 14px;
-  --icon-md: 16px;
-  --icon-lg: 18px;
-  --icon-xl: 22px;
-  --icon-2xl: 28px;
+  --icon-micro: 12px;
+  --icon-xs: 14px;
+  --icon-sm: 16px;
+  --icon-md: 18px;
+  --icon-lg: 20px;
+  --icon-xl: 24px;
+  --icon-2xl: 30px;
 
   /* Borders */
   --border-hairline: 1px solid var(--glass-border);
@@ -103,17 +105,24 @@
 
 [data-theme='light'] {
   --bg-primary: #f8fafc;
-  --bg-secondary: #f1f5f9;
-  --bg-accent: #e2e8f0;
+  --bg-secondary: #ffffff;
+  --bg-accent: #f1f5f9;
   --text-primary: #0f172a;
   --text-secondary: #475569;
-  --text-muted: #94a3b8;
+  --text-muted: #64748b;
   --accent-gold: #d97706;
-  --accent-red-soft: rgba(239, 68, 68, 0.10);
-  --accent-gold-soft: rgba(217, 119, 6, 0.15);
-  --glass-bg: rgba(255, 255, 255, 0.8);
-  --glass-hover: rgba(255, 255, 255, 1);
+  --accent-gold-soft: rgba(217, 119, 6, 0.12);
+  --accent-gold-glow: rgba(217, 119, 6, 0.25);
+  --gold-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  --text-on-gold: #ffffff;
+  --accent-emerald: #059669;
+  --accent-emerald-glow: rgba(5, 150, 105, 0.25);
+  --accent-red: #dc2626;
+  --accent-red-soft: rgba(220, 38, 38, 0.10);
+  --glass-bg: #ffffff;
+  --glass-hover: #f8fafc;
   --glass-border: rgba(15, 23, 42, 0.08);
+  --glass-shadow: 0 4px 16px 0 rgba(15, 23, 42, 0.05);
 }
 
 * {
@@ -128,7 +137,7 @@ html {
 
 @media (max-width: 640px) {
   html {
-    font-size: 14px;
+    font-size: 15px;
   }
 }
 
@@ -329,7 +338,7 @@ body {
   background: var(--glass-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: var(--border-hairline);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--glass-shadow);
   transition: var(--transition-smooth);
@@ -343,6 +352,7 @@ body {
 @media (max-width: 640px) {
   .glass-card {
     border-radius: var(--radius-md);
+    box-shadow: var(--glass-shadow);
   }
 }
 
@@ -351,7 +361,7 @@ body {
   height: var(--control-md-h);
   border-radius: var(--radius-full);
   background: var(--glass-bg);
-  border: var(--border-hairline);
+  border: 1px solid var(--glass-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -360,24 +370,16 @@ body {
   transition: var(--transition-fast);
 }
 
-@media (min-width: 640px) {
-  .icon-btn {
-    width: 42px;
-    height: 42px;
-  }
-}
-
 .icon-btn:hover {
   background: var(--bg-accent);
   color: var(--accent-gold);
 }
 
 /*
- * Deliberate small icon button (32px).
- * Overrides the 36px/42px .icon-btn box on every breakpoint. Used by compact
+ * Deliberate small icon button (36px).
+ * Overrides the 44px .icon-btn box on every breakpoint. Used by compact
  * sub-page headers (Mudarasa, Audio Manager) whose controls are intentionally
- * tighter than the global header's. Declared after the .icon-btn breakpoint so
- * it wins on all viewports.
+ * tighter than the global header's.
  */
 .icon-btn-sm {
   width: var(--control-sm-h);
@@ -400,52 +402,6 @@ body {
   border-radius: 4px;
 }
 
-/* SurahDetail: compact Cancel control inside the download status pill. */
-.dl-pill-btn {
-  flex-shrink: 0;
-  padding: 0.2rem 0.6rem;
-  border-radius: var(--radius-full);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  background: transparent;
-  color: #fff;
-  font-family: inherit;
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-strong);
-  line-height: 1.4;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.dl-pill-btn:hover {
-  background: rgba(255, 255, 255, 0.18);
-}
-
-.dl-pill-btn:focus-visible {
-  outline: 2px solid var(--accent-gold);
-  outline-offset: 2px;
-}
-
-/* Active-download indicator dot in the status pill. */
-@keyframes dl-pulse {
-  0%,
-  100% {
-    opacity: 0.35;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-.dl-pulse {
-  animation: dl-pulse 1.2s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dl-pulse {
-    animation: none;
-  }
-}
-
 /*
  * Borderless variant of .icon-btn.
  * Same 36px / 42px square box as the header controls so the tap target and the
@@ -454,8 +410,8 @@ body {
  * by the homepage "More" disclosure, which is icon-only and right aligned.
  */
 .icon-btn-ghost {
-  width: 36px;
-  height: 36px;
+  width: var(--control-md-h);
+  height: var(--control-md-h);
   border-radius: var(--radius-full);
   background: transparent;
   border: none;
@@ -465,13 +421,6 @@ body {
   color: var(--text-muted);
   cursor: pointer;
   transition: var(--transition-fast);
-}
-
-@media (min-width: 640px) {
-  .icon-btn-ghost {
-    width: 42px;
-    height: 42px;
-  }
 }
 
 .icon-btn-ghost:hover {
@@ -568,23 +517,24 @@ body {
   cursor: pointer;
 }
 
-@media (min-width: 640px) {
-  .brand-lockup {
-    height: 42px;
-  }
-}
-
 .btn-primary {
-  background: var(--accent-gold);
-  color: #000;
+  background: var(--gold-gradient);
+  color: var(--text-on-gold);
   padding: var(--space-4) var(--space-5);
   border-radius: var(--radius-lg);
   font-weight: var(--fw-strong);
+  font-size: var(--fs-body);
   border: none;
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   transition: var(--transition-smooth);
+  box-shadow: 0 4px 14px 0 var(--accent-gold-soft);
+}
+
+.btn-primary:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
 }
 
 .modal-backdrop {
@@ -620,7 +570,7 @@ body {
 }
 
 .modal-title {
-  font-size: 1.25rem;
+  font-size: var(--fs-page);
   line-height: 1.2;
   font-weight: 850;
   letter-spacing: -0.03em;
@@ -629,13 +579,13 @@ body {
 
 .modal-subtitle {
   margin-top: 0.3rem;
-  font-size: 0.875rem;
+  font-size: var(--fs-body);
   color: var(--text-muted);
 }
 
 .modal-close {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.5rem;
+  height: 2.5rem;
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -726,7 +676,7 @@ body {
 }
 
 .feedback-label {
-  font-size: 0.7rem;
+  font-size: var(--fs-meta);
   font-weight: 850;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -741,7 +691,7 @@ body {
 }
 
 .feedback-text {
-  font-size: 0.95rem;
+  font-size: var(--fs-card);
   font-weight: 750;
   color: var(--text-primary);
 }
@@ -749,7 +699,7 @@ body {
 .modal-note {
   margin: 1rem 0 0;
   text-align: center;
-  font-size: 0.75rem;
+  font-size: var(--fs-secondary);
   color: var(--text-muted);
 }
 

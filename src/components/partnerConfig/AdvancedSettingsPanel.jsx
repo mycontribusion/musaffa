@@ -126,8 +126,8 @@ export const AdvancedSettingsPanel = ({
                     style={{
                       flex: 1, padding: '0.8rem', borderRadius: 'var(--radius-lg)', border: '1px solid', cursor: 'pointer',
                       borderColor: params.whoStarts === 'app' ? 'var(--accent-gold)' : 'var(--glass-border)',
-                      background: params.whoStarts === 'app' ? 'var(--accent-gold)' : 'var(--bg-accent)',
-                      color: params.whoStarts === 'app' ? '#000' : 'var(--text-secondary)',
+                      background: params.whoStarts === 'app' ? 'var(--gold-gradient)' : 'var(--bg-accent)',
+                      color: params.whoStarts === 'app' ? 'var(--text-on-gold)' : 'var(--text-secondary)',
                       fontWeight: '800', fontSize: 'var(--fs-secondary)',
                     }}
                   >App Starts</button>
@@ -137,7 +137,7 @@ export const AdvancedSettingsPanel = ({
                       flex: 1, padding: '0.8rem', borderRadius: 'var(--radius-lg)', border: '1px solid', cursor: 'pointer',
                       borderColor: params.whoStarts === 'user' ? 'var(--accent-emerald)' : 'var(--glass-border)',
                       background: params.whoStarts === 'user' ? 'var(--accent-emerald)' : 'var(--bg-accent)',
-                      color: params.whoStarts === 'user' ? '#000' : 'var(--text-secondary)',
+                      color: params.whoStarts === 'user' ? '#ffffff' : 'var(--text-secondary)',
                       fontWeight: '800', fontSize: 'var(--fs-secondary)',
                     }}
                   >I Start</button>
@@ -167,7 +167,7 @@ export const AdvancedSettingsPanel = ({
                       onChange={e => onChange('micSensitivity', 45 - Number(e.target.value))}
                       style={{ width: '100%', accentColor: 'var(--accent-gold)', height: '4px' }}
                     />
-                    <div style={{ height: '6px', width: '100%', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden', position: 'relative' }}>
+                    <div style={{ height: '6px', width: '100%', background: 'var(--bg-primary)', borderRadius: '3px', overflow: 'hidden', position: 'relative' }}>
                       <motion.div
                         style={{ height: '100%', opacity: 0.6, background: currentVolume > params.micSensitivity ? 'var(--accent-emerald)' : 'var(--text-muted)' }}
                         animate={{ width: `${(currentVolume / 100) * 100}%` }}
@@ -183,21 +183,21 @@ export const AdvancedSettingsPanel = ({
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
                   <div style={{
                     background: 'var(--bg-accent)', padding: 'var(--space-4)',
-                    borderRadius: 'var(--radius-lg)', border: '1px solid rgba(99,102,241,0.2)',
+                    borderRadius: 'var(--radius-lg)', border: '1px solid var(--glass-border)',
                     display: 'flex', flexDirection: 'column', gap: 'var(--space-3)',
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
                       <span style={{ fontSize: 'var(--fs-secondary)', fontWeight: '800', color: 'var(--text-secondary)' }}>Accuracy Threshold</span>
-                      <span style={{ fontSize: 'var(--fs-secondary)', fontWeight: '800', color: '#818cf8' }}>{params.errorThreshold ?? 50}%</span>
+                      <span style={{ fontSize: 'var(--fs-secondary)', fontWeight: '800', color: 'var(--accent-gold)' }}>{params.errorThreshold ?? 50}%</span>
                     </div>
                     <input
                       type="range" min="50" max="100" step="5"
                       value={params.errorThreshold ?? 50}
                       onChange={e => onChange('errorThreshold', parseInt(e.target.value))}
-                      style={{ width: '100%', accentColor: '#6366f1' }}
+                      style={{ width: '100%', accentColor: 'var(--accent-gold)' }}
                     />
                     <p style={{ fontSize: 'var(--fs-label)', color: 'var(--text-muted)', marginTop: 'var(--space-2)', lineHeight: '1.4' }}>
-                      Auto-advances only when <strong style={{ color: '#818cf8' }}>every verse</strong> individually meets the {params.errorThreshold ?? 50}% accuracy target with no unread words remaining.
+                      Auto-advances only when <strong style={{ color: 'var(--accent-gold)' }}>every verse</strong> individually meets the {params.errorThreshold ?? 50}% accuracy target with no unread words remaining.
                     </p>
                   </div>
                 </motion.div>

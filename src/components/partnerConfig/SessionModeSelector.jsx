@@ -8,7 +8,7 @@ export const SessionModeSelector = ({ params, onChange, sttSupported, modeRef })
   const isHandsFree = params.autoNext && !params.errorDetection;
   const isSmart = params.autoNext && params.errorDetection;
 
-  const ModeCard = ({ isActive, onClick, cardRef, icon, title, description, activeColor = 'var(--accent-gold)', activeBg = 'var(--accent-gold-soft)', activeDotBg = '#000' }) => (
+  const ModeCard = ({ isActive, onClick, cardRef, icon, title, description, activeColor = 'var(--accent-gold)', activeBg = 'var(--accent-gold-soft)', activeDotBg = 'var(--text-on-gold)' }) => (
     <button
       ref={isActive ? cardRef : null}
       onClick={onClick}
@@ -23,14 +23,14 @@ export const SessionModeSelector = ({ params, onChange, sttSupported, modeRef })
       <div style={{
         width: '32px', height: '32px', borderRadius: '8px',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: isActive ? activeColor : 'rgba(255,255,255,0.05)',
+        background: isActive ? activeColor : 'var(--bg-secondary)',
         color: isActive ? activeDotBg : 'var(--text-muted)',
       }}>
         {icon}
       </div>
       <div style={{ flex: 1 }}>
         <p style={{ fontWeight: '800', fontSize: 'var(--fs-body-sm)', color: isActive ? activeColor : 'var(--text-primary)' }}>{title}</p>
-        <p style={{ fontSize: 'var(--fs-label)', color: 'var(--text-secondary)' }}>{description}</p>
+        <p style={{ fontSize: 'var(--fs-meta)', color: 'var(--text-secondary)' }}>{description}</p>
       </div>
       <div style={{
         width: '16px', height: '16px', borderRadius: '50%', border: '2px solid',
@@ -71,9 +71,9 @@ export const SessionModeSelector = ({ params, onChange, sttSupported, modeRef })
             icon={<BrainCircuit size={16} />}
             title="Smart Detection"
             description="Auto-advance + check accuracy."
-            activeColor="rgba(99,102,241,0.8)"
-            activeBg="rgba(99,102,241,0.1)"
-            activeDotBg="#000"
+            activeColor="var(--accent-emerald)"
+            activeBg="rgba(16, 185, 129, 0.12)"
+            activeDotBg="#ffffff"
           />
         )}
       </div>

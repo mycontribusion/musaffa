@@ -7,7 +7,7 @@ const STATUS_CONFIG = {
   correct: { color: 'var(--accent-emerald)', bg: 'rgba(16,185,129,0.12)', label: 'Correct' },
   omission: { color: 'var(--accent-red)', bg: 'rgba(220,38,38,0.12)', label: 'Omission' },
   substitution: { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', label: 'Substitution' },
-  insertion: { color: 'var(--text-muted)', bg: 'rgba(255,255,255,0.06)', label: 'Extra' },
+  insertion: { color: 'var(--text-muted)', bg: 'var(--bg-accent)', label: 'Extra' },
 };
 
 /**
@@ -87,7 +87,7 @@ const RecitationFeedbackCard = ({ results, insertions = [], breakdown, chunk, tr
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <div style={{ position: 'relative', flexShrink: 0, width: 60, height: 60 }}>
                 <svg width="60" height="60" viewBox="0 0 60 60" style={{ transform: 'rotate(-90deg)' }}>
-                  <circle cx="30" cy="30" r="24" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="6" />
+                   <circle cx="30" cy="30" r="24" fill="none" stroke="var(--glass-border)" strokeWidth="6" />
                   <circle
                     cx="30" cy="30" r="24"
                     fill="none"
@@ -100,12 +100,12 @@ const RecitationFeedbackCard = ({ results, insertions = [], breakdown, chunk, tr
                   />
                 </svg>
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: '900', color: ringColour, lineHeight: 1 }}>{accuracy}%</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: '900', color: ringColour, lineHeight: 1 }}>{accuracy}%</span>
                 </div>
               </div>
 
               <div style={{ flex: 1 }}>
-                <p style={{ fontSize: '0.5rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', margin: 0 }}>
+                <p style={{ fontSize: 'var(--fs-micro)', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', margin: 0 }}>
                   Recitation Check
                 </p>
                 <p style={{ fontSize: '0.95rem', fontWeight: '800', color: ringColour, margin: '0.1rem 0 0' }}>{ringLabel}</p>
@@ -134,7 +134,8 @@ const RecitationFeedbackCard = ({ results, insertions = [], breakdown, chunk, tr
             {/* ── Word-by-word diff ── */}
             {displayWords.length > 0 && (
               <div style={{
-                background: 'rgba(0,0,0,0.2)',
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--glass-border)',
                 borderRadius: 'var(--radius-lg)',
                 padding: '1rem',
                 maxHeight: '200px',
@@ -200,8 +201,8 @@ const RecitationFeedbackCard = ({ results, insertions = [], breakdown, chunk, tr
                 { status: 'insertion', label: 'Extra' },
               ].map(({ status, label }) => (
                 <div key={status} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                  <div style={{ width: 8, height: 8, borderRadius: 2, background: STATUS_CONFIG[status].color, opacity: 0.85 }} />
-                  <span style={{ fontSize: '0.55rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</span>
+                  <div style={{ width: 8, height: 8, borderRadius: 2, background: STATUS_CONFIG[status].color }} />
+                  <span style={{ fontSize: 'var(--fs-micro)', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</span>
                 </div>
               ))}
             </div>
@@ -211,13 +212,13 @@ const RecitationFeedbackCard = ({ results, insertions = [], breakdown, chunk, tr
               <div style={{
                 display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
                 padding: '0.5rem 0.75rem',
-                background: 'rgba(255,255,255,0.03)',
+                background: 'var(--bg-accent)',
                 borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--glass-border)',
               }}>
-                <Mic size={10} style={{ color: 'var(--text-muted)', marginTop: '2px', flexShrink: 0 }} />
+                <Mic size={12} style={{ color: 'var(--text-muted)', marginTop: '2px', flexShrink: 0 }} />
                 <p style={{
-                  fontSize: '0.62rem', color: 'var(--text-muted)', margin: 0,
+                  fontSize: 'var(--fs-meta)', color: 'var(--text-secondary)', margin: 0,
                   direction: 'rtl', fontFamily: 'inherit', lineHeight: 1.6,
                 }}>
                   {transcript.trim().slice(0, 220)}{transcript.length > 220 ? '…' : ''}
@@ -233,13 +234,13 @@ const RecitationFeedbackCard = ({ results, insertions = [], breakdown, chunk, tr
                   style={{
                     flex: 1, padding: '0.75rem', borderRadius: 'var(--radius-lg)',
                     border: '1px solid var(--accent-red)',
-                    background: 'rgba(220,38,38,0.1)',
+                    background: 'var(--accent-red-soft)',
                     color: 'var(--accent-red)',
-                    fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer',
+                    fontSize: 'var(--fs-secondary)', fontWeight: '800', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
                   }}
                 >
-                  <XCircle size={13} /> Log Stumble
+                  <XCircle size={14} /> Log Stumble
                 </button>
               )}
               <button
@@ -247,13 +248,13 @@ const RecitationFeedbackCard = ({ results, insertions = [], breakdown, chunk, tr
                 style={{
                   flex: 2, padding: '0.75rem', borderRadius: 'var(--radius-lg)',
                   border: 'none',
-                  background: 'var(--accent-gold)',
-                  color: '#000',
-                  fontSize: '0.8rem', fontWeight: '900', cursor: 'pointer',
+                  background: 'var(--gold-gradient)',
+                  color: 'var(--text-on-gold)',
+                  fontSize: 'var(--fs-secondary)', fontWeight: '900', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
                 }}
               >
-                Continue <ChevronRight size={14} />
+                Continue <ChevronRight size={16} />
               </button>
             </div>
           </div>

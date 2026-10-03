@@ -42,7 +42,7 @@ export const MudarasaHeader = ({
           {/* Deliberately .icon-btn-sm: sub-page header, tighter tap target than the global header. */}
           <button onClick={onBack} className="icon-btn icon-btn-sm"><ChevronLeft size={16} /></button>
           <div>
-            <span style={{ fontSize: '0.55rem', fontWeight: 'var(--fw-strong)', color: mudarasaTurn === 'app' ? 'var(--accent-gold)' : 'var(--accent-emerald)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            <span style={{ fontSize: 'var(--fs-micro)', fontWeight: 'var(--fw-strong)', color: mudarasaTurn === 'app' ? 'var(--accent-gold)' : 'var(--accent-emerald)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
               {mudarasaTurn === 'app' ? 'Listen' : 'Recite'}
             </span>
             <p style={{ fontSize: 'var(--fs-secondary)', fontWeight: '700', color: 'var(--text-primary)' }}>Portion {currentChunkIndex + 1} of {chunksLength}</p>
@@ -55,21 +55,21 @@ export const MudarasaHeader = ({
             onClick={isPaused ? onResume : onPause}
             title={isPaused ? 'Resume recitation' : 'Pause recitation'}
             style={{
-              display: 'flex', alignItems: 'center', gap: '0.3rem',
-              padding: '0.2rem 0.55rem 0.2rem 0.4rem',
+              display: 'flex', alignItems: 'center', gap: '0.35rem',
+              padding: '0.3rem 0.65rem',
               borderRadius: 'var(--radius-full)', cursor: 'pointer',
               border: `1px solid ${isPaused ? 'rgba(212,175,55,0.4)' : 'var(--glass-border)'}`,
-              background: isPaused ? 'rgba(212,175,55,0.08)' : 'transparent',
+              background: isPaused ? 'var(--accent-gold-soft)' : 'transparent',
               transition: 'all 0.2s',
             }}
           >
             {isPaused
-              ? <Play size={12} color="var(--accent-gold)" />
-              : <Pause size={12} color="var(--text-muted)" />}
+              ? <Play size={13} color="var(--accent-gold)" />
+              : <Pause size={13} color="var(--text-muted)" />}
             <span style={{
-              fontSize: '0.5rem', fontWeight: '800', letterSpacing: 'var(--tracking-status)',
+              fontSize: 'var(--fs-micro)', fontWeight: '800', letterSpacing: 'var(--tracking-status)',
               textTransform: 'uppercase',
-              color: isPaused ? 'var(--accent-gold)' : 'var(--text-muted)',
+              color: isPaused ? 'var(--accent-gold)' : 'var(--text-secondary)',
               transition: 'color 0.2s',
             }}>
               {isPaused ? 'Resume' : 'Pause'}
@@ -79,21 +79,21 @@ export const MudarasaHeader = ({
             onClick={() => setShowText(!showText)}
             title={showText ? 'Hide text' : 'Show text'}
             style={{
-              display: 'flex', alignItems: 'center', gap: '0.3rem',
-              padding: '0.2rem 0.55rem 0.2rem 0.4rem',
+              display: 'flex', alignItems: 'center', gap: '0.35rem',
+              padding: '0.3rem 0.65rem',
               borderRadius: 'var(--radius-full)', cursor: 'pointer',
               border: `1px solid ${showText ? 'var(--glass-border)' : 'rgba(212,175,55,0.4)'}`,
-              background: showText ? 'transparent' : 'rgba(212,175,55,0.08)',
+              background: showText ? 'transparent' : 'var(--accent-gold-soft)',
               transition: 'all 0.2s',
             }}
           >
             {showText
-              ? <BookOpen size={12} color="var(--text-muted)" />
-              : <BookX size={12} color="var(--accent-gold)" />}
+              ? <BookOpen size={13} color="var(--text-muted)" />
+              : <BookX size={13} color="var(--accent-gold)" />}
             <span style={{
-              fontSize: '0.5rem', fontWeight: '800', letterSpacing: 'var(--tracking-status)',
+              fontSize: 'var(--fs-micro)', fontWeight: '800', letterSpacing: 'var(--tracking-status)',
               textTransform: 'uppercase',
-              color: showText ? 'var(--text-muted)' : 'var(--accent-gold)',
+              color: showText ? 'var(--text-secondary)' : 'var(--accent-gold)',
               transition: 'color 0.2s',
             }}>
               Text
@@ -101,14 +101,14 @@ export const MudarasaHeader = ({
           </button>
           {enableErrorDetection && mudarasaTurn === 'user' && (
             <div style={{
-              display: 'flex', alignItems: 'center', gap: '0.3rem',
-              padding: '0.25rem 0.5rem', borderRadius: 'var(--radius-full)',
-              background: isSttListening ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.05)',
+              display: 'flex', alignItems: 'center', gap: '0.35rem',
+              padding: '0.3rem 0.6rem', borderRadius: 'var(--radius-full)',
+              background: isSttListening ? 'rgba(16,185,129,0.15)' : 'var(--bg-accent)',
               border: `1px solid ${isSttListening ? 'rgba(16,185,129,0.4)' : 'var(--glass-border)'}`,
               transition: 'all 0.3s',
             }}>
-              <BrainCircuit size={10} color={isSttListening ? 'var(--accent-emerald)' : 'var(--text-muted)'} />
-               <span style={{ fontSize: '0.5rem', fontWeight: '800', color: isSttListening ? 'var(--accent-emerald)' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-status)' }}>
+              <BrainCircuit size={12} color={isSttListening ? 'var(--accent-emerald)' : 'var(--text-muted)'} />
+               <span style={{ fontSize: 'var(--fs-micro)', fontWeight: '800', color: isSttListening ? 'var(--accent-emerald)' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-status)' }}>
                  {modelStatus === 'installing' || modelStatus === 'needs_install'
                    ? 'Installing Model...'
                    : isSttListening
@@ -122,7 +122,7 @@ export const MudarasaHeader = ({
           <div style={{
             width: '8px', height: '8px', borderRadius: '50%',
             background: mudarasaTurn === 'user'
-              ? (isListening ? (currentVolume > sensitivity ? 'var(--accent-emerald)' : 'rgba(255,255,255,0.15)') : 'var(--accent-emerald)')
+              ? (isListening ? (currentVolume > sensitivity ? 'var(--accent-emerald)' : 'var(--glass-border)') : 'var(--accent-emerald)')
               : 'var(--bg-accent)',
             boxShadow: mudarasaTurn === 'user'
               ? (isListening ? (currentVolume > sensitivity ? '0 0 10px var(--accent-emerald)' : 'none') : '0 0 10px var(--accent-emerald)')

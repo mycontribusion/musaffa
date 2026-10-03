@@ -15,10 +15,11 @@ import { BookOpen, Volume2 } from 'lucide-react';
  */
 
 const pill = {
-  display: 'flex', alignItems: 'center', gap: '0.45rem',
-  padding: '0.6rem 0.9rem', borderRadius: 'var(--radius-md)',
-  background: 'var(--bg-accent)', border: 'var(--border-hairline)',
+  display: 'flex', alignItems: 'center', gap: '0.5rem',
+  padding: '0.7rem 1.1rem', borderRadius: 'var(--radius-md)',
+  background: 'var(--bg-accent)', border: '1px solid var(--glass-border)',
   color: 'var(--text-primary)', cursor: 'pointer', transition: 'var(--transition-fast)',
+  minHeight: '44px', fontSize: 'var(--fs-secondary)',
 };
 
 const HomeControls = ({ setView }) => {

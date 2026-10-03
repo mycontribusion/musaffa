@@ -1,7 +1,40 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, CheckCircle2, XCircle, RotateCcw, SquareSquare } from 'lucide-react';
+import { ChevronLeft, CheckCircle2, XCircle, RotateCcw, CircleHelp } from 'lucide-react';
 import { buildSessionCards } from '../utils/mutashabihatParser';
+
+/**
+ * Standard "stop" transport glyph: a circle with a *filled* square inside.
+ *
+ * lucide's `CircleStop` cannot supply this. Its icon node is a bare
+ * `<rect x="9" y="9" width="6" height="6" rx="1" />` with no `fill`, so it
+ * renders as an outlined square — not the solid one on a real transport bar —
+ * and lucide v1.14 ships no filled variant (`circle-stop`, `stop-circle` and
+ * `square-stop` are all outline-only). The previously used `SquareSquare` was
+ * worse: two overlapping squares read as "copy/duplicate".
+ *
+ * Geometry and stroke conventions deliberately mirror lucide's own `circle-stop`
+ * node (24 viewBox, `currentColor`, strokeWidth 2, round caps/joins) so it sits
+ * consistently beside the other icons in this header.
+ */
+const StopCircleIcon = ({ size = 15, ...rest }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    {...rest}
+  >
+    <circle cx="12" cy="12" r="10" />
+    <rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor" stroke="none" />
+  </svg>
+);
 
 const OptionBtn = ({ opt, answered, selected, onClick }) => {
   const correct = answered && opt.isCorrect;
@@ -30,15 +63,12 @@ const OptionBtn = ({ opt, answered, selected, onClick }) => {
         transition: 'all 0.35s',
       }}
     >
-      <span style={{
-        display: 'block',
-        fontSize: '0.5rem', fontWeight: 'var(--fw-strong)',
-        textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)',
-        color: correct ? '#34d399' : 'rgba(255,255,255,0.3)',
-        marginBottom: '0.4rem',
-      }}>
-        {/* {opt.surahName} · {opt.surah}:{opt.ayah} */}
-      </span>
+      {/* The surah/verse reference that used to sit above each option
+          ("Al-Baqarah · 2:255") is gone for the same reason as `contextLabel`:
+          it disclosed which verse an option was drawn from, which is the answer
+          the question is asking for. The whole span is removed rather than left
+          empty, since it was still contributing its own `marginBottom` and
+          uppercase styling to every option. */}
       <p className="arabic-text" style={{
         fontSize: 'clamp(1.3rem, 3.8vw, 1.9rem)',
         lineHeight: 1.85, color: correct ? 'var(--text-primary)'
@@ -88,6 +118,20 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
   const card = cards[idx];
   const total = cards.length;
   const progress = total ? ((idx + 1) / total) * 100 : 0;
+
+  /* Return to the top of the page on every question change. A long option set
+     leaves the reader scrolled partway down the card, and the next question can
+     be taller or shorter, so without this the new card can render off-screen —
+     especially on the first question of a restart, where `idx` returns to 0 from
+     deep in the list. Keying on `idx` covers both the "next question" advance and
+     `restart()`, and the initial mount is a harmless no-op at scroll position 0.
+
+     The document is the scroll container here (the page has no overflow wrapper),
+     so `window.scrollTo` is the right target. Behavior is smooth, matching the
+     card's own 0.2s enter/exit transition. */
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [idx]);
 
   const handleAnswer = (opt) => {
     if (answered) return;
@@ -140,8 +184,8 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
           <button onClick={restart} style={{
-            padding: '0.9rem', borderRadius: '0.9rem', background: 'var(--accent-gold)',
-            border: 'none', color: '#0a0a0f', fontWeight: 'var(--fw-strong)', fontSize: 'var(--fs-meta)',
+            padding: '0.9rem', borderRadius: '0.9rem', background: 'var(--gold-gradient)',
+            border: 'none', color: 'var(--text-on-gold)', fontWeight: 'var(--fw-strong)', fontSize: 'var(--fs-meta)',
             textTransform: 'uppercase', letterSpacing: '0.15em', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}>
@@ -235,61 +279,94 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
 
-      {/* Header — offset by the global header's rendered height so it parks
-          below it instead of painting over it: `--control-md-h` (36px, 42px from
-          640px up) + `py-2` (--space-4) + the 1px hairline border. Same calc the
-          WeaknessTracker header uses. `--z-sticky` sits below `--z-header` so the
-          global header keeps stacking on top. */}
+      {/* Header — full-bleed top-level bar, identical to the Audio Manager,
+          Surah Detail, Mistake Book and Mutashabih Selection headers. The global
+          `<Header />` is suppressed for this view (see `VIEWS_WITHOUT_GLOBAL_HEADER`
+          in App), so this is the page's only header and pins at `top: 0`, breaking
+          out of `.app-container` so its background and hairline span the whole
+          viewport; `.app-container` restores the standard page gutter.
+
+          The row is deliberately single-line. It used to stack the title above a
+          separate uppercase `n / total` line (plus a `0.6rem` gap), which made the
+          bar taller than the global header's and left it floating below it.
+
+          The title itself — `displayTitle`, i.e. "12 Surahs · Mutashabihat" or
+          "Al-Baqarah · Mutashabihat" — has been reduced to just the word "Quiz". The
+          surah count repeated what the user had already chosen on the selection
+          screen and never changed mid-quiz, and it was the only part wide enough to
+          squeeze the score and action buttons on a narrow phone. So the bar now
+          reads "Quiz · 3/12" instead: enough to identify the screen, short enough to
+          stay on one line. The counter carries an `aria-label` so the heading still
+          announces meaningfully even though its visible text is only a fraction.
+          `displayTitle` itself is still used by the empty state further down, so the
+          variable stays. */}
       <header style={{
-        position: 'sticky', top: 'calc(var(--control-md-h) + var(--space-4) + 1px)', zIndex: 'var(--z-sticky)',
-        background: 'rgba(10,10,15,0.92)', backdropFilter: 'blur(24px)',
-        borderBottom: 'var(--border-hairline)',
-        padding: '0.8rem 1.25rem',
+        position: 'sticky', top: 0, zIndex: 'var(--z-header)',
+        width: '100vw', marginLeft: 'calc(50% - 50vw)', flexShrink: 0,
+        backgroundColor: 'var(--bg-primary)', borderBottom: 'var(--border-hairline)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: '0.6rem' }}>
-          <button onClick={onClose} style={{
-            width: 36, height: 36, borderRadius: '10px', flexShrink: 0,
-            border: 'var(--border-hairline)', background: 'var(--glass-bg)',
-            color: 'var(--text-muted)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <ChevronLeft size={18} />
-          </button>
-          <div style={{ flex: 1 }}>
-            <h1 style={{ fontSize: 'var(--fs-page)', fontWeight: 'var(--fw-strong)', color: 'var(--text-primary)', margin: 0 }}>
-              {displayTitle}
-            </h1>
-            <p style={{ fontSize: 'var(--fs-label)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--accent-gold)', opacity: 0.65, margin: 0 }}>
-              {idx + 1} / {total}
-            </p>
-          </div>
-          <button onClick={restart} style={{
-            width: 36, height: 36, borderRadius: '10px',
-            border: 'var(--border-hairline)', background: 'var(--glass-bg)',
-            color: 'var(--text-muted)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <RotateCcw size={14} />
-          </button>
-          <button onClick={() => setDone(true)} title="End Quiz Early" style={{
-            width: 36, height: 36, borderRadius: '10px',
-            border: 'var(--border-hairline)', background: 'var(--glass-bg)',
-            color: 'var(--text-muted)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <SquareSquare size={14} />
-          </button>
-          <div style={{
-            padding: '4px 14px', borderRadius: '8px',
-            background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.2)',
-            fontSize: '0.85rem', fontWeight: 'var(--fw-strong)', color: 'var(--accent-gold)',
-          }}>
-            {score}
+        <div className="app-container">
+          <div className="flex items-center justify-between py-2" style={{ paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minWidth: 0 }}>
+              <button onClick={onClose} className="icon-btn" aria-label="Back" title="Back to selection">
+                <ChevronLeft size={18} />
+              </button>
+              {/* Visible text is "Quiz" plus the counter; the `aria-label`
+                  carries the full heading so the bar announces as
+                  "Quiz, question 3 of 12" rather than a bare "3/12". */}
+              <h1
+                aria-label={`Quiz, question ${idx + 1} of ${total}`}
+                style={{
+                  margin: 0, display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {/* `CircleHelp` (lucide's current name for the classic
+                    HelpCircle glyph) reads as "quiz" far more readily than the
+                    circuit-brain `BrainCircuit`, which is why this bar no longer
+                    matches the feature glyph used on the entry points. */}
+                <CircleHelp size={16} color="var(--accent-gold)" style={{ flexShrink: 0 }} aria-hidden="true" />
+                <span aria-hidden="true" style={{
+                  fontSize: 'var(--fs-view)', fontWeight: 'var(--fw-strong)', color: 'var(--text-primary)',
+                }}>
+                  Quiz
+                </span>
+                <span aria-hidden="true" style={{
+                  fontSize: 'var(--fs-meta)', fontWeight: 700, color: 'var(--accent-gold)',
+                  fontVariantNumeric: 'tabular-nums',
+                }}>
+                  · {idx + 1}/{total}
+                </span>
+              </h1>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexShrink: 0 }}>
+              <span style={{
+                padding: '4px 12px', borderRadius: 'var(--radius-full)',
+                background: 'var(--accent-gold-soft)', border: '1px solid rgba(212,175,55,0.3)',
+                fontSize: 'var(--fs-meta)', fontWeight: 'var(--fw-strong)', color: 'var(--accent-gold)',
+                fontVariantNumeric: 'tabular-nums',
+              }}>
+                {score}
+              </span>
+              <button onClick={restart} className="icon-btn" aria-label="Restart quiz" title="Restart quiz">
+                <RotateCcw size={15} />
+              </button>
+              {/* `StopCircleIcon` is the standard transport stop mark — a circle
+                  with a solid square inside. Distinct from the `XCircle` used for
+                  a wrong answer below, since the inner mark is a square, not a
+                  cross. See the component's note on why lucide's `CircleStop`
+                  could not be used. */}
+              <button onClick={() => setDone(true)} className="icon-btn" title="End Quiz Early" aria-label="End quiz early">
+                <StopCircleIcon size={15} />
+              </button>
+            </div>
           </div>
         </div>
-        <div style={{ height: 3, background: 'rgba(255,255,255,0.05)', borderRadius: 99, overflow: 'hidden' }}>
+        {/* Progress strip — kept full-bleed (outside `.app-container`) so it runs
+            the width of the viewport rather than stopping at the 1000px gutter. */}
+        <div style={{ height: 3, background: 'var(--bg-accent)', overflow: 'hidden' }} aria-hidden="true">
           <motion.div animate={{ width: `${progress}%` }} transition={{ type: 'spring', stiffness: 55 }}
-            style={{ height: '100%', background: 'linear-gradient(90deg,var(--accent-gold),#34d399)', borderRadius: 99 }} />
+            style={{ height: '100%', background: 'linear-gradient(90deg,var(--accent-gold),#34d399)' }} />
         </div>
       </header>
 
@@ -300,24 +377,23 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
             initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.2 }}>
 
-            {/* Context verse */}
+            {/* Context verse — no verse reference above it. The card used to
+                render `card.contextLabel` ("Al-Baqarah · 2:255") here, which pinned
+                down the exact ayah preceding the blank the question asks the
+                test-taker to fill, so the answer could be read off rather than
+                recalled. The surah is still named — in the question text below —
+                so only the ayah number was removed. The parser no longer emits the
+                field. */}
             <div style={{
               borderRadius: 'var(--radius-lg)', padding: '1.75rem',
-              border: '1px solid rgba(212,175,55,0.15)',
-              background: 'rgba(212,175,55,0.03)',
+              border: '1px solid rgba(212,175,55,0.25)',
+              background: 'var(--accent-gold-soft)',
               marginBottom: '1.75rem',
             }}>
-              <span style={{
-                display: 'block', fontSize: '0.5rem', fontWeight: 'var(--fw-strong)',
-                textTransform: 'uppercase', letterSpacing: '0.25em',
-                color: 'rgba(212,175,55,0.6)', marginBottom: 'var(--space-3)',
-              }}>
-                {card.contextLabel}
-              </span>
               <p className="arabic-text" style={{
                 fontSize: 'clamp(1.6rem, 4.5vw, 2.2rem)',
                 lineHeight: 1.9, textAlign: 'right',
-                color: 'var(--text-secondary)', margin: 0,
+                color: 'var(--text-primary)', margin: 0,
               }}>
                 {card.contextVerse.text}
               </p>

@@ -117,10 +117,16 @@ export const buildSessionCards = (entries, surahNum, quranAr, surahs) => {
     if (!prev.text || prev.surah !== first.surah || first.ayah <= 1) return null;
     const options = buildOptions(false);
     if (options.length < 2) return null;
+    /* The question keeps naming the surah — it orients the test-taker and scopes
+       the ask to one surah's running order. What it must not carry is a *verse*
+       reference: `contextLabel` used to render "Al-Baqarah · 2:255" directly
+       above the context verse, pinning down the exact ayah preceding the blank,
+       which turned the card into a lookup of ayah n+1. That field is removed
+       outright rather than trimmed, and its label span was dropped from
+       MutashabihatSession accordingly. */
     return {
       id: `cont-${sources[0].surah}:${sources[0].ayah}-${surahNum}`,
       contextVerse: prev,
-      contextLabel: `${nam(prev.surah)} · ${prev.surah}:${prev.ayah}`,
       question: `Which verse follows in ${nam(surahNum)}?`,
       options,
     };

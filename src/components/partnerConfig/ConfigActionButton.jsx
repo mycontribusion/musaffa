@@ -62,7 +62,7 @@ export const ConfigActionButton = ({
         <button
           onClick={() => onSavePreset && onSavePreset({ ...params })}
           className="btn-primary"
-          style={{ width: '100%', padding: '1.1rem', fontSize: 'var(--fs-body)', background: 'var(--accent-emerald)', color: '#000' }}
+          style={{ width: '100%', padding: '1.1rem', fontSize: 'var(--fs-body)', background: 'var(--accent-emerald)', color: '#ffffff' }}
         >
           Save Preset
         </button>

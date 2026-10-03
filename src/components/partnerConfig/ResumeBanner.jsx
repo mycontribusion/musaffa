@@ -34,8 +34,8 @@ export const ResumeBanner = ({ savedSession, onResume, onDismiss }) => {
         <button
           onClick={onResume}
           style={{
-            padding: '0.4rem 0.7rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-gold)',
-            background: 'var(--accent-gold)', color: '#000', fontSize: 'var(--fs-label)',
+            padding: '0.4rem 0.7rem', borderRadius: 'var(--radius-md)', border: 'none',
+            background: 'var(--gold-gradient)', color: 'var(--text-on-gold)', fontSize: 'var(--fs-label)',
             fontWeight: '800', cursor: 'pointer',
           }}
         >

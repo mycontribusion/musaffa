@@ -68,16 +68,15 @@ export const AudioErrorModal = ({ audioError, setAudioError, onResume, onNext })
                 onClick={() => { setAudioError(false); onNext(); }}
                 style={{
                   height: '2.75rem', borderRadius: '1rem', cursor: 'pointer',
-                  background: 'transparent',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  color: 'var(--text-muted)', fontWeight: '600', fontSize: '0.65rem',
+                  background: 'var(--bg-accent)',
+                  border: '1px solid var(--glass-border)',
+                  color: 'var(--text-secondary)', fontWeight: '700', fontSize: 'var(--fs-secondary)',
                   textTransform: 'uppercase', letterSpacing: '0.1em',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                  opacity: 0.6,
                   transition: 'all 0.2s',
                 }}
               >
-                <FastForward size={12} /> Skip App's Turn
+                <FastForward size={14} /> Skip App's Turn
               </button>
             </div>
           </motion.div>

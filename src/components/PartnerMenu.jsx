@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Users, BookOpen, BrainCircuit, ChevronRight } from 'lucide-react';
+import { Users, BookOpen, CircleHelp, ChevronRight } from 'lucide-react';
 
 const PartnerMenu = ({ setView, startQuiz }) => {
   return (
@@ -18,7 +18,7 @@ const PartnerMenu = ({ setView, startQuiz }) => {
           whileHover={{ y: -8 }}
           onClick={() => setView('list')} 
           className="glass-card"
-          style={{ padding: '3rem', textAlign: 'left', cursor: 'pointer', border: '1px solid rgba(251, 191, 36, 0.1)', position: 'relative', overflow: 'hidden' }}
+          style={{ padding: '3rem', textAlign: 'left', cursor: 'pointer', border: '1px solid var(--glass-border)', position: 'relative', overflow: 'hidden' }}
         >
           <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div style={{ width: '64px', height: '64px', background: 'rgba(251, 191, 36, 0.1)', borderRadius: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-gold)', border: '1px solid rgba(251, 191, 36, 0.2)' }}>
@@ -28,8 +28,8 @@ const PartnerMenu = ({ setView, startQuiz }) => {
               <h3 style={{ fontSize: '1.75rem', fontWeight: '900', color: 'var(--text-primary)' }}>Start Musaffa</h3>
               <p style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>Interactive turn-taking recitation session with the app.</p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-gold)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '0.65rem' }}>
-              Go to Library <ChevronRight size={14} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-gold)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: 'var(--fs-secondary)' }}>
+              Go to Library <ChevronRight size={16} />
             </div>
           </div>
           <Users size={120} strokeWidth={1} style={{ position: 'absolute', top: '0', right: '0', padding: '2rem', opacity: 0.05 }} />
@@ -39,21 +39,26 @@ const PartnerMenu = ({ setView, startQuiz }) => {
           whileHover={{ y: -8 }}
           onClick={startQuiz} 
           className="glass-card"
-          style={{ padding: '3rem', textAlign: 'left', cursor: 'pointer', border: '1px solid rgba(16, 185, 129, 0.1)', position: 'relative', overflow: 'hidden' }}
+          style={{ padding: '3rem', textAlign: 'left', cursor: 'pointer', border: '1px solid rgba(16, 185, 129, 0.25)', position: 'relative', overflow: 'hidden' }}
         >
           <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {/* `CircleHelp` is the app-wide Mutashabihat Quiz glyph, matching the
+                header of MutashabihSelection, the per-surah button in SurahDetail
+                and the quiz session bar. `BrainCircuit` is now reserved for the
+                separate "Smart Detection" meaning (Smart presets, session mode,
+                the STT indicator). */}
             <div style={{ width: '64px', height: '64px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-emerald)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-              <BrainCircuit size={32} strokeWidth={1.5} />
+              <CircleHelp size={32} strokeWidth={1.5} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               <h3 style={{ fontSize: '1.75rem', fontWeight: '900', color: 'var(--text-primary)' }}>Mutashabihat Quiz</h3>
               <p style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>Test your knowledge of similar verses across different Surahs.</p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-emerald)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '0.65rem' }}>
-              Start Test <ChevronRight size={14} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-emerald)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: 'var(--fs-secondary)' }}>
+              Start Test <ChevronRight size={16} />
             </div>
           </div>
-          <BrainCircuit size={120} strokeWidth={1} style={{ position: 'absolute', top: '0', right: '0', padding: '2rem', opacity: 0.05 }} />
+          <CircleHelp size={120} strokeWidth={1} style={{ position: 'absolute', top: '0', right: '0', padding: '2rem', opacity: 0.05 }} />
         </motion.button>
       </div>
     </motion.div>
