@@ -81,7 +81,7 @@ const AudioManager = ({ surahs, audioDownloadControls, reciter, setReciter, setV
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0.5rem 0 0.75rem',
-        borderBottom: '1px solid var(--glass-border)',
+        borderBottom: 'var(--border-hairline)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           <button
@@ -91,8 +91,8 @@ const AudioManager = ({ surahs, audioDownloadControls, reciter, setReciter, setV
             style={{
               width: '2rem', height: '2rem', flexShrink: 0,
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              borderRadius: '999px',
-              border: '1px solid var(--glass-border)',
+              borderRadius: 'var(--radius-full)',
+              border: 'var(--border-hairline)',
               background: 'var(--glass-bg)',
               color: 'var(--text-muted)',
               cursor: 'pointer',
@@ -102,7 +102,7 @@ const AudioManager = ({ surahs, audioDownloadControls, reciter, setReciter, setV
           </button>
           <Volume2 size={18} color="var(--accent-gold)" strokeWidth={2} />
           <h2 style={{
-            fontSize: '1rem', fontWeight: '900', color: 'var(--text-primary)',
+            fontSize: 'var(--fs-page)', fontWeight: 'var(--fw-strong)', color: 'var(--text-primary)',
             margin: 0, letterSpacing: '-0.01em',
           }}>
             Audio Manager
@@ -116,8 +116,8 @@ const AudioManager = ({ surahs, audioDownloadControls, reciter, setReciter, setV
           htmlFor="audio-manager-reciter"
           style={{
             display: 'block',
-            fontSize: '0.65rem', fontWeight: '800', textTransform: 'uppercase',
-            letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '0.5rem',
+            fontSize: 'var(--fs-label)', fontWeight: '800', textTransform: 'uppercase',
+            letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 'var(--space-2)',
           }}
         >
           Reciter
@@ -132,7 +132,7 @@ const AudioManager = ({ surahs, audioDownloadControls, reciter, setReciter, setV
               padding: '0.7rem 2.2rem 0.7rem 0.9rem',
               borderRadius: 'var(--radius-md)',
               background: 'var(--bg-accent)',
-              border: '1px solid var(--glass-border)',
+              border: 'var(--border-hairline)',
               color: 'var(--text-primary)',
               fontSize: '0.85rem', fontWeight: '700',
               cursor: 'pointer',
@@ -153,9 +153,9 @@ const AudioManager = ({ surahs, audioDownloadControls, reciter, setReciter, setV
 
       {/* Summary */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap',
+        display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap',
         padding: '0.85rem 0 0.25rem',
-        fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600',
+        fontSize: 'var(--fs-secondary)', color: 'var(--text-muted)', fontWeight: '600',
       }}>
         <span>{downloadedSurahs.length} of {surahs.length} surahs downloaded</span>
         {downloadStatus?.notice && (
@@ -177,27 +177,27 @@ const AudioManager = ({ surahs, audioDownloadControls, reciter, setReciter, setV
             <div
               key={surah.number}
               style={{
-                display: 'flex', alignItems: 'center', gap: '0.75rem',
+                display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
                 padding: '0.65rem 0.75rem',
                 borderRadius: 'var(--radius-md)',
                 background: 'var(--bg-accent)',
-                border: '1px solid var(--glass-border)',
+                border: 'var(--border-hairline)',
               }}
             >
               <span style={{
-                fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-primary)',
+                fontSize: 'var(--fs-body-sm)', fontWeight: '800', color: 'var(--text-primary)',
                 minWidth: '2.5rem',
               }}>
                 {surah.number}
               </span>
               <span style={{
-                fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-primary)',
+                fontSize: 'var(--fs-body-sm)', fontWeight: '600', color: 'var(--text-primary)',
                 flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}>
                 {surah.englishName}
               </span>
               <span style={{
-                fontSize: '0.65rem', fontWeight: '600', color: getStatusColor(surah.number),
+                fontSize: 'var(--fs-label)', fontWeight: '600', color: getStatusColor(surah.number),
                 minWidth: '5rem', textAlign: 'right',
               }}>
                 {getStatusText(surah.number)}
@@ -212,7 +212,7 @@ const AudioManager = ({ surahs, audioDownloadControls, reciter, setReciter, setV
                     style={{
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                       width: '2rem', height: '2rem', borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--glass-border)',
+                      border: 'var(--border-hairline)',
                       background: 'var(--bg-secondary)',
                       color: 'var(--text-muted)',
                       cursor: 'pointer',
@@ -230,7 +230,7 @@ const AudioManager = ({ surahs, audioDownloadControls, reciter, setReciter, setV
                     style={{
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                       width: '2rem', height: '2rem', borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--glass-border)',
+                      border: 'var(--border-hairline)',
                       background: 'var(--bg-secondary)',
                       color: isDownloading || downloadStatus?.isDownloading ? 'var(--text-muted)' : 'var(--accent-gold)',
                       cursor: isDownloading || downloadStatus?.isDownloading ? 'not-allowed' : 'pointer',

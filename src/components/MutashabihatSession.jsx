@@ -20,7 +20,7 @@ const OptionBtn = ({ opt, answered, selected, onClick }) => {
         borderRadius: '1.25rem',
         border: correct ? '1px solid #34d399'
           : wrong ? '1px solid rgba(239,68,68,0.4)'
-            : '1px solid var(--glass-border)',
+            : 'var(--border-hairline)',
         background: correct ? 'rgba(52,211,153,0.1)'
           : wrong ? 'rgba(239,68,68,0.06)'
             : 'var(--bg-accent)',
@@ -32,8 +32,8 @@ const OptionBtn = ({ opt, answered, selected, onClick }) => {
     >
       <span style={{
         display: 'block',
-        fontSize: '0.5rem', fontWeight: 900,
-        textTransform: 'uppercase', letterSpacing: '0.2em',
+        fontSize: '0.5rem', fontWeight: 'var(--fw-strong)',
+        textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)',
         color: correct ? '#34d399' : 'rgba(255,255,255,0.3)',
         marginBottom: '0.4rem',
       }}>
@@ -122,26 +122,26 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
 
   if (done) return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-      style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', padding: '2rem' }}>
+      style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', padding: 'var(--space-6)' }}>
       <div style={{ textAlign: 'center', maxWidth: 400, width: '100%' }}>
         <div style={{
-          width: 110, height: 110, borderRadius: '2rem', margin: '0 auto 2rem',
+          width: 110, height: 110, borderRadius: 'var(--radius-xl)', margin: '0 auto 2rem',
           background: 'rgba(212,175,55,0.07)', border: '1px solid rgba(212,175,55,0.2)',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         }}>
-          <span style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--accent-gold)' }}>{score}</span>
-          <span style={{ fontSize: '0.5rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em', color: 'var(--text-muted)' }}>/ {total}</span>
+          <span style={{ fontSize: '2.2rem', fontWeight: 'var(--fw-strong)', color: 'var(--accent-gold)' }}>{score}</span>
+          <span style={{ fontSize: '0.5rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--text-muted)' }}>/ {total}</span>
         </div>
-        <h2 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+        <h2 style={{ fontSize: '1.6rem', fontWeight: 'var(--fw-strong)', color: 'var(--text-primary)', marginBottom: 'var(--space-2)' }}>
           {score >= Math.ceil(total * 0.8) ? 'Mastery Achieved' : 'Keep Revising'}
         </h2>
         <p style={{ color: 'var(--text-muted)', marginBottom: '2.5rem', lineHeight: 1.6 }}>
           <strong style={{ color: 'var(--text-primary)' }}>{Math.round(score / total * 100)}%</strong> accuracy on {accuracyLabel} Mutashabihat
         </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
           <button onClick={restart} style={{
             padding: '0.9rem', borderRadius: '0.9rem', background: 'var(--accent-gold)',
-            border: 'none', color: '#0a0a0f', fontWeight: 900, fontSize: '0.7rem',
+            border: 'none', color: '#0a0a0f', fontWeight: 'var(--fw-strong)', fontSize: 'var(--fs-meta)',
             textTransform: 'uppercase', letterSpacing: '0.15em', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}>
@@ -149,8 +149,8 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
           </button>
           <button onClick={onClose} style={{
             padding: '0.9rem', borderRadius: '0.9rem',
-            background: 'var(--glass-bg)', border: '1px solid var(--glass-border)',
-            color: 'var(--text-muted)', fontWeight: 800, fontSize: '0.7rem',
+            background: 'var(--glass-bg)', border: 'var(--border-hairline)',
+            color: 'var(--text-muted)', fontWeight: 800, fontSize: 'var(--fs-meta)',
             textTransform: 'uppercase', letterSpacing: '0.15em', cursor: 'pointer',
           }}>
             {multiSurahData ? 'Back to Selection' : 'Back to Surah'}
@@ -159,30 +159,30 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
 
         {/* History Breakdown */}
         {answersHistory.length > 0 && (
-          <div style={{ marginTop: '3rem', textAlign: 'left' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '1.5rem', textAlign: 'center' }}>
+          <div style={{ marginTop: 'var(--space-8)', textAlign: 'left' }}>
+            <h3 style={{ fontSize: 'var(--fs-view)', fontWeight: 'var(--fw-strong)', color: 'var(--text-primary)', marginBottom: 'var(--space-5)', textAlign: 'center' }}>
               Quiz Review
             </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
               {answersHistory.map((hist, i) => (
                 <div key={i} style={{
-                  background: 'var(--glass-bg)', border: '1px solid var(--glass-border)',
-                  borderRadius: '1rem', padding: '1.25rem'
+                  background: 'var(--glass-bg)', border: 'var(--border-hairline)',
+                  borderRadius: 'var(--radius-md)', padding: '1.25rem'
                 }}>
-                  <p style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+                  <p style={{ fontSize: 'var(--fs-body-sm)', fontWeight: 800, color: 'var(--text-primary)', marginBottom: 'var(--space-2)' }}>
                     Q{i + 1}: {hist.card.question}
                   </p>
-                  <p className="arabic-text" style={{ fontSize: '1.2rem', textAlign: 'right', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                  <p className="arabic-text" style={{ fontSize: '1.2rem', textAlign: 'right', color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
                     {hist.card.contextVerse.text}
                   </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
                     {hist.card.options.map((o, j) => {
                       const isChosen = hist.selectedOpt.surah === o.surah && hist.selectedOpt.ayah === o.ayah;
                       const isCorrect = o.isCorrect;
                       return (
                         <div key={j} style={{
-                          display: 'flex', alignItems: 'center', gap: '0.5rem',
-                          padding: '0.75rem', borderRadius: '0.5rem',
+                          display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
+                          padding: 'var(--space-3)', borderRadius: 'var(--radius-sm)',
                           background: isCorrect ? 'rgba(52,211,153,0.1)' : (isChosen && !isCorrect ? 'rgba(239,68,68,0.1)' : 'var(--bg-accent)'),
                           border: isCorrect ? '1px solid rgba(52,211,153,0.3)' : (isChosen && !isCorrect ? '1px solid rgba(239,68,68,0.3)' : '1px solid transparent')
                         }}>
@@ -191,7 +191,7 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
                             <p className="arabic-text" style={{ fontSize: '1.1rem', textAlign: 'right', margin: 0, color: isCorrect ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                               {o.text}
                             </p>
-                            <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', margin: 0, marginTop: '0.2rem', textAlign: 'left' }}>
+                            <p style={{ fontSize: 'var(--fs-label)', color: 'var(--text-muted)', margin: 0, marginTop: '0.2rem', textAlign: 'left' }}>
                               {o.surahName} · {o.surah}:{o.ayah}
                             </p>
                           </div>
@@ -207,7 +207,7 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
         
         {/* Attribution Footer */}
         <div style={{ marginTop: '2.5rem', opacity: 0.6 }}>
-          <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+          <p style={{ fontSize: 'var(--fs-label)', color: 'var(--text-muted)', lineHeight: '1.5' }}>
             Mutashabihat dataset courtesy of{' '}
             <a 
               href="https://github.com/Waqar144/Quran_Mutashabihat_Data" 
@@ -237,31 +237,31 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
 
       {/* Header */}
       <header style={{
-        position: 'sticky', top: 0, zIndex: 100,
+        position: 'sticky', top: 0, zIndex: 'var(--z-header)',
         background: 'rgba(10,10,15,0.92)', backdropFilter: 'blur(24px)',
-        borderBottom: '1px solid var(--glass-border)',
+        borderBottom: 'var(--border-hairline)',
         padding: '0.8rem 1.25rem',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.6rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: '0.6rem' }}>
           <button onClick={onClose} style={{
             width: 36, height: 36, borderRadius: '10px', flexShrink: 0,
-            border: '1px solid var(--glass-border)', background: 'var(--glass-bg)',
+            border: 'var(--border-hairline)', background: 'var(--glass-bg)',
             color: 'var(--text-muted)', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <ChevronLeft size={18} />
           </button>
           <div style={{ flex: 1 }}>
-            <h1 style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
+            <h1 style={{ fontSize: '0.85rem', fontWeight: 'var(--fw-strong)', color: 'var(--text-primary)', margin: 0 }}>
               {displayTitle}
             </h1>
-            <p style={{ fontSize: '0.5rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em', color: 'var(--accent-gold)', opacity: 0.65, margin: 0 }}>
+            <p style={{ fontSize: '0.5rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--accent-gold)', opacity: 0.65, margin: 0 }}>
               {idx + 1} / {total}
             </p>
           </div>
           <button onClick={restart} style={{
             width: 36, height: 36, borderRadius: '10px',
-            border: '1px solid var(--glass-border)', background: 'var(--glass-bg)',
+            border: 'var(--border-hairline)', background: 'var(--glass-bg)',
             color: 'var(--text-muted)', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
@@ -269,7 +269,7 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
           </button>
           <button onClick={() => setDone(true)} title="End Quiz Early" style={{
             width: 36, height: 36, borderRadius: '10px',
-            border: '1px solid var(--glass-border)', background: 'var(--glass-bg)',
+            border: 'var(--border-hairline)', background: 'var(--glass-bg)',
             color: 'var(--text-muted)', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
@@ -278,7 +278,7 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
           <div style={{
             padding: '4px 14px', borderRadius: '8px',
             background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.2)',
-            fontSize: '0.85rem', fontWeight: 900, color: 'var(--accent-gold)',
+            fontSize: '0.85rem', fontWeight: 'var(--fw-strong)', color: 'var(--accent-gold)',
           }}>
             {score}
           </div>
@@ -298,15 +298,15 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
 
             {/* Context verse */}
             <div style={{
-              borderRadius: '1.5rem', padding: '1.75rem',
+              borderRadius: 'var(--radius-lg)', padding: '1.75rem',
               border: '1px solid rgba(212,175,55,0.15)',
               background: 'rgba(212,175,55,0.03)',
               marginBottom: '1.75rem',
             }}>
               <span style={{
-                display: 'block', fontSize: '0.5rem', fontWeight: 900,
+                display: 'block', fontSize: '0.5rem', fontWeight: 'var(--fw-strong)',
                 textTransform: 'uppercase', letterSpacing: '0.25em',
-                color: 'rgba(212,175,55,0.6)', marginBottom: '0.75rem',
+                color: 'rgba(212,175,55,0.6)', marginBottom: 'var(--space-3)',
               }}>
                 {card.contextLabel}
               </span>
@@ -321,7 +321,7 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
 
             {/* Question */}
             <h2 style={{
-              fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)', fontWeight: 900,
+              fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)', fontWeight: 'var(--fw-strong)',
               color: 'var(--text-primary)', textAlign: 'center',
               margin: '0 0 1.25rem', lineHeight: 1.4,
             }}>
@@ -329,7 +329,7 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
             </h2>
 
             {/* Options */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
               {card.options.map((opt) => (
                 <OptionBtn
                   key={`${opt.surah}-${opt.ayah}`}
@@ -348,7 +348,7 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
                   initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                   style={{
                     textAlign: 'center', marginTop: '1.25rem',
-                    fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.1em',
+                    fontSize: 'var(--fs-label)', fontWeight: 800, letterSpacing: '0.1em',
                     color: 'var(--text-muted)', textTransform: 'uppercase',
                   }}
                 >
@@ -360,8 +360,8 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
         </AnimatePresence>
 
         {/* Attribution Footer */}
-        <div style={{ textAlign: 'center', marginTop: '4rem', opacity: 0.5 }}>
-          <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+        <div style={{ textAlign: 'center', marginTop: 'var(--space-10)', opacity: 0.5 }}>
+          <p style={{ fontSize: 'var(--fs-label)', color: 'var(--text-muted)' }}>
             Mutashabihat dataset courtesy of{' '}
             <a 
               href="https://github.com/Waqar144/Quran_Mutashabihat_Data" 

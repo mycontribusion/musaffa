@@ -66,10 +66,10 @@ const SurahList = ({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
-      style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', paddingBottom: '3rem', paddingTop: '1.5rem' }}
+      style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', paddingBottom: 'var(--space-8)', paddingTop: 'var(--space-5)' }}
     >
       {/* Quick Actions */}
-      <div style={{ maxWidth: '600px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', width: '100%', padding: '0 0.5rem' }}>
+      <div style={{ maxWidth: '600px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)', width: '100%', padding: '0 0.5rem' }}>
         <button
           onClick={() => {
             // Smart Musaffa opens the NORMAL config screen. Clear any leftover
@@ -82,21 +82,21 @@ const SurahList = ({
             setPartnerSubView('config');
           }}
           className="glass-card hover-scale"
-          style={{ padding: '1.25rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', border: '1px solid var(--glass-border)' }}
+          style={{ padding: '1.25rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer', border: 'var(--border-hairline)' }}
         >
           <div style={{ textAlign: 'center' }}>
             <span style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-primary)', display: 'block' }}>Smart Musaffa</span>
-            <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>AI Recitation Partner</span>
+            <span style={{ fontSize: 'var(--fs-label)', color: 'var(--text-secondary)' }}>AI Recitation Partner</span>
           </div>
         </button>
         <button
           onClick={() => setView('mutashabihat-selection')}
           className="glass-card hover-scale"
-          style={{ padding: '1.25rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', border: '1px solid var(--glass-border)' }}
+          style={{ padding: '1.25rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer', border: 'var(--border-hairline)' }}
         >
           <div style={{ textAlign: 'center' }}>
             <span style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-primary)', display: 'block' }}>Mutashabih Quiz</span>
-            <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Global Challenge</span>
+            <span style={{ fontSize: 'var(--fs-label)', color: 'var(--text-secondary)' }}>Global Challenge</span>
           </div>
         </button>
       </div>
@@ -106,10 +106,10 @@ const SurahList = ({
         <div style={{ maxWidth: '600px', margin: '0 auto', width: '100%', padding: '0 0.5rem' }}>
           {/* Header row: title group pinned left, create button pushed to the far
               right of the same row and vertically centred against the title. */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', marginBottom: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', marginBottom: 'var(--space-3)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <Play size={13} color="var(--accent-gold)" />
-              <span style={{ fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Quick Start Musaffa</span>
+              <span style={{ fontSize: 'var(--fs-meta)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Quick Start Musaffa</span>
             </div>
 
             {/* Icon-only, same footprint and hover treatment as the per-card
@@ -125,7 +125,7 @@ const SurahList = ({
               <Plus size={14} />
             </button>
           </div>
-          <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+          <div style={{ display: 'flex', gap: 'var(--space-3)', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
             {musaffaPresets.map((preset, idx) => {
               const mode = getModeLabel(preset);
               const ModeIcon = mode.Icon;
@@ -135,17 +135,17 @@ const SurahList = ({
               return (
                 <div key={idx} style={{
                   flexShrink: 0, minWidth: '200px', maxWidth: '220px',
-                  background: 'var(--glass-bg)', border: '1px solid var(--glass-border)',
-                  borderRadius: 'var(--radius-lg)', padding: '1rem',
-                  display: 'flex', flexDirection: 'column', gap: '0.75rem',
+                  background: 'var(--glass-bg)', border: 'var(--border-hairline)',
+                  borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)',
+                  display: 'flex', flexDirection: 'column', gap: 'var(--space-3)',
                 }}>
                   {/* Card Header */}
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--space-2)' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontWeight: '900', fontSize: '0.9rem', color: 'var(--text-primary)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <p style={{ fontWeight: 'var(--fw-strong)', fontSize: 'var(--fs-body)', color: 'var(--text-primary)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {preset.label}
                       </p>
-                      <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', margin: '0.2rem 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <p style={{ fontSize: 'var(--fs-label)', color: 'var(--text-muted)', margin: '0.2rem 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {rangeLabel}
                       </p>
                     </div>
@@ -161,13 +161,13 @@ const SurahList = ({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                      padding: '0.25rem 0.6rem', borderRadius: '999px',
+                      padding: '0.25rem 0.6rem', borderRadius: 'var(--radius-full)',
                       background: `${mode.color}18`, border: `1px solid ${mode.color}40`,
-                      fontSize: '0.6rem', fontWeight: '800', color: mode.color,
+                      fontSize: 'var(--fs-micro)', fontWeight: '800', color: mode.color,
                     }}>
                       <ModeIcon size={10} /> {mode.label}
                     </span>
-                    <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>{preset.portion === 'page' ? 'Full Pg' : preset.portion === 'half' ? '½ Pg' : preset.portion === 'verse' ? '1 Verse' : preset.portion}</span>
+                    <span style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-muted)' }}>{preset.portion === 'page' ? 'Full Pg' : preset.portion === 'half' ? '½ Pg' : preset.portion === 'verse' ? '1 Verse' : preset.portion}</span>
                   </div>
 
                   {/* Start button */}
@@ -177,7 +177,7 @@ const SurahList = ({
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
                       background: 'var(--accent-gold)', color: '#000',
                       border: 'none', borderRadius: 'var(--radius-md)', padding: '0.6rem',
-                      fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer', width: '100%',
+                      fontWeight: 'var(--fw-strong)', fontSize: 'var(--fs-secondary)', cursor: 'pointer', width: '100%',
                       transition: 'opacity 0.2s',
                     }}
                   >
@@ -192,7 +192,7 @@ const SurahList = ({
 
 
       {/* Search Section */}
-      <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', padding: '0 0.5rem' }}>
+      <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', width: '100%', padding: '0 0.5rem' }}>
         <div className="search-input-wrapper" style={{ width: '100%' }}>
           <Search className="search-icon" size={18} strokeWidth={2} />
           <input
@@ -207,13 +207,13 @@ const SurahList = ({
 
       {/* Ayah / Content Results */}
       {hasAyahResults && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0 0.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', padding: '0 0.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div className="section-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <ScrollText size={13} color="var(--accent-gold)" />
               Ayahs
             </div>
-            <span style={{ fontSize: '0.65rem', fontWeight: '700', color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: 'var(--fs-label)', fontWeight: '700', color: 'var(--text-muted)' }}>
               {totalAyahMatches} match{totalAyahMatches === 1 ? '' : 'es'}
             </span>
           </div>
@@ -230,20 +230,20 @@ const SurahList = ({
                   onClick={() => openAyah(r.surahNumber, r.ayahNumber)}
                   className="glass-card"
                   style={{
-                    padding: '1rem',
+                    padding: 'var(--space-4)',
                     cursor: 'pointer',
                     textAlign: 'left',
-                    border: '1px solid var(--glass-border)',
+                    border: 'var(--border-hairline)',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '0.6rem',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
                     <span className="arabic" style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>
                       {meta ? meta.name : `Surah ${r.surahNumber}`}
                     </span>
-                    <span style={{ fontSize: '0.6rem', fontWeight: '800', color: 'var(--text-muted)' }}>
+                    <span style={{ fontSize: 'var(--fs-micro)', fontWeight: '800', color: 'var(--text-muted)' }}>
                       {meta ? meta.englishName : ''} · Ayah {r.ayahNumber}
                     </span>
                   </div>
@@ -256,7 +256,7 @@ const SurahList = ({
                     {r.arabic.clippedEnd && <span style={{ opacity: 0.45 }}>…</span>}
                   </p>
 
-                  <p style={{ fontSize: '0.8rem', lineHeight: 1.5, color: 'var(--text-secondary)', margin: 0 }}>
+                  <p style={{ fontSize: 'var(--fs-body-sm)', lineHeight: 1.5, color: 'var(--text-secondary)', margin: 0 }}>
                     {r.english.clippedStart && <span style={{ opacity: 0.45 }}>… </span>}
                     {r.english.segments.map((seg, i) => (
                       <span key={i} style={seg.match ? highlightColor(false) : undefined}>{seg.text}{' '}</span>
@@ -269,7 +269,7 @@ const SurahList = ({
           </div>
 
           {isTruncated && (
-            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'center', padding: '0.5rem' }}>
+            <p style={{ fontSize: 'var(--fs-meta)', color: 'var(--text-muted)', textAlign: 'center', padding: 'var(--space-2)' }}>
               Showing first {ayahResults.length} of {totalAyahMatches} matches — refine your search to narrow it down.
             </p>
           )}
@@ -278,10 +278,10 @@ const SurahList = ({
 
       {/* No Results */}
       {noResults && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', padding: '3rem 1rem', textAlign: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-2)', padding: '3rem 1rem', textAlign: 'center' }}>
           <Search size={28} color="var(--text-muted)" />
-          <p style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-secondary)', margin: 0 }}>No results</p>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
+          <p style={{ fontSize: 'var(--fs-body)', fontWeight: '700', color: 'var(--text-secondary)', margin: 0 }}>No results</p>
+          <p style={{ fontSize: 'var(--fs-secondary)', color: 'var(--text-muted)', margin: 0 }}>
             Try a surah name, or a word from the Arabic text or the translation.
           </p>
         </div>
@@ -292,26 +292,26 @@ const SurahList = ({
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)',
-          borderRadius: 'var(--radius-lg)', padding: '1rem',
+          borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)',
           margin: '0 0.5rem',
         }}>
           <div>
-            <p style={{ fontWeight: '800', fontSize: '0.9rem', color: 'var(--accent-gold)' }}>Active Musaffa Session</p>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+            <p style={{ fontWeight: '800', fontSize: 'var(--fs-body)', color: 'var(--accent-gold)' }}>Active Musaffa Session</p>
+            <p style={{ fontSize: 'var(--fs-secondary)', color: 'var(--text-secondary)' }}>
               {savedMusaffaSession.surahNumber
                 ? `Surah ${savedMusaffaSession.surahNumber} · Chunk ${savedMusaffaSession.chunkIndex + 1}`
                 : 'Continue your recitation'}
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
             <button onClick={clearMusaffaSession} style={{
-              padding: '0.5rem 0.8rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)',
-              background: 'var(--bg-accent)', color: 'var(--text-secondary)', fontSize: '0.75rem',
+              padding: '0.5rem 0.8rem', borderRadius: 'var(--radius-md)', border: 'var(--border-hairline)',
+              background: 'var(--bg-accent)', color: 'var(--text-secondary)', fontSize: 'var(--fs-secondary)',
               fontWeight: '700', cursor: 'pointer',
             }}>Dismiss</button>
             <button onClick={resumeMusaffaSession} style={{
               padding: '0.5rem 0.8rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-gold)',
-              background: 'var(--accent-gold)', color: '#000', fontSize: '0.75rem',
+              background: 'var(--accent-gold)', color: '#000', fontSize: 'var(--fs-secondary)',
               fontWeight: '800', cursor: 'pointer',
             }}>Resume</button>
           </div>
@@ -320,23 +320,23 @@ const SurahList = ({
 
       {/* Recent Reads */}
       {recentSurahs.length > 0 && searchQuery === '' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
           <div className="section-label" style={{ paddingLeft: '0.25rem' }}>Continue Reading</div>
-          <div className="no-scrollbar" style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem', paddingLeft: '0.25rem' }}>
+          <div className="no-scrollbar" style={{ display: 'flex', gap: 'var(--space-3)', overflowX: 'auto', paddingBottom: 'var(--space-2)', paddingLeft: '0.25rem' }}>
             {recentSurahs.map((s) => (
               <motion.button
                 key={s.number}
                 whileHover={{ y: -2 }}
                 onClick={() => { handleSelectSurah(s); setView('detail'); }}
                 className="glass-card"
-                style={{ flexShrink: 0, width: '150px', padding: '1rem', textAlign: 'left', cursor: 'pointer', border: '1px solid var(--glass-border)' }}
+                style={{ flexShrink: 0, width: '150px', padding: 'var(--space-4)', textAlign: 'left', cursor: 'pointer', border: 'var(--border-hairline)' }}
               >
-                <div style={{ marginBottom: '0.75rem' }}>
-                  <span style={{ fontSize: '0.65rem', fontWeight: '800', color: 'var(--accent-gold)', opacity: 0.6 }}>{s.number}</span>
+                <div style={{ marginBottom: 'var(--space-3)' }}>
+                  <span style={{ fontSize: 'var(--fs-label)', fontWeight: '800', color: 'var(--accent-gold)', opacity: 0.6 }}>{s.number}</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
                   <p className="arabic" style={{ fontSize: '1.1rem', color: 'var(--text-primary)' }}>{s.name}</p>
-                  <p style={{ fontSize: '0.65rem', fontWeight: '500', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.englishName}</p>
+                  <p style={{ fontSize: 'var(--fs-label)', fontWeight: '500', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.englishName}</p>
                 </div>
               </motion.button>
             ))}
@@ -345,18 +345,18 @@ const SurahList = ({
       )}
 
       {/* Main Grid */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.5rem' }}>
           <div className="section-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             {isSearching && filteredSurahs.length > 0 && <BookOpen size={13} color="var(--accent-gold)" />}
             {isSearching ? 'Surahs' : 'Surah Library'}
           </div>
-          <span style={{ fontSize: '0.65rem', fontWeight: '700', color: 'var(--text-muted)' }}>
+          <span style={{ fontSize: 'var(--fs-label)', fontWeight: '700', color: 'var(--text-muted)' }}>
             {filteredSurahs.length} {isSearching ? (filteredSurahs.length === 1 ? 'Match' : 'Matches') : 'Chapters'}
           </span>
         </div>
 
-        <div className="grid md:grid-cols-2" style={{ gap: '1rem' }}>
+        <div className="grid md:grid-cols-2" style={{ gap: 'var(--space-4)' }}>
           {filteredSurahs.map((surah) => (
             <motion.div
               key={surah.number}
@@ -370,14 +370,14 @@ const SurahList = ({
               className="glass-card"
               style={{ padding: '1.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '0.75rem', background: 'var(--bg-accent)', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-secondary)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '0.75rem', background: 'var(--bg-accent)', border: 'var(--border-hairline)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--fs-body-sm)', fontWeight: '800', color: 'var(--text-secondary)' }}>
                   {surah.number}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--text-primary)' }}>{surah.englishName}</h3>
+                  <h3 style={{ fontSize: 'var(--fs-card)', fontWeight: '700', color: 'var(--text-primary)' }}>{surah.englishName}</h3>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>{surah.numberOfAyahs} Ayahs</span>
+                    <span style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-muted)' }}>{surah.numberOfAyahs} Ayahs</span>
                   </div>
                 </div>
               </div>

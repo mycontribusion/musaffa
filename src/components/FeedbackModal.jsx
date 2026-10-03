@@ -11,9 +11,9 @@ export default function FeedbackModal({ onClose, modelStatus, installProgress, i
         exit={{ opacity: 0 }}
         onClick={(e) => e.target === e.currentTarget && onClose()}
         style={{
-          position: 'fixed', inset: 0, zIndex: 9999,
+          position: 'fixed', inset: 0, zIndex: 'var(--z-modal)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '1.5rem',
+          padding: 'var(--space-5)',
           background: 'rgba(0,0,0,0.5)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
@@ -29,25 +29,25 @@ export default function FeedbackModal({ onClose, modelStatus, installProgress, i
           aria-labelledby="feedback-title"
           style={{
             width: '100%', maxWidth: '26rem',
-            borderRadius: '2rem',
+            borderRadius: 'var(--radius-xl)',
             background: 'var(--bg-secondary)',
-            border: '1px solid var(--glass-border)',
+            border: 'var(--border-hairline)',
             borderTop: '3px solid var(--accent-gold)',
             boxShadow: '0 24px 64px rgba(0,0,0,0.35), 0 0 0 1px var(--accent-gold-soft)',
             padding: '1.75rem',
-            display: 'flex', flexDirection: 'column', gap: '1.5rem',
+            display: 'flex', flexDirection: 'column', gap: 'var(--space-5)',
           }}
         >
           {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--space-4)' }}>
             <div>
               <h2 id="feedback-title" style={{
-                fontSize: '1.15rem', fontWeight: '900', letterSpacing: '-0.02em',
+                fontSize: '1.15rem', fontWeight: 'var(--fw-strong)', letterSpacing: 'var(--tracking-tight)',
                 color: 'var(--text-primary)', margin: 0, lineHeight: 1.2,
               }}>
                 Feedback & Suggestions
               </h2>
-              <p style={{ marginTop: '0.3rem', fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '500' }}>
+              <p style={{ marginTop: '0.3rem', fontSize: 'var(--fs-body-sm)', color: 'var(--text-muted)', fontWeight: '500' }}>
                 We'd love to hear from you
               </p>
             </div>
@@ -57,8 +57,8 @@ export default function FeedbackModal({ onClose, modelStatus, installProgress, i
               style={{
                 width: '2.25rem', height: '2.25rem', flexShrink: 0,
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                borderRadius: '999px',
-                border: '1px solid var(--glass-border)',
+                borderRadius: 'var(--radius-full)',
+                border: 'var(--border-hairline)',
                 background: 'var(--glass-bg)',
                 color: 'var(--text-muted)',
                 cursor: 'pointer',
@@ -70,13 +70,13 @@ export default function FeedbackModal({ onClose, modelStatus, installProgress, i
           </div>
 
           {/* Contact Cards */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
             {/* Email Card */}
             <a
               href="mailto:ahmadmusamuhd@gmail.com"
               style={{
                 display: 'flex', alignItems: 'center', gap: '0.9rem',
-                padding: '1rem',
+                padding: 'var(--space-4)',
                 borderRadius: 'var(--radius-lg)',
                 textDecoration: 'none',
                 background: 'var(--accent-gold-soft)',
@@ -96,13 +96,13 @@ export default function FeedbackModal({ onClose, modelStatus, installProgress, i
               </div>
               <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
                 <span style={{
-                  fontSize: '0.65rem', fontWeight: '900',
-                  letterSpacing: '0.12em', textTransform: 'uppercase',
+                  fontSize: 'var(--fs-label)', fontWeight: 'var(--fw-strong)',
+                  letterSpacing: 'var(--tracking-label)', textTransform: 'uppercase',
                   color: 'var(--accent-gold)',
                 }}>
                   Email
                 </span>
-                <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+                <span style={{ fontSize: 'var(--fs-body)', fontWeight: '700', color: 'var(--text-primary)' }}>
                   Send an Email
                 </span>
               </div>
@@ -115,7 +115,7 @@ export default function FeedbackModal({ onClose, modelStatus, installProgress, i
               rel="noopener noreferrer"
               style={{
                 display: 'flex', alignItems: 'center', gap: '0.9rem',
-                padding: '1rem',
+                padding: 'var(--space-4)',
                 borderRadius: 'var(--radius-lg)',
                 textDecoration: 'none',
                 background: 'var(--accent-gold-soft)',
@@ -135,13 +135,13 @@ export default function FeedbackModal({ onClose, modelStatus, installProgress, i
               </div>
               <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
                 <span style={{
-                  fontSize: '0.65rem', fontWeight: '900',
-                  letterSpacing: '0.12em', textTransform: 'uppercase',
+                  fontSize: 'var(--fs-label)', fontWeight: 'var(--fw-strong)',
+                  letterSpacing: 'var(--tracking-label)', textTransform: 'uppercase',
                   color: 'var(--accent-gold)',
                 }}>
                   LinkedIn
                 </span>
-                <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+                <span style={{ fontSize: 'var(--fs-body)', fontWeight: '700', color: 'var(--text-primary)' }}>
                   Send a DM
                 </span>
               </div>
@@ -151,16 +151,16 @@ export default function FeedbackModal({ onClose, modelStatus, installProgress, i
           {/* SDK Download Section */}
           {isNative && modelStatus !== 'idle' && (
             <div style={{
-              padding: '1rem',
+              padding: 'var(--space-4)',
               borderRadius: 'var(--radius-md)',
               background: 'var(--glass-bg)',
-              border: '1px solid var(--glass-border)',
+              border: 'var(--border-hairline)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.6rem' }}>
                 <Download size={12} color="var(--accent-gold)" />
                 <span style={{
-                  fontSize: '0.6rem', fontWeight: '900',
-                  textTransform: 'uppercase', letterSpacing: '0.12em',
+                  fontSize: 'var(--fs-micro)', fontWeight: 'var(--fw-strong)',
+                  textTransform: 'uppercase', letterSpacing: 'var(--tracking-label)',
                   color: 'var(--text-muted)',
                 }}>
                   Speech Recognition SDK
@@ -168,20 +168,20 @@ export default function FeedbackModal({ onClose, modelStatus, installProgress, i
               </div>
 
               {modelStatus === 'needs_install' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                  <p style={{ fontSize: 'var(--fs-secondary)', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
                     The offline speech recognition model is bundled in the app and will be installed on first use (~40MB).
                   </p>
                   <button
                     onClick={() => confirmInstall()}
                     style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-2)',
                       padding: '0.75rem 1rem',
                       borderRadius: 'var(--radius-md)',
                       background: 'linear-gradient(135deg, var(--accent-gold), #2563eb)',
                       color: '#fff',
                       border: 'none',
-                      fontSize: '0.8rem',
+                      fontSize: 'var(--fs-body-sm)',
                       fontWeight: '700',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
@@ -195,17 +195,17 @@ export default function FeedbackModal({ onClose, modelStatus, installProgress, i
               )}
 
               {modelStatus === 'installing' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                     <Loader size={16} className="animate-spin" style={{ color: 'var(--accent-gold)' }} />
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    <span style={{ fontSize: 'var(--fs-secondary)', color: 'var(--text-secondary)' }}>
                       {installMessage || 'Installing...'}
                     </span>
                   </div>
                   <div style={{
                     width: '100%',
                     height: '8px',
-                    borderRadius: '99px',
+                    borderRadius: 'var(--radius-full)',
                     background: 'rgba(255,255,255,0.1)',
                     overflow: 'hidden',
                   }}>
@@ -214,35 +214,35 @@ export default function FeedbackModal({ onClose, modelStatus, installProgress, i
                       transition={{ type: 'spring', stiffness: 50, damping: 20 }}
                       style={{
                         height: '100%',
-                        borderRadius: '99px',
+                        borderRadius: 'var(--radius-full)',
                         background: 'linear-gradient(90deg, var(--accent-gold), #2563eb)',
                       }}
                     />
                   </div>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'right' }}>
+                  <span style={{ fontSize: 'var(--fs-meta)', color: 'var(--text-muted)', textAlign: 'right' }}>
                     {installProgress}%
                   </span>
                 </div>
               )}
 
               {modelStatus === 'error' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                     <AlertCircle size={16} style={{ color: '#ef4444' }} />
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    <span style={{ fontSize: 'var(--fs-secondary)', color: 'var(--text-secondary)' }}>
                       {installMessage || 'Installation failed'}
                     </span>
                   </div>
                   <button
                     onClick={() => confirmInstall()}
                     style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-2)',
                       padding: '0.6rem 1rem',
                       borderRadius: 'var(--radius-md)',
                       background: 'var(--glass-bg)',
                       color: 'var(--text-primary)',
-                      border: '1px solid var(--glass-border)',
-                      fontSize: '0.75rem',
+                      border: 'var(--border-hairline)',
+                      fontSize: 'var(--fs-secondary)',
                       fontWeight: '600',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
@@ -255,9 +255,9 @@ export default function FeedbackModal({ onClose, modelStatus, installProgress, i
               )}
 
               {modelStatus === 'ready' && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                   <CheckCircle size={16} style={{ color: '#22c55e' }} />
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                  <span style={{ fontSize: 'var(--fs-secondary)', color: 'var(--text-secondary)' }}>
                     Speech recognition SDK is ready
                   </span>
                 </div>
@@ -267,16 +267,16 @@ export default function FeedbackModal({ onClose, modelStatus, installProgress, i
 
           {/* Data Sources */}
           <div style={{
-            padding: '1rem',
+            padding: 'var(--space-4)',
             borderRadius: 'var(--radius-md)',
             background: 'var(--glass-bg)',
-            border: '1px solid var(--glass-border)',
+            border: 'var(--border-hairline)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.6rem' }}>
               <Database size={12} color="var(--accent-gold)" />
               <span style={{
-                fontSize: '0.6rem', fontWeight: '900',
-                textTransform: 'uppercase', letterSpacing: '0.12em',
+                fontSize: 'var(--fs-micro)', fontWeight: 'var(--fw-strong)',
+                textTransform: 'uppercase', letterSpacing: 'var(--tracking-label)',
                 color: 'var(--text-muted)',
               }}>
                 Data Sources
@@ -295,8 +295,8 @@ export default function FeedbackModal({ onClose, modelStatus, installProgress, i
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
-                    display: 'flex', alignItems: 'center', gap: '0.5rem',
-                    fontSize: '0.7rem', textDecoration: 'none',
+                    display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
+                    fontSize: 'var(--fs-meta)', textDecoration: 'none',
                     color: 'var(--text-secondary)',
                     transition: 'color 0.2s',
                   }}

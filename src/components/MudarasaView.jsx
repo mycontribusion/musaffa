@@ -176,7 +176,7 @@ import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
         /> */}
 
         <div style={{ flex: 1, padding: '1rem 0 6rem 0' }}>
-          <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '3rem' }}>
+          <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 'var(--space-8)' }}>
             {chunks[currentChunkIndex]?.map((ayah, idx) => {
               let displayText = ayah.text;
               if (enableErrorDetection && quranSimple) {
@@ -248,22 +248,22 @@ import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
         </div>
 
         {/* Control Bar */}
-        <div style={{ position: 'fixed', bottom: '2rem', left: '0', right: '0', zIndex: 100, display: 'flex', justifyContent: 'center' }}>
+        <div style={{ position: 'fixed', bottom: '2rem', left: '0', right: '0', zIndex: 'var(--z-header)', display: 'flex', justifyContent: 'center' }}>
           <AnimatePresence mode="wait">
             {mudarasaTurn === 'user' && (
-              <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+              <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-4)' }}>
                 {(enableErrorDetection && isSttListening) || isHintActive ? (
                   <>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.6rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }}>
                         <button
                           onClick={handleMarkSatisfied}
                           style={{
-                            padding: '0.45rem 0.85rem', borderRadius: '999px', cursor: 'pointer',
+                            padding: '0.45rem 0.85rem', borderRadius: 'var(--radius-full)', cursor: 'pointer',
                             border: '1px solid rgba(16,185,129,0.3)',
                             background: 'rgba(16,185,129,0.08)',
-                            color: 'var(--accent-emerald)', fontWeight: '800', fontSize: '0.65rem',
-                            textTransform: 'uppercase', letterSpacing: '0.08em',
+                            color: 'var(--accent-emerald)', fontWeight: '800', fontSize: 'var(--fs-label)',
+                            textTransform: 'uppercase', letterSpacing: 'var(--tracking-status)',
                             display: 'flex', alignItems: 'center', gap: '0.35rem',
                             transition: 'all 0.2s',
                           }}
@@ -272,7 +272,7 @@ import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
                         </button>
                       </div>
                       {activeStat && (
-                        <span style={{ color: activeStat.accuracy < targetAccuracy ? 'rgba(245,158,11,0.8)' : 'var(--accent-emerald)', opacity: 0.9, fontWeight: '800', fontSize: '0.65rem' }}>
+                        <span style={{ color: activeStat.accuracy < targetAccuracy ? 'rgba(245,158,11,0.8)' : 'var(--accent-emerald)', opacity: 0.9, fontWeight: '800', fontSize: 'var(--fs-label)' }}>
                           Verse {chunks[currentChunkIndex]?.[activeAyahIndex]?.numberInSurah} Accuracy: {activeStat.accuracy}% / {targetAccuracy}%
                         </span>
                       )}
@@ -289,7 +289,7 @@ import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
                           background: 'rgba(16,185,129,0.15)',
                           border: '1px solid rgba(16,185,129,0.4)',
                           color: 'var(--text-primary)',
-                          fontSize: '0.75rem',
+                          fontSize: 'var(--fs-secondary)',
                           fontWeight: '600',
                           textAlign: 'center',
                           lineHeight: 1.5,
@@ -306,15 +306,15 @@ import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
                     <button
                       onClick={enableErrorDetection ? handleManualFinish : onNext}
                       className="btn-primary"
-                      style={{ background: 'var(--accent-emerald)', padding: '1.25rem 2.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#fff', fontSize: '0.8rem', letterSpacing: '0.1em' }}
+                      style={{ background: 'var(--accent-emerald)', padding: '1.25rem 2.5rem', display: 'flex', alignItems: 'center', gap: 'var(--space-3)', color: '#fff', fontSize: 'var(--fs-body-sm)', letterSpacing: '0.1em' }}
                     >
                       <span>{enableErrorDetection ? 'Finished Reciting' : 'Finished Portion'}</span>
                     </button>
-                    <button onClick={() => onLogStumble(chunks[currentChunkIndex][0])} style={{ background: 'none', border: 'none', color: 'var(--accent-red)', opacity: 0.5, fontWeight: '700', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer' }}>Log Stumble</button>
+                    <button onClick={() => onLogStumble(chunks[currentChunkIndex][0])} style={{ background: 'none', border: 'none', color: 'var(--accent-red)', opacity: 0.5, fontWeight: '700', fontSize: 'var(--fs-label)', textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer' }}>Log Stumble</button>
                   </>
                 )}
                 {isListening && !enableErrorDetection && (
-                  <p style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: '600', letterSpacing: '0.05em', margin: 0 }}>
+                  <p style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-muted)', fontWeight: '600', letterSpacing: '0.05em', margin: 0 }}>
                     <Mic size={10} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
                     LISTENING: TURN SWITCHES AFTER SILENCE
                   </p>

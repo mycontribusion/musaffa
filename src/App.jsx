@@ -213,8 +213,8 @@ const App = () => {
 
   if (error) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '1rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-        <div style={{ maxWidth: '32rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: 'var(--space-4)', textAlign: 'center', color: 'var(--text-secondary)' }}>
+        <div style={{ maxWidth: '32rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
           <div style={{ fontSize: '3rem', color: 'var(--text-muted)' }}>📶</div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>You're Offline</h1>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}>{error}</p>

@@ -62,7 +62,7 @@ export const ConfigActionButton = ({
         <button
           onClick={() => onSavePreset && onSavePreset({ ...params })}
           className="btn-primary"
-          style={{ width: '100%', padding: '1.1rem', fontSize: '0.9rem', background: 'var(--accent-emerald)', color: '#000' }}
+          style={{ width: '100%', padding: '1.1rem', fontSize: 'var(--fs-body)', background: 'var(--accent-emerald)', color: '#000' }}
         >
           Save Preset
         </button>
@@ -76,7 +76,7 @@ export const ConfigActionButton = ({
       disabled={!isRangeValid}
       className="btn-primary"
       style={{
-        width: '100%', padding: '1.1rem', fontSize: '0.9rem',
+        width: '100%', padding: '1.1rem', fontSize: 'var(--fs-body)',
         opacity: isRangeValid ? 1 : 0.3,
         cursor: isRangeValid ? 'pointer' : 'not-allowed',
       }}

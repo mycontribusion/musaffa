@@ -53,13 +53,13 @@ const PartnerConfig = ({
       style={{ maxWidth: '640px', margin: '0 auto', padding: '0.5rem 0.5rem 6rem' }}
     >
       {/* Page title */}
-      <div className="text-center" style={{ marginBottom: '1rem' }}>
-        <h2 style={{ fontSize: 'clamp(1.5rem, 5vw, 2rem)', fontWeight: '900', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+      <div className="text-center" style={{ marginBottom: 'var(--space-4)' }}>
+        <h2 style={{ fontSize: 'clamp(1.5rem, 5vw, 2rem)', fontWeight: 'var(--fw-strong)', color: 'var(--text-primary)', letterSpacing: 'var(--tracking-tight)' }}>
           {presetEditingIndex !== null ? `Edit Preset ${presetEditingIndex + 1}` : 'Musaffa Session'}
         </h2>
       </div>
 
-      <div className="glass-card" style={{ padding: 'clamp(1rem, 4vw, 1.5rem)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div className="glass-card" style={{ padding: 'clamp(1rem, 4vw, 1.5rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
 
         <RangeSelector
           surahs={surahs}
@@ -92,7 +92,7 @@ const PartnerConfig = ({
         {/* Preset name input — edit mode only */}
         {presetEditingIndex !== null && (
           <div>
-            <div style={{ fontSize: '0.65rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+            <div style={{ fontSize: 'var(--fs-label)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 'var(--space-2)' }}>
               Preset Name
             </div>
             <input
@@ -102,7 +102,7 @@ const PartnerConfig = ({
               style={{
                 width: '100%', padding: '0.75rem 1rem', outline: 'none',
                 background: 'var(--bg-accent)', color: 'var(--text-primary)',
-                border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-md)',
+                border: 'var(--border-hairline)', borderRadius: 'var(--radius-md)',
                 fontSize: '0.85rem',
               }}
             />

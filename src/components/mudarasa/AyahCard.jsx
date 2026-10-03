@@ -15,12 +15,12 @@ export const LiveTextOverlay = ({ plainText, results, numberInSurah, wordOffset 
   const originalWords = plainText.trim().split(/\s+/).filter(Boolean);
   const wordMapping = [];
   let currentIndex = 0;
-  
+
   for (const origWord of originalWords) {
     const clean = removeTashkeel(origWord);
     const exp = normalizeArabic(expandMuqattaat(clean));
     const count = exp.trim().split(/\s+/).filter(Boolean).length;
-    
+
     wordMapping.push({
       word: origWord,
       startIdx: currentIndex,
@@ -47,7 +47,7 @@ export const LiveTextOverlay = ({ plainText, results, numberInSurah, wordOffset 
     }
 
     if (hasPending && !hasError && !hasCorrect) return { status: 'pending', spokenWord: null };
-    if (hasError) return { status: 'omission', spokenWord }; 
+    if (hasError) return { status: 'omission', spokenWord };
     if (hasPending && hasCorrect) return { status: 'pending', spokenWord: null };
     return { status: 'correct', spokenWord };
   };
@@ -118,11 +118,11 @@ export const AyahCard = ({
   wordOffset
 }) => {
   return (
-    <div 
-      style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        gap: '2rem',
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--space-6)',
         opacity: isLocked ? 0.2 : (isCompleted ? 0.8 : 1),
         pointerEvents: isLocked ? 'none' : 'auto',
         transition: 'all 0.4s ease',
@@ -134,8 +134,8 @@ export const AyahCard = ({
           animate={{ opacity: 1, scale: currentAyahNumber === `bismillah-${ayah.number}` ? 1.02 : 1 }}
           style={{
             textAlign: 'center',
-            padding: '1.5rem',
-            borderRadius: '1.5rem',
+            padding: 'var(--space-5)',
+            borderRadius: 'var(--radius-lg)',
             background: currentAyahNumber === `bismillah-${ayah.number}` ? 'var(--accent-gold-soft)' : 'transparent',
             border: currentAyahNumber === `bismillah-${ayah.number}` ? '1px solid var(--accent-gold-soft)' : '1px solid transparent',
             transition: '0.4s'
@@ -147,14 +147,14 @@ export const AyahCard = ({
       <motion.div
         id={`mudarasa-ayah-${ayah.number}`}
         initial={{ opacity: 0 }}
-        animate={{ 
-          opacity: 1, 
-          scale: (ayah.number === currentAyahNumber || isActive) ? 1.01 : 1 
+        animate={{
+          opacity: 1,
+          scale: (ayah.number === currentAyahNumber || isActive) ? 1.01 : 1
         }}
         style={{
-          textAlign: 'right', 
-          padding: '1.5rem', 
-          borderRadius: '1.5rem',
+          textAlign: 'right',
+          padding: 'var(--space-5)',
+          borderRadius: 'var(--radius-lg)',
           background: (ayah.number === currentAyahNumber || (isActive && !isLocked && !isCompleted)) ? 'var(--accent-gold-soft)' : 'transparent',
           border: (ayah.number === currentAyahNumber || (isActive && !isLocked && !isCompleted)) ? '1px solid var(--accent-gold-soft)' : '1px solid transparent',
           transition: '0.4s'
@@ -169,11 +169,11 @@ export const AyahCard = ({
               wordOffset={wordOffset}
             />
           ) : (
-            <p 
-              className="arabic-text" 
-              style={{ 
-                fontSize: '2.2rem', 
-                color: isCompleted ? 'var(--accent-emerald)' : ((ayah.number === currentAyahNumber || isActive) ? 'var(--accent-gold)' : 'var(--text-primary)') 
+            <p
+              className="arabic-text"
+              style={{
+                fontSize: '2.2rem',
+                color: isCompleted ? 'var(--accent-emerald)' : ((ayah.number === currentAyahNumber || isActive) ? 'var(--accent-gold)' : 'var(--text-primary)')
               }}
             >
               {displayText}{' '}
@@ -186,7 +186,7 @@ export const AyahCard = ({
             </p>
           )
         ) : (
-          <p style={{ fontSize: '1rem', color: isCompleted ? 'var(--accent-emerald)' : 'var(--text-muted)', opacity: isCompleted ? 0.8 : 0.4, textAlign: 'center', fontWeight: '700', letterSpacing: '0.1em' }}>
+          <p style={{ fontSize: 'var(--fs-view)', color: isCompleted ? 'var(--accent-emerald)' : 'var(--text-muted)', opacity: isCompleted ? 0.8 : 0.4, textAlign: 'center', fontWeight: '700', letterSpacing: '0.1em' }}>
             {isCompleted ? (
               <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
                 — {ayah.numberInSurah} — <CheckCircle2 size={12} />

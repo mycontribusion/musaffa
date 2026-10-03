@@ -266,23 +266,23 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={0.2}
       onDragEnd={handleDragEnd}
-      style={{ display: 'flex', flexDirection: 'column', gap: '2rem', cursor: 'grab' }}
+      style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', cursor: 'grab' }}
       whileTap={{ cursor: 'grabbing' }}
     >
       {/* Header — hides on scroll down, shows on scroll up */}
       <motion.div
         animate={{ y: headerVisible ? 0 : -80, opacity: headerVisible ? 1 : 0 }}
         transition={{ duration: 0.25, ease: 'easeInOut' }}
-        style={{ position: 'sticky', top: '4.5rem', zIndex: 90 }}
+        style={{ position: 'sticky', top: '4.5rem', zIndex: 'var(--z-sticky)' }}
       >
         <div className="glass-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem' }}>
           <button onClick={() => setView('list')} className="icon-btn">
             <ChevronLeft size={18} />
           </button>
           <div style={{ textAlign: 'center' }}>
-            <h2 style={{ fontSize: '1rem', fontWeight: '800', color: 'var(--text-primary)' }}>{selectedSurah.englishName}</h2>
+            <h2 style={{ fontSize: 'var(--fs-page)', fontWeight: '800', color: 'var(--text-primary)' }}>{selectedSurah.englishName}</h2>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
             {/* Mutashabih Quiz — same destination as the homepage "Mutashabih Quiz"
                 card. `BrainCircuit` is the icon already used for "Mutashabihat
                 Quiz" in PartnerMenu. Only rendered when the currently selected
@@ -326,7 +326,7 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
       </motion.div>
 
       {/* Title + Session Button */}
-      <div style={{ textAlign: 'center', marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
+      <div style={{ textAlign: 'center', marginTop: 'var(--space-6)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-5)' }}>
         <div style={{ position: 'relative' }}>
           <h1 className="arabic-text" style={{ fontSize: '4rem', color: 'var(--text-primary)', marginBottom: '-0.5rem' }}>
             {selectedSurah.name}
@@ -342,11 +342,11 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
               background: dlTone.bg,
               color: 'white',
               padding: downloadStatus.isDownloading ? '0.6rem 0.9rem' : '0.5rem 1rem',
-              borderRadius: '9999px',
+              borderRadius: 'var(--radius-full)',
               fontSize: '0.85rem',
               display: 'flex',
               flexDirection: 'column',
-              gap: '0.5rem',
+              gap: 'var(--space-2)',
               alignSelf: 'center',
               width: 'fit-content',
               maxWidth: 'min(32rem, 92vw)',
@@ -355,7 +355,7 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
               border: `1px solid ${dlTone.border}`,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
               {(downloadStatus.isDownloading || downloadStatus.notice) && (
                 <div className="dl-pulse" style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(255,255,255,0.3)', flexShrink: 0 }}></div>
               )}
@@ -375,17 +375,17 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
               <>
                 <div
                   aria-hidden="true"
-                  style={{ height: '3px', borderRadius: '999px', background: 'rgba(255,255,255,0.28)', overflow: 'hidden' }}
+                  style={{ height: '3px', borderRadius: 'var(--radius-full)', background: 'rgba(255,255,255,0.28)', overflow: 'hidden' }}
                 >
                   <div style={{
                     height: '100%',
                     width: `${Math.min(100, Math.max(0, downloadStatus.progress))}%`,
                     background: 'var(--accent-gold)',
-                    borderRadius: '999px',
+                    borderRadius: 'var(--radius-full)',
                     transition: 'width 0.2s ease',
                   }} />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', fontSize: '0.7rem', fontWeight: '700', opacity: 0.9 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--space-3)', fontSize: 'var(--fs-meta)', fontWeight: '700', opacity: 0.9 }}>
                   <span>{downloadStatus.completed} / {downloadStatus.total} ayahs</span>
                   <span>{downloadStatus.progress}%</span>
                 </div>
@@ -396,7 +396,7 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
       </div>
 
       {/* Ayahs List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem', maxWidth: '800px', margin: '0 auto', padding: '2rem 0 10rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-10)', maxWidth: '800px', margin: '0 auto', padding: '2rem 0 10rem' }}>
         {/* Unnumbered Bismillah */}
         {selectedSurah.number !== 1 && selectedSurah.number !== 9 && (
           <div style={{ textAlign: 'center', padding: '1rem 0' }}>
@@ -417,20 +417,20 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
               id={`surah-ayah-${ayah.numberInSurah}`} data-ayah-num={ayah.numberInSurah}
               onClick={() => handleAyahTap(idx)}
               style={{
-                display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '1.25rem 0.75rem',
-                borderRadius: '1rem', cursor: 'pointer', transition: 'background 0.3s',
+                display: 'flex', flexDirection: 'column', gap: 'var(--space-5)', padding: '1.25rem 0.75rem',
+                borderRadius: 'var(--radius-md)', cursor: 'pointer', transition: 'background 0.3s',
                 background: isActive ? 'var(--accent-gold-soft)' : 'transparent',
                 border: isActive ? '1px solid rgba(212,175,55,0.3)' : '1px solid transparent',
               }}
             >
               {/* Ayah number indicator */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                 <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to right, transparent, var(--glass-border), transparent)' }} />
                 <div style={{
-                  padding: '0.2rem 0.6rem', borderRadius: '9999px',
+                  padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-full)',
                   border: `1px solid ${isActive ? 'var(--accent-gold)' : 'var(--glass-border)'}`,
                   background: isActive ? 'var(--accent-gold)' : 'var(--glass-bg)',
-                  fontSize: '0.6rem', fontWeight: '800',
+                  fontSize: 'var(--fs-micro)', fontWeight: '800',
                   color: isActive ? '#000' : 'var(--text-muted)',
                   display: 'flex', alignItems: 'center', gap: '0.3rem'
                 }}>
@@ -446,7 +446,7 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
               </div>
 
               {/* Translation */}
-              <div style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', fontWeight: '300', lineHeight: '1.5', padding: '0 1rem', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
+              <div style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-card)', fontWeight: '300', lineHeight: '1.5', padding: '0 1rem', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
                 {englishAyahs[idx]?.text}
               </div>
             </motion.div>
@@ -462,21 +462,21 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
             style={{
-              position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200,
+              position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 'var(--z-fixed)',
               padding: '0.75rem 1rem 1.25rem',
               background: 'var(--bg-primary)',
-              borderTop: '1px solid var(--glass-border)',
+              borderTop: 'var(--border-hairline)',
               backdropFilter: 'blur(20px)',
             }}
           >
-            <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
               {/* Ayah label + close */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.65rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                <span style={{ fontSize: 'var(--fs-label)', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                   {selectedSurah.englishName}
                 </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ fontSize: '0.65rem', fontWeight: '700', color: playingAyahIdx !== null ? 'var(--accent-gold)' : 'var(--text-muted)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                  <span style={{ fontSize: 'var(--fs-label)', fontWeight: '700', color: playingAyahIdx !== null ? 'var(--accent-gold)' : 'var(--text-muted)' }}>
                     {playingAyahIdx !== null
                       ? `Ayah ${arabicAyahs[playingAyahIdx]?.numberInSurah} of ${arabicAyahs.length}`
                       : `${arabicAyahs.length} Ayahs`}
@@ -492,10 +492,10 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
               </div>
 
               {/* Controls */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-5)' }}>
                 <button
                   onClick={handlePrevAyah}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.5rem' }}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 'var(--space-2)' }}
                 >
                   <SkipBack size={20} />
                 </button>
@@ -516,7 +516,7 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
 
                 <button
                   onClick={handleNextAyah}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.5rem' }}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 'var(--space-2)' }}
                 >
                   <SkipForward size={20} />
                 </button>

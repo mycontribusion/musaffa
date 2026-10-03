@@ -31,7 +31,7 @@ const Header = ({ theme, setTheme, setView, modelStatus, installProgress, instal
       className="sticky top-0 z-100 mb-6"
       style={{
         backgroundColor: 'var(--bg-primary)',
-        borderBottom: '1px solid var(--glass-border)'
+        borderBottom: 'var(--border-hairline)'
       }}
     >
       <div className="app-container">
@@ -45,7 +45,7 @@ const Header = ({ theme, setTheme, setView, modelStatus, installProgress, instal
               scale of logo + text is tuned, so the header row is untouched. */}
           <div className="brand-lockup" onClick={() => { setView('list'); }}>
             <img src="/pwa-192x192.png" alt="MusaffaPro Icon" style={{ width: '22px', height: '22px', borderRadius: '7px' }} />
-            <h1 style={{ fontSize: '0.95rem', fontWeight: '800', letterSpacing: '-0.02em', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+            <h1 style={{ fontSize: 'var(--fs-card)', fontWeight: '800', letterSpacing: 'var(--tracking-tight)', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
               MusaffaPro
             </h1>
           </div>

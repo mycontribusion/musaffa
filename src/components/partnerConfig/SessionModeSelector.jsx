@@ -4,11 +4,6 @@ import { Mic, BrainCircuit, Hand } from 'lucide-react';
  * SessionModeSelector — Manual Tap / Hands-Free / Smart Detection mode picker.
  */
 export const SessionModeSelector = ({ params, onChange, sttSupported, modeRef }) => {
-  const sectionLabel = {
-    fontSize: '0.65rem', fontWeight: '800', textTransform: 'uppercase',
-    letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '0.5rem',
-  };
-
   const isManual = !params.autoNext && !params.errorDetection;
   const isHandsFree = params.autoNext && !params.errorDetection;
   const isSmart = params.autoNext && params.errorDetection;
@@ -34,8 +29,8 @@ export const SessionModeSelector = ({ params, onChange, sttSupported, modeRef })
         {icon}
       </div>
       <div style={{ flex: 1 }}>
-        <p style={{ fontWeight: '800', fontSize: '0.8rem', color: isActive ? activeColor : 'var(--text-primary)' }}>{title}</p>
-        <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{description}</p>
+        <p style={{ fontWeight: '800', fontSize: 'var(--fs-body-sm)', color: isActive ? activeColor : 'var(--text-primary)' }}>{title}</p>
+        <p style={{ fontSize: 'var(--fs-label)', color: 'var(--text-secondary)' }}>{description}</p>
       </div>
       <div style={{
         width: '16px', height: '16px', borderRadius: '50%', border: '2px solid',
@@ -50,8 +45,8 @@ export const SessionModeSelector = ({ params, onChange, sttSupported, modeRef })
 
   return (
     <div>
-      <div style={sectionLabel}>Session Mode</div>
-      <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+      <div className="field-label" style={{ marginBottom: 'var(--space-2)' }}>Session Mode</div>
+      <div style={{ display: 'flex', gap: 'var(--space-2)', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         <ModeCard
           cardRef={modeRef}
           isActive={isManual}

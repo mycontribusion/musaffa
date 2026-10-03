@@ -1,13 +1,8 @@
 import { AlertCircle } from 'lucide-react';
 
-const sectionLabel = {
-  fontSize: '0.65rem', fontWeight: '800', textTransform: 'uppercase',
-  letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '0.5rem',
-};
-
 const selectStyle = {
   background: 'var(--bg-accent)', color: 'var(--text-primary)',
-  border: '1px solid var(--glass-border)', padding: '0.75rem 0.5rem',
+  border: 'var(--border-hairline)', padding: '0.75rem 0.5rem',
   borderRadius: 'var(--radius-md)', outline: 'none', fontSize: '0.85rem',
   minWidth: 0,
 };
@@ -26,10 +21,10 @@ export const RangeSelector = ({
   onStartAyahChange,
 }) => (
   <>
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
       {/* Start From */}
       <div>
-        <div style={sectionLabel}>Start From</div>
+        <div className="field-label" style={{ marginBottom: 'var(--space-2)' }}>Start From</div>
         <div style={{ display: 'flex', gap: '0.4rem', overflow: 'hidden' }}>
           <select
             value={params.startSurah}
@@ -51,7 +46,7 @@ export const RangeSelector = ({
 
       {/* End At */}
       <div>
-        <div style={sectionLabel}>End At</div>
+        <div className="field-label" style={{ marginBottom: 'var(--space-2)' }}>End At</div>
         <div style={{ display: 'flex', gap: '0.4rem', overflow: 'hidden' }}>
           <select
             value={params.endSurah}
@@ -75,8 +70,8 @@ export const RangeSelector = ({
     {/* Validation error */}
     {!isRangeValid && (
       <div style={{
-        display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-red)',
-        fontSize: '0.75rem', fontWeight: '700', background: 'rgba(239,68,68,0.1)',
+        display: 'flex', alignItems: 'center', gap: 'var(--space-2)', color: 'var(--accent-red)',
+        fontSize: 'var(--fs-secondary)', fontWeight: '700', background: 'rgba(239,68,68,0.1)',
         padding: '0.6rem 0.75rem', borderRadius: 'var(--radius-md)'
       }}>
         <AlertCircle size={13} /><span>Start must be earlier than End.</span>
