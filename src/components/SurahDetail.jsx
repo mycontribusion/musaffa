@@ -270,10 +270,14 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
       whileTap={{ cursor: 'grabbing' }}
     >
       {/* Header — hides on scroll down, shows on scroll up */}
+      {/* Offset by the global header's rendered height so this bar parks directly
+          beneath it at every viewport: `--control-md-h` (36px, 42px from 640px up)
+          + `py-2` (--space-4) + the 1px hairline border. The previous fixed 4.5rem
+          resolved to 63px/72px, leaving a 12-13px gap under the real header. */}
       <motion.div
         animate={{ y: headerVisible ? 0 : -80, opacity: headerVisible ? 1 : 0 }}
         transition={{ duration: 0.25, ease: 'easeInOut' }}
-        style={{ position: 'sticky', top: '4.5rem', zIndex: 'var(--z-sticky)' }}
+        style={{ position: 'sticky', top: 'calc(var(--control-md-h) + var(--space-4) + 1px)', zIndex: 'var(--z-sticky)' }}
       >
         <div className="glass-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem' }}>
           <button onClick={() => setView('list')} className="icon-btn">

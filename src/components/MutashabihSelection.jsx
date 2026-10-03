@@ -65,9 +65,13 @@ const MutashabihSelection = ({ surahs, waqarData, quranAr, setView, setMultiSura
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column' }}>
 
-      {/* Header */}
+      {/* Header — offset by the global header's rendered height so it parks
+          below it instead of painting over it: `--control-md-h` (36px, 42px from
+          640px up) + `py-2` (--space-4) + the 1px hairline border. Same calc the
+          WeaknessTracker header uses. `--z-sticky` sits below `--z-header` so the
+          global header keeps stacking on top. */}
       <header style={{
-        position: 'sticky', top: 0, zIndex: 'var(--z-header)',
+        position: 'sticky', top: 'calc(var(--control-md-h) + var(--space-4) + 1px)', zIndex: 'var(--z-sticky)',
         background: 'rgba(10,10,15,0.92)', backdropFilter: 'blur(24px)',
         borderBottom: 'var(--border-hairline)',
         padding: '0.8rem 1.25rem', display: 'flex', alignItems: 'center', gap: 'var(--space-3)'

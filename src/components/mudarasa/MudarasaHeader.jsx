@@ -32,7 +32,11 @@ export const MudarasaHeader = ({
   }, []);
 
   return (
-    <div style={{ position: 'sticky', top: '70px', zIndex: 'var(--z-sticky)', padding: '1rem 0' }}>
+    <div style={{ position: 'sticky', top: 'calc(var(--control-md-h) + var(--space-4) + 1px)', zIndex: 'var(--z-sticky)', padding: '1rem 0' }}>
+      {/* Offset by the global header's rendered height so this bar parks directly
+          beneath it at every viewport: `--control-md-h` (36px, 42px from 640px up)
+          + `py-2` (--space-4) + the 1px hairline border. The previous fixed 70px
+          left a 19px/11px gap that also ignored the 14px mobile root. */}
       <div className="glass-card" style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--glass-bg)', backdropFilter: 'blur(20px)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
           {/* Deliberately .icon-btn-sm: sub-page header, tighter tap target than the global header. */}
