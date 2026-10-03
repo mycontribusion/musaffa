@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, BookOpen, BookX, BrainCircuit } from 'lucide-react';
+import { ChevronLeft, BookOpen, BookX, BrainCircuit, Play, Pause } from 'lucide-react';
 
- export const MudarasaHeader = ({
+export const MudarasaHeader = ({
    onBack,
    mudarasaTurn,
    currentChunkIndex,
@@ -13,7 +13,10 @@ import { ChevronLeft, BookOpen, BookX, BrainCircuit } from 'lucide-react';
    isListening,
    currentVolume,
    sensitivity,
-   modelStatus = 'idle'
+   modelStatus = 'idle',
+   isPaused = false,
+   onPause,
+   onResume
  }) => {
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
@@ -41,6 +44,32 @@ import { ChevronLeft, BookOpen, BookX, BrainCircuit } from 'lucide-react';
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          {/* Session Pause/Resume — driven by the same isPaused/pauseMusaffa/
+              resumeMusaffa state the global header used to control. */}
+          <button
+            onClick={isPaused ? onResume : onPause}
+            title={isPaused ? 'Resume recitation' : 'Pause recitation'}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.3rem',
+              padding: '0.2rem 0.55rem 0.2rem 0.4rem',
+              borderRadius: '999px', cursor: 'pointer',
+              border: `1px solid ${isPaused ? 'rgba(212,175,55,0.4)' : 'var(--glass-border)'}`,
+              background: isPaused ? 'rgba(212,175,55,0.08)' : 'transparent',
+              transition: 'all 0.2s',
+            }}
+          >
+            {isPaused
+              ? <Play size={12} color="var(--accent-gold)" />
+              : <Pause size={12} color="var(--text-muted)" />}
+            <span style={{
+              fontSize: '0.5rem', fontWeight: '800', letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: isPaused ? 'var(--accent-gold)' : 'var(--text-muted)',
+              transition: 'color 0.2s',
+            }}>
+              {isPaused ? 'Resume' : 'Pause'}
+            </span>
+          </button>
           <button
             onClick={() => setShowText(!showText)}
             title={showText ? 'Hide text' : 'Show text'}

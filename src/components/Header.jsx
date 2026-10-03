@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { Moon, Sun, PlayCircle, Pause, User, BookOpen, Settings, X, MessageCircleQuestion } from 'lucide-react';
+import { Moon, Sun, User, BookOpen, Settings, X, MessageCircleQuestion } from 'lucide-react';
 import { RECITERS } from '../utils/quranUtils';
 import FeedbackModal from './FeedbackModal';
 
-const Header = ({ theme, setTheme, view, setView, setPartnerSubView, isInMusaffaSession, isPaused, onPauseMusaffa, onResumeMusaffa, reciter, setReciter, modelStatus, installProgress, installMessage, showInstallPrompt, confirmInstall, setShowInstallPrompt, isNative }) => {
+const Header = ({ theme, setTheme, setView, reciter, setReciter, modelStatus, installProgress, installMessage, showInstallPrompt, confirmInstall, setShowInstallPrompt, isNative }) => {
   const isDark = theme === 'dark';
   const [showReciterDropdown, setShowReciterDropdown] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(() => typeof window !== 'undefined' && window.location.pathname === '/settings');
@@ -60,79 +60,6 @@ const Header = ({ theme, setTheme, view, setView, setPartnerSubView, isInMusaffa
           </div>
 
           <div className="flex items-center gap-2 md:gap-4">
-            {isInMusaffaSession ? (
-              isPaused ? (
-                <button
-                  onClick={onResumeMusaffa}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    background: 'var(--accent-emerald)',
-                    color: '#fff',
-                    padding: '0.4rem 0.75rem',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid var(--glass-border)',
-                    fontSize: '0.65rem',
-                    fontWeight: '900',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
-                    cursor: 'pointer',
-                    transition: 'var(--transition-fast)'
-                  }}
-                >
-                  <PlayCircle size={14} />
-                  <span>Musaffa</span>
-                </button>
-              ) : (
-                <button
-                  onClick={onPauseMusaffa}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    background: 'var(--accent-red)',
-                    color: '#fff',
-                    padding: '0.4rem 0.75rem',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid var(--glass-border)',
-                    fontSize: '0.65rem',
-                    fontWeight: '900',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
-                    cursor: 'pointer',
-                    transition: 'var(--transition-fast)'
-                  }}
-                >
-                  <Pause size={14} />
-                  <span>Musaffa</span>
-                </button>
-              )
-            ) : (
-              <button
-                onClick={() => { setView('partner'); setPartnerSubView('config'); }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  background: view === 'partner' ? 'var(--accent-gold)' : 'var(--glass-bg)',
-                  color: view === 'partner' ? '#000' : 'var(--text-primary)',
-                  padding: '0.4rem 0.75rem',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--glass-border)',
-                  fontSize: '0.65rem',
-                  fontWeight: '900',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.1em',
-                  cursor: 'pointer',
-                  transition: 'var(--transition-fast)'
-                }}
-              >
-                <PlayCircle size={14} />
-                <span>Musaffa</span>
-              </button>
-            )}
-
             {settingsOpen ? (
               <div className="relative flex items-center gap-2 md:gap-4">
                 {/* Reciter Dropdown — moved into the settings area */}

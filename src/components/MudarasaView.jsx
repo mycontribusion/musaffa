@@ -162,8 +162,11 @@ import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
            isListening={isListening}
            currentVolume={currentVolume}
            sensitivity={sensitivity}
-           modelStatus={modelStatus}
-         />
+            modelStatus={modelStatus}
+            isPaused={isPaused}
+            onPause={onPause}
+            onResume={onResume}
+          />
 
         {/* <AudioErrorModal
           audioError={audioError}

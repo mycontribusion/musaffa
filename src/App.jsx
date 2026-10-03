@@ -230,13 +230,7 @@ const App = () => {
       <Header
         theme={theme}
         setTheme={setTheme}
-        view={view}
         setView={setView}
-        setPartnerSubView={setPartnerSubView}
-        isInMusaffaSession={view === 'partner' && partnerSubView === 'mudarasa'}
-        isPaused={isPaused}
-        onPauseMusaffa={pauseMusaffa}
-        onResumeMusaffa={resumeMusaffa}
         reciter={reciter}
         setReciter={setReciter}
         // Vosk model install props
