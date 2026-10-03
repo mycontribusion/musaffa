@@ -123,7 +123,7 @@ const MutashabihSelection = ({ surahs, waqarData, quranAr, setView, setMultiSura
                     {s.number}
                   </div>
                   <div>
-                    <h3 style={{ fontSize: 'var(--fs-body)', fontWeight: 800, color: isSelected ? 'var(--accent-gold)' : 'var(--text-primary)', margin: 0 }}>
+                    <h3 style={{ fontSize: 'var(--fs-card)', fontWeight: 700, color: isSelected ? 'var(--accent-gold)' : 'var(--text-primary)', margin: 0 }}>
                       {s.englishName}
                     </h3>
                     <p style={{ fontSize: 'var(--fs-meta)', color: 'var(--text-muted)', margin: 0 }}>

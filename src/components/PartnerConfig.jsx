@@ -92,7 +92,10 @@ const PartnerConfig = ({
         {/* Preset name input — edit mode only */}
         {presetEditingIndex !== null && (
           <div>
-            <div style={{ fontSize: 'var(--fs-label)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 'var(--space-2)' }}>
+            {/* `.field-label` supplies the font-size / weight / uppercase /
+                tracking / colour; the margin stays inline so this call site's
+                spacing is unchanged. */}
+            <div className="field-label" style={{ marginBottom: 'var(--space-2)' }}>
               Preset Name
             </div>
             <input

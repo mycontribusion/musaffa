@@ -252,10 +252,10 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
             <ChevronLeft size={18} />
           </button>
           <div style={{ flex: 1 }}>
-            <h1 style={{ fontSize: '0.85rem', fontWeight: 'var(--fw-strong)', color: 'var(--text-primary)', margin: 0 }}>
+            <h1 style={{ fontSize: 'var(--fs-page)', fontWeight: 'var(--fw-strong)', color: 'var(--text-primary)', margin: 0 }}>
               {displayTitle}
             </h1>
-            <p style={{ fontSize: '0.5rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--accent-gold)', opacity: 0.65, margin: 0 }}>
+            <p style={{ fontSize: 'var(--fs-label)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--accent-gold)', opacity: 0.65, margin: 0 }}>
               {idx + 1} / {total}
             </p>
           </div>

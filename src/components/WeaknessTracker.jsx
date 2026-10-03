@@ -73,7 +73,16 @@ const WeaknessTracker = ({
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="pb-24">
       {/* Header */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 'var(--z-sticky)', padding: '1rem 0' }}>
+      {/* Sticky offset mirrors the global header's rendered height so this card
+          parks below it instead of sliding underneath: the header row is
+          `--control-md-h` (36px, then 42px from 640px up) tall, plus its `py-2`
+          (2 x 0.5rem = `--space-4`) and the 1px `--border-hairline` bottom
+          border. Expressed as a calc rather than a fixed rem so it tracks both
+          breakpoints — 51px below 640px, 57px at 640px itself, 59px above it —
+          whereas a single rem value cannot cover all three.
+          `--z-sticky` (90) stays as-is: now that the two no longer overlap, the
+          lower layer is harmless and still lets the list scroll beneath. */}
+      <div style={{ position: 'sticky', top: 'calc(var(--control-md-h) + var(--space-4) + 1px)', zIndex: 'var(--z-sticky)', padding: '1rem 0' }}>
         <div className="glass-card" style={{ padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
             <button onClick={() => setView('list')} className="icon-btn" style={{ width: 'var(--control-md-h)', height: 'var(--control-md-h)' }}>
@@ -132,7 +141,7 @@ const WeaknessTracker = ({
                           {group.surahNumber}
                         </div>
                         <div>
-                          <h3 style={{ fontSize: 'var(--fs-view)', fontWeight: '800', color: 'var(--text-primary)' }}>{group.surahName}</h3>
+                          <h3 style={{ fontSize: 'var(--fs-card)', fontWeight: '700', color: 'var(--text-primary)' }}>{group.surahName}</h3>
                           <p style={{ fontSize: 'var(--fs-secondary)', color: 'var(--accent-red)', fontWeight: '700' }}>{group.ayahs.length} mistake{group.ayahs.length !== 1 ? 's' : ''}</p>
                         </div>
                       </div>
