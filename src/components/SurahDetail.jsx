@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Zap, Download, Play, Pause, SkipBack, SkipForward, Volume2, X } from 'lucide-react';
+import { ChevronLeft, Download, Play, Pause, SkipBack, SkipForward, Volume2, X, Users, BrainCircuit } from 'lucide-react';
 import { useAudioDownload } from '../hooks/useAudioDownload';
 import { getAudioUrl } from '../utils/quranUtils';
 
@@ -283,6 +283,34 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
             <h2 style={{ fontSize: '1rem', fontWeight: '800', color: 'var(--text-primary)' }}>{selectedSurah.englishName}</h2>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {/* Mutashabih Quiz — same destination as the homepage "Mutashabih Quiz"
+                card. `BrainCircuit` is the icon already used for "Mutashabihat
+                Quiz" in PartnerMenu. Only rendered when the currently selected
+                surah has Mutashabihat data, reusing the exact same smart
+                condition as the previous below-title Mutashabihat Session
+                button (`waqarData && waqarData[selectedSurah.number]`). */}
+            {waqarData && waqarData[selectedSurah.number] && (
+              <button
+                onClick={() => setView('mutashabihat-selection')}
+                className="icon-btn"
+                aria-label="Open Mutashabih Quiz"
+                title="Mutashabih Quiz"
+              >
+                <BrainCircuit size={18} />
+              </button>
+            )}
+            {/* Musaffa — reuses the `openMusaffaConfig` navigation handed down by
+                App (selects this surah, then opens the existing Partner config
+                screen). `Users` is the icon already used for "Start Musaffa" in
+                PartnerMenu, so the feature keeps one glyph. */}
+            <button
+              onClick={() => openMusaffaConfig(selectedSurah)}
+              className="icon-btn"
+              aria-label="Open Musaffa for this Surah"
+              title="Musaffa"
+            >
+              <Users size={18} />
+            </button>
             {/* Play Surah button */}
             <button
               onClick={handlePlaySurah}
@@ -364,25 +392,6 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
               </>
             )}
           </div>
-        )}
-        {waqarData && waqarData[selectedSurah.number] && (
-          <button
-            onClick={() => setView('mutashabihat-session')}
-            style={{
-              padding: '0.75rem 1.5rem',
-              background: 'rgba(212,175,55,0.08)',
-              border: '1px solid rgba(212,175,55,0.25)',
-              borderRadius: '1rem',
-              color: 'var(--accent-gold)',
-              display: 'flex', alignItems: 'center', gap: '0.6rem',
-              cursor: 'pointer', transition: 'all 0.2s',
-              boxShadow: '0 8px 24px -8px rgba(212,175,55,0.2)'
-            }}
-            className="hover-scale"
-          >
-            <Zap size={18} strokeWidth={2.5} />
-            <span style={{ fontSize: '0.75rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.15em' }}>Mutashabihat Session</span>
-          </button>
         )}
       </div>
 

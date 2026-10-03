@@ -30,14 +30,17 @@ const HomeControls = ({ setView }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', marginTop: '1.5rem', marginBottom: '0' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-        {/* Mistake Book — unchanged destination */}
+        {/* Mistake Book — unchanged destination.
+            Shares the exact subdued `label` treatment used by Audio Manager so
+            the two read as one secondary/utility group. Visual only: the
+            destination, text and position are untouched. */}
         <button
           onClick={() => setView('weaknesses')}
           style={pill}
           title="Mistake Book (Weaknesses)"
         >
           <BookOpen size={15} color="var(--accent-gold)" strokeWidth={2} />
-          <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-primary)' }}>Mistake Book</span>
+          <span style={label}>Mistake Book</span>
         </button>
 
         {/* Audio Manager — navigates to the Audio Manager view */}
