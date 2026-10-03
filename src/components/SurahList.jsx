@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Search, Download, CheckCircle, Loader, BrainCircuit, Zap, Pencil, Play, Mic, Hand, BookOpen, ScrollText } from 'lucide-react';
+import { Search, CheckCircle, BrainCircuit, Pencil, Plus, Play, Mic, Hand, BookOpen, ScrollText } from 'lucide-react';
 import { useQuranSearch } from '../hooks/useQuranSearch';
 
 const SurahList = ({
@@ -22,6 +22,8 @@ const SurahList = ({
   setMusaffaPresets,
   startMusaffaFromPreset,
   editPreset,
+  createPreset,
+  exitPresetEditing,
 }) => {
   const [searchQuery, setSearchQuery] = React.useState('');
 
@@ -70,6 +72,11 @@ const SurahList = ({
       <div style={{ maxWidth: '600px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', width: '100%', padding: '0 0.5rem' }}>
         <button
           onClick={() => {
+            // Smart Musaffa opens the NORMAL config screen. Clear any leftover
+            // preset-editing index first — otherwise a preset editor abandoned
+            // earlier would make this screen render as the preset editor
+            // (Preset Name / Save / Delete) and hide Start Musaffa.
+            exitPresetEditing?.();
             setMusaffaParams(prev => ({ ...prev, autoNext: true, errorDetection: true }));
             setView('partner');
             setPartnerSubView('config');
@@ -77,9 +84,6 @@ const SurahList = ({
           className="glass-card hover-scale"
           style={{ padding: '1.25rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', border: '1px solid var(--glass-border)' }}
         >
-          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(212,175,55,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <BrainCircuit size={20} color="var(--accent-gold)" />
-          </div>
           <div style={{ textAlign: 'center' }}>
             <span style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-primary)', display: 'block' }}>Smart Musaffa</span>
             <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>AI Recitation Partner</span>
@@ -90,9 +94,6 @@ const SurahList = ({
           className="glass-card hover-scale"
           style={{ padding: '1.25rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', border: '1px solid var(--glass-border)' }}
         >
-          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(212,175,55,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Zap size={20} color="var(--accent-gold)" />
-          </div>
           <div style={{ textAlign: 'center' }}>
             <span style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-primary)', display: 'block' }}>Mutashabih Quiz</span>
             <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Global Challenge</span>
@@ -103,9 +104,26 @@ const SurahList = ({
       {/* Quick Start Presets */}
       {musaffaPresets && musaffaPresets.length > 0 && (
         <div style={{ maxWidth: '600px', margin: '0 auto', width: '100%', padding: '0 0.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.75rem' }}>
-            <Play size={13} color="var(--accent-gold)" />
-            <span style={{ fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Quick Start Musaffa</span>
+          {/* Header row: title group pinned left, create button pushed to the far
+              right of the same row and vertically centred against the title. */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', marginBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Play size={13} color="var(--accent-gold)" />
+              <span style={{ fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Quick Start Musaffa</span>
+            </div>
+
+            {/* Icon-only, same footprint and hover treatment as the per-card
+                Pencil button below, so the two read as siblings. Creates the
+                preset through the existing usePresets flow, which appends it
+                and opens the existing preset editor on it. */}
+            <button
+              onClick={createPreset}
+              className="preset-add-btn"
+              aria-label="Create new Musaffa preset"
+              title="Create new preset"
+            >
+              <Plus size={14} />
+            </button>
           </div>
           <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
             {musaffaPresets.map((preset, idx) => {
@@ -365,25 +383,14 @@ const SurahList = ({
               </div>
               <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'end', gap: '0.1rem' }}>
                 <span className="arabic" style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>{surah.name}</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
-                  {audioDownloadControls?.isSurahAudioDownloaded(surah.number) ? (
+                {/* Informational mark only: audio downloads are managed in the Audio Manager.
+                    Rendered for surahs already downloaded for the active reciter; nothing at all
+                    is rendered (no empty action slot) for surahs that are not downloaded. */}
+                {audioDownloadControls?.isSurahAudioDownloaded(surah.number) && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
                     <CheckCircle size={14} style={{ color: 'var(--accent-emerald)', opacity: 0.8 }} />
-                  ) : audioDownloadControls?.downloadStatus?.isDownloading && audioDownloadControls?.downloadStatus?.surahNumber === surah.number ? (
-                    <Loader size={14} className="animate-spin" style={{ color: 'var(--accent-gold)' }} />
-                  ) : (
-                    <div
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        audioDownloadControls?.downloadSurahAudio(surah.number);
-                      }}
-                      style={{ padding: '0.2rem', margin: '-0.2rem', color: 'var(--text-muted)' }}
-                      className="hover:text-[var(--accent-gold)] transition-colors"
-                    >
-                      <Download size={14} />
-                    </div>
-                  )}
-                  {/* <ChevronRight size={12} style={{ color: 'var(--text-muted)', opacity: 0.5 }} /> */}
-                </div>
+                  </div>
+                )}
               </div>
             </motion.div>
           ))}

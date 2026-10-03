@@ -46,6 +46,9 @@ const PartnerSession = ({
   quranSimple,
   presetEditingIndex,
   onSavePreset,
+  // Prop forwarding only — the delete behaviour lives in usePresets.js.
+  onDeletePreset,
+  canDeletePreset,
    modelReady,
    modelStatus,
    ensureModelReady,
@@ -313,7 +316,16 @@ const PartnerSession = ({
   // Dispatcher
   if (subView === 'config') return (
     <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0.5rem 0.5rem 6rem' }}>
-      {!presetEditingIndex && (
+      {/* Resume is only offered on the plain config screen.
+
+          `presetEditingIndex !== null` is the single source of truth for "a preset
+          is open" and it covers BOTH preset routes — `editPreset(index)` and
+          `createPreset()` (which appends and opens the editor at that index). The
+          previous `!presetEditingIndex` test was falsy for index 0, so editing the
+          first preset still showed the banner. Nothing else about Resume changes:
+          the saved session, its persistence and both handlers are untouched, and
+          the plain Musaffa config (`presetEditingIndex === null`) is unchanged. */}
+      {presetEditingIndex === null && (
         <ResumeBanner
           savedSession={savedMusaffaSession}
           onResume={resumeMusaffaSession}
@@ -338,6 +350,8 @@ const PartnerSession = ({
         sttSupported={sttSupported}
         presetEditingIndex={presetEditingIndex}
         onSavePreset={onSavePreset}
+        onDeletePreset={onDeletePreset}
+        canDeletePreset={canDeletePreset}
       />
     </div>
   );

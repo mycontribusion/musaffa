@@ -12,6 +12,7 @@
   --accent-emerald: #10b981;
   --accent-emerald-glow: rgba(16, 185, 129, 0.3);
   --accent-red: #ef4444;
+  --accent-red-soft: rgba(239, 68, 68, 0.12);
   --glass-bg: rgba(30, 41, 59, 0.7);
   --glass-hover: rgba(30, 41, 59, 0.9);
   --glass-border: rgba(255, 255, 255, 0.05);
@@ -33,6 +34,7 @@
   --text-secondary: #475569;
   --text-muted: #94a3b8;
   --accent-gold: #d97706;
+  --accent-red-soft: rgba(239, 68, 68, 0.10);
   --accent-gold-soft: rgba(217, 119, 6, 0.15);
   --glass-bg: rgba(255, 255, 255, 0.8);
   --glass-hover: rgba(255, 255, 255, 1);
@@ -223,6 +225,16 @@ body {
   padding: 2rem;
 }
 
+.py-2 {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.py-3 {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
 .py-4 {
   padding-top: 1rem;
   padding-bottom: 1rem;
@@ -283,6 +295,196 @@ body {
 .icon-btn:hover {
   background: var(--bg-accent);
   color: var(--accent-gold);
+}
+
+/*
+ * Audio download controls.
+ * Small, scoped additions only — no change to the existing pill/icon layout.
+ */
+
+/* SurahList: transparent download glyph inside a surah card. */
+.dl-glyph:hover {
+  color: var(--accent-gold);
+}
+
+.dl-glyph:focus-visible {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* SurahDetail: compact Cancel control inside the download status pill. */
+.dl-pill-btn {
+  flex-shrink: 0;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: transparent;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.dl-pill-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.dl-pill-btn:focus-visible {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 2px;
+}
+
+/* Active-download indicator dot in the status pill. */
+@keyframes dl-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.dl-pulse {
+  animation: dl-pulse 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dl-pulse {
+    animation: none;
+  }
+}
+
+/*
+ * Borderless variant of .icon-btn.
+ * Same 36px / 42px square box as the header controls so the tap target and the
+ * icon optically match them, but permanently transparent: no border, no fill and
+ * no hover/expanded background, so nothing ever appears *around* the glyph. Used
+ * by the homepage "More" disclosure, which is icon-only and right aligned.
+ */
+.icon-btn-ghost {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+@media (min-width: 640px) {
+  .icon-btn-ghost {
+    width: 42px;
+    height: 42px;
+  }
+}
+
+.icon-btn-ghost:hover {
+  color: var(--accent-gold);
+}
+
+/*
+ * Icon-only destructive action for the preset editor ("Delete Preset").
+ *
+ * Deliberately quiet: it is a rare, irreversible maintenance action sitting next
+ * to the primary "Save Preset", so it renders as a muted outline with no label
+ * and only reveals its destructive colour on hover/focus. `width: auto` lets it
+ * shrink to the icon inside an `auto` grid track while Save takes the rest.
+ *
+ * The icon is always rendered — the accessible name comes from aria-label and
+ * the affordance from title, so the control stays discoverable to screen
+ * readers and to sighted users on hover while carrying no visible text.
+ */
+.btn-danger-ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 2.75rem;
+  height: 100%;
+  padding: 0 0.85rem;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.btn-danger-ghost:hover {
+  background: var(--accent-red-soft);
+  color: var(--accent-red);
+  border-color: var(--accent-red);
+}
+
+.btn-danger-ghost:focus-visible {
+  outline: 2px solid var(--accent-red);
+  outline-offset: 2px;
+}
+
+/*
+ * Create-preset button in the Quick Start Musaffa header row.
+ * Matches the per-card Pencil button exactly (same 2px padding, 6px radius,
+ * muted resting colour) so the two read as siblings, and shares its hover /
+ * focus-visible feedback. Deliberately no resting background or ring: the
+ * section header is not a card, so a filled affordance here would over-weight
+ * a secondary action. 24px keeps it compact next to the small-caps title while
+ * staying above the practical touch-target floor for a secondary control.
+ */
+.preset-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  padding: 2px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.preset-add-btn:hover,
+.preset-add-btn:focus-visible {
+  background: var(--bg-accent);
+  color: var(--accent-gold);
+}
+
+.preset-add-btn:focus-visible {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 1px;
+}
+
+/*
+ * Header brand lockup.
+ * Occupies exactly the same height as the .icon-btn box beside it (36px, then
+ * 42px from 640px up) so the wordmark and its logo line up optically with the
+ * bordered Theme/Feedback controls. Logo + text stay vertically centred.
+ */
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 36px;
+  cursor: pointer;
+}
+
+@media (min-width: 640px) {
+  .brand-lockup {
+    height: 42px;
+  }
 }
 
 .btn-primary {

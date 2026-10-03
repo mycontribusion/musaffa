@@ -9,7 +9,7 @@ const PartnerConfig = ({
   surahs, params, onChange, onStart,
   currentVolume, reciter, setReciter,
   audioDownloadControls, sttSupported,
-  presetEditingIndex, onSavePreset
+  presetEditingIndex, onSavePreset, onDeletePreset, canDeletePreset
 }) => {
   const getAyahCount = (n) => (surahs.find(x => x.number === n)?.numberOfAyahs || 0);
   const startAyahCount = getAyahCount(params.startSurah);
@@ -114,6 +114,9 @@ const PartnerConfig = ({
           onStart={onStart}
           presetEditingIndex={presetEditingIndex}
           onSavePreset={onSavePreset}
+          onDeletePreset={onDeletePreset}
+          canDeletePreset={canDeletePreset}
+          presetLabel={params.label}
           params={params}
         />
 

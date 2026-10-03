@@ -1,13 +1,23 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Zap, Download, Trash2, Play, Pause, SkipBack, SkipForward, Volume2, X } from 'lucide-react';
+import { ChevronLeft, Zap, Download, Play, Pause, SkipBack, SkipForward, Volume2, X } from 'lucide-react';
 import { useAudioDownload } from '../hooks/useAudioDownload';
 import { getAudioUrl } from '../utils/quranUtils';
 
 const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranEn, setView, openMusaffaConfig, waqarData, lastRead, setLastRead, reciter, audioDownloadControls, targetAyah = null }) => {
   const scrollTrackerRef = useRef(null);
   const scrollEffectRef = useRef({ surahNumber: null, ayahNumber: null, hasScrolled: false });
-  const { downloadStatus, downloadSurahAudio, deleteSurahAudio, isSurahAudioDownloaded } = audioDownloadControls;
+  const { downloadStatus, cancelDownload } = audioDownloadControls;
+
+  // ── Audio download status presentation ─────────────────────────────────────
+  const downloadText = downloadStatus.notice || downloadStatus.message;
+  const dlTone = downloadStatus.error
+    ? { bg: 'rgba(185, 28, 28, 0.85)', border: 'rgba(220, 38, 38, 0.6)' }
+    : downloadStatus.status === 'cancelled'
+      ? { bg: 'rgba(87, 83, 78, 0.9)', border: 'rgba(168, 162, 158, 0.6)' }
+      : downloadStatus.isDownloading
+        ? { bg: 'rgba(30, 58, 138, 0.85)', border: 'rgba(59, 130, 246, 0.6)' }
+        : { bg: 'rgba(16, 185, 129, 0.85)', border: 'rgba(16, 185, 129, 0.6)' };
 
   // ── Smart Header (hide on scroll down, show on scroll up) ────────────────────
   const [headerVisible, setHeaderVisible] = useState(true);
@@ -282,43 +292,7 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
             >
               {isPlaying ? <Pause size={18} /> : <Play size={18} />}
             </button>
-            {isSurahAudioDownloaded(selectedSurah.number) ? (
-              <button
-                onClick={() => deleteSurahAudio(selectedSurah.number)}
-                className="icon-btn"
-                title="Delete downloaded audio"
-                style={{ color: 'var(--text-secondary)' }}
-              >
-                <Trash2 size={18} />
-              </button>
-            ) : !downloadStatus.isDownloading && (
-              <button
-                onClick={() => downloadSurahAudio(selectedSurah.number)}
-                className="icon-btn"
-                title="Download audio for offline use"
-              >
-                <Download size={18} />
-              </button>
-            )}
-            {downloadStatus.isDownloading && (
-              <div className="icon-btn" style={{ position: 'relative' }}>
-                <Download size={18} style={{ opacity: 0.7 }} />
-                <div style={{
-                  position: 'absolute',
-                  top: '-8px',
-                  right: '-8px',
-                  background: 'var(--accent-gold)',
-                  color: 'white',
-                  borderRadius: '50%',
-                  padding: '2px 6px',
-                  fontSize: '0.7rem',
-                  minWidth: '18px',
-                  textAlign: 'center',
-                }}>
-                  {downloadStatus.progress}%
-                </div>
-              </div>
-            )}
+            {/* Audio download/delete controls live in the Audio Manager, not in this header. */}
           </div>
         </div>
       </motion.div>
@@ -332,29 +306,63 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
           <div style={{ height: '2px', width: '60%', background: 'linear-gradient(90deg, transparent, var(--accent-gold), transparent)', margin: '0 auto' }} />
         </div>
         {/* Download Status */}
-        {downloadStatus.message && (
-          <div style={{
-            background: downloadStatus.isDownloading ? 'rgba(30, 58, 138, 0.8)' : downloadStatus.error ? 'rgba(185, 28, 28, 0.8)' : 'rgba(16, 185, 129, 0.8)',
-            color: 'white',
-            padding: '0.5rem 1rem',
-            borderRadius: '9999px',
-            fontSize: '0.85rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            backdropFilter: 'blur(4px)',
-            border: `1px solid ${downloadStatus.isDownloading ? 'rgba(30, 58, 138, 0.6)' : downloadStatus.error ? 'rgba(185, 28, 28, 0.6)' : 'rgba(16, 185, 129, 0.6)'}`,
-          }}>
-            {downloadStatus.isDownloading && (
-              <div className="animate-pulse" style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(255,255,255,0.3)' }}></div>
+        {downloadText && (
+          <div
+            role="status"
+            aria-live="polite"
+            style={{
+              background: dlTone.bg,
+              color: 'white',
+              padding: downloadStatus.isDownloading ? '0.6rem 0.9rem' : '0.5rem 1rem',
+              borderRadius: '9999px',
+              fontSize: '0.85rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
+              alignSelf: 'center',
+              width: 'fit-content',
+              maxWidth: 'min(32rem, 92vw)',
+              backdropFilter: 'blur(4px)',
+              WebkitBackdropFilter: 'blur(4px)',
+              border: `1px solid ${dlTone.border}`,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {(downloadStatus.isDownloading || downloadStatus.notice) && (
+                <div className="dl-pulse" style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(255,255,255,0.3)', flexShrink: 0 }}></div>
+              )}
+              {downloadStatus.status === 'cancelled' && <X size={16} strokeWidth={1.5} />}
+              {downloadStatus.error && <span role="img" aria-label="error">⚠️</span>}
+              {!downloadStatus.isDownloading && !downloadStatus.error && downloadStatus.status !== 'cancelled' && (
+                <Download size={16} strokeWidth={1.5} />
+              )}
+              <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>{downloadText}</span>
+              {downloadStatus.isDownloading && (
+                <button type="button" onClick={cancelDownload} className="dl-pill-btn">
+                  Cancel
+                </button>
+              )}
+            </div>
+            {downloadStatus.isDownloading && downloadStatus.total > 0 && (
+              <>
+                <div
+                  aria-hidden="true"
+                  style={{ height: '3px', borderRadius: '999px', background: 'rgba(255,255,255,0.28)', overflow: 'hidden' }}
+                >
+                  <div style={{
+                    height: '100%',
+                    width: `${Math.min(100, Math.max(0, downloadStatus.progress))}%`,
+                    background: 'var(--accent-gold)',
+                    borderRadius: '999px',
+                    transition: 'width 0.2s ease',
+                  }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', fontSize: '0.7rem', fontWeight: '700', opacity: 0.9 }}>
+                  <span>{downloadStatus.completed} / {downloadStatus.total} ayahs</span>
+                  <span>{downloadStatus.progress}%</span>
+                </div>
+              </>
             )}
-            {!downloadStatus.isDownloading && !downloadStatus.error && (
-              <Download size={16} strokeWidth={1.5} />
-            )}
-            {downloadStatus.error && (
-              <span role="img" aria-label="error">⚠️</span>
-            )}
-            <span>{downloadStatus.message}</span>
           </div>
         )}
         {waqarData && waqarData[selectedSurah.number] && (

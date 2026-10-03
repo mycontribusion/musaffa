@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import Header from './components/Header';
+import HomeControls from './components/HomeControls';
+import AudioManager from './components/AudioManager';
 import SurahList from './components/SurahList';
 import SurahDetail from './components/SurahDetail';
 import PartnerSession from './components/PartnerSession';
@@ -60,6 +62,8 @@ const App = () => {
         else if (parts[1] === 'session') v = 'mutashabihat-multi-session';
       } else if (parts[0] === 'weaknesses') {
         v = 'weaknesses';
+      } else if (parts[0] === 'audio-manager') {
+        v = 'audio-manager';
       }
     } else if (!p.get('view')) {
       v = 'list';
@@ -93,7 +97,7 @@ const App = () => {
     selectedSurah, musaffaParams, chunks, currentChunkIndex, mudarasaTurn, partnerSubView, view, surahs, startMusaffa, stopMusaffa, setSelectedSurah, setMusaffaParams, setView
   );
 
-  const { musaffaPresets, setMusaffaPresets, presetEditingIndex, startMusaffaFromPreset, editPreset, handleSavePreset } = usePresets(setMusaffaParams, startMusaffa, setView, setPartnerSubView);
+  const { musaffaPresets, setMusaffaPresets, presetEditingIndex, exitPresetEditing, startMusaffaFromPreset, editPreset, createPreset, canDeletePreset, deletePreset, handleSavePreset } = usePresets(setMusaffaParams, startMusaffa, setView, setPartnerSubView);
 
   useEffect(() => { document.documentElement.setAttribute('data-theme', theme); }, [theme]);
 
@@ -122,6 +126,8 @@ const App = () => {
       newPath = `/mutashabihat/session`;
     } else if (view === 'weaknesses') {
       newPath = `/weaknesses`;
+    } else if (view === 'audio-manager') {
+      newPath = `/audio-manager`;
     }
 
     const currentPath = window.location.pathname;
@@ -231,8 +237,6 @@ const App = () => {
         theme={theme}
         setTheme={setTheme}
         setView={setView}
-        reciter={reciter}
-        setReciter={setReciter}
         // Vosk model install props
         modelStatus={modelStatus}
         installProgress={installProgress}
@@ -244,6 +248,11 @@ const App = () => {
       />
       <div className="app-container">
         <main className="pb-24">
+          {/* Homepage controls sit directly below the global header. */}
+          {view === 'list' && (
+            <HomeControls setView={setView} />
+          )}
+
           <AnimatePresence mode="wait">
             {view === 'list' && (
               <SurahList
@@ -262,21 +271,33 @@ const App = () => {
                 setPartnerSubView={setPartnerSubView} 
                 setMusaffaParams={setMusaffaParams} 
                 musaffaPresets={musaffaPresets} 
-                setMusaffaPresets={setMusaffaPresets} 
-                startMusaffaFromPreset={startMusaffaFromPreset} 
-                editPreset={editPreset} 
+                setMusaffaPresets={setMusaffaPresets}
+                startMusaffaFromPreset={startMusaffaFromPreset}
+                editPreset={editPreset}
+                createPreset={createPreset}
+                exitPresetEditing={exitPresetEditing}
               />
             )}
             
             {view === 'weaknesses' && (
-              <WeaknessTracker 
-                stumbles={stumbles} 
-                setStumbles={setStumbles} 
-                surahs={surahs} 
-                setView={setView} 
-                setPartnerSubView={setPartnerSubView} 
-                setMusaffaParams={setMusaffaParams} 
-                handleSelectSurah={handleSelectSurah} 
+              <WeaknessTracker
+                stumbles={stumbles}
+                setStumbles={setStumbles}
+                surahs={surahs}
+                setView={setView}
+                setPartnerSubView={setPartnerSubView}
+                setMusaffaParams={setMusaffaParams}
+                handleSelectSurah={handleSelectSurah}
+              />
+            )}
+
+            {view === 'audio-manager' && (
+              <AudioManager
+                surahs={surahs}
+                audioDownloadControls={audioDownloadControls}
+                reciter={reciter}
+                setReciter={setReciter}
+                setView={setView}
               />
             )}
             
@@ -360,6 +381,8 @@ const App = () => {
                 quranSimple={quranSimple}
                 presetEditingIndex={presetEditingIndex}
                 onSavePreset={handleSavePreset}
+                onDeletePreset={deletePreset}
+                canDeletePreset={canDeletePreset}
                  modelReady={modelReady}
                  modelStatus={modelStatus}
                  ensureModelReady={downloadAndInitModel}

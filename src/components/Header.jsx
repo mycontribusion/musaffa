@@ -1,25 +1,12 @@
-import { useState, useRef, useEffect } from 'react';
-import { Moon, Sun, User, BookOpen, Settings, X, MessageCircleQuestion } from 'lucide-react';
-import { RECITERS } from '../utils/quranUtils';
+import { useState, useEffect } from 'react';
+import { Moon, Sun, X, MessageCircleQuestion } from 'lucide-react';
 import FeedbackModal from './FeedbackModal';
 
-const Header = ({ theme, setTheme, setView, reciter, setReciter, modelStatus, installProgress, installMessage, showInstallPrompt, confirmInstall, setShowInstallPrompt, isNative }) => {
+const Header = ({ theme, setTheme, setView, modelStatus, installProgress, installMessage, showInstallPrompt, confirmInstall, setShowInstallPrompt, isNative }) => {
   const isDark = theme === 'dark';
-  const [showReciterDropdown, setShowReciterDropdown] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(() => typeof window !== 'undefined' && window.location.pathname === '/settings');
   const [feedbackOpen, setFeedbackOpen] = useState(() => typeof window !== 'undefined' && window.location.pathname === '/feedback');
   const [previousPath, setPreviousPath] = useState('');
-  const dropdownRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowReciterDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   useEffect(() => {
     const syncFromUrl = () => {
@@ -49,156 +36,76 @@ const Header = ({ theme, setTheme, setView, reciter, setReciter, modelStatus, in
     >
       <div className="app-container">
         <div
-          className="flex items-center justify-between py-4"
+          className="flex items-center justify-between py-2"
           style={{ paddingLeft: '0.25rem', paddingRight: '0.25rem' }}
         >
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => { setView('list'); }}>
-            <img src="/pwa-192x192.png" alt="MusaffaPro Icon" style={{ width: '15px', height: '15px', borderRadius: '6px' }} />
-            <h1 style={{ fontSize: 'clamp(0.8rem, 4vw, 0.8rem)', fontWeight: '800', letterSpacing: '-0.02em', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+          {/* Brand — same wordmark, logo asset, weight/tracking and destination.
+              `.brand-lockup` keeps the .icon-btn Theme/Feedback height (36px,
+              42px from 640px up) and centres its contents; only the internal
+              scale of logo + text is tuned, so the header row is untouched. */}
+          <div className="brand-lockup" onClick={() => { setView('list'); }}>
+            <img src="/pwa-192x192.png" alt="MusaffaPro Icon" style={{ width: '22px', height: '22px', borderRadius: '7px' }} />
+            <h1 style={{ fontSize: '0.95rem', fontWeight: '800', letterSpacing: '-0.02em', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
               MusaffaPro
             </h1>
           </div>
 
           <div className="flex items-center gap-2 md:gap-4">
-            {settingsOpen ? (
-              <div className="relative flex items-center gap-2 md:gap-4">
-                {/* Reciter Dropdown — moved into the settings area */}
-                <div className="relative" ref={dropdownRef}>
-                  <button
-                    onClick={() => setShowReciterDropdown(!showReciterDropdown)}
-                    className="icon-btn"
-                    title="Select Reciter"
-                    style={{ position: 'relative' }}
-                  >
-                    <User size={16} strokeWidth={2} />
-                  </button>
+            {/* Mistake Book and Reciter now live on the homepage (HomeControls),
+                directly below this header. */}
+            {!settingsOpen && (
+              <button
+                onClick={() => setTheme(isDark ? 'light' : 'dark')}
+                className="icon-btn"
+                title="Toggle Theme"
+              >
+                {isDark ? <Moon size={16} strokeWidth={2} /> : <Sun size={16} strokeWidth={2} />}
+              </button>
+            )}
 
-                  {showReciterDropdown && (
-                    <div style={{
-                      position: 'absolute',
-                      top: 'calc(100% + 0.5rem)',
-                      right: 0,
-                      background: 'var(--bg-primary)',
-                      border: '1px solid var(--glass-border)',
-                      borderRadius: 'var(--radius-md)',
-                      padding: '0.5rem',
-                      boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-                      zIndex: 100,
-                      minWidth: '200px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.25rem'
-                    }}>
-                      <div style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>
-                        Select Reciter
-                      </div>
-                      {RECITERS.map(r => (
-                        <button
-                          key={r.id}
-                          onClick={() => {
-                            if (setReciter) setReciter(r.id);
-                            setShowReciterDropdown(false);
-                          }}
-                          style={{
-                            textAlign: 'left',
-                            padding: '0.5rem 0.75rem',
-                            borderRadius: 'var(--radius-sm)',
-                            background: reciter === r.id ? 'var(--accent-gold)' : 'transparent',
-                            color: reciter === r.id ? '#000' : 'var(--text-primary)',
-                            border: 'none',
-                            cursor: 'pointer',
-                            fontSize: '0.85rem',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            transition: 'var(--transition-fast)'
-                          }}
-                          className="hover:bg-opacity-20"
-                        >
-                          <span style={{ fontWeight: reciter === r.id ? 'bold' : 'normal' }}>{r.name}</span>
-                          <span style={{ fontSize: '0.65rem', opacity: 0.8 }}>{r.style}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+            {/* Feedback — the single existing feedback entry point, shared by
+                both header states. Modal is rendered below. */}
+            <button
+              onClick={() => {
+                if (window.location.pathname !== '/settings' && window.location.pathname !== '/feedback') {
+                  setPreviousPath(window.location.pathname);
+                }
+                setFeedbackOpen((open) => !open);
+              }}
+              className="icon-btn"
+              title="Feedback"
+            >
+              <MessageCircleQuestion size={16} strokeWidth={2} />
+            </button>
 
-                <button
-                  onClick={() => {
-                    setShowReciterDropdown(false);
-                    if (window.location.pathname !== '/settings' && window.location.pathname !== '/feedback') {
-                      setPreviousPath(window.location.pathname);
-                    }
-                    setFeedbackOpen((open) => !open);
-                  }}
-                  className="icon-btn"
-                  title="Feedback"
-                >
-                  <MessageCircleQuestion size={16} strokeWidth={2} />
-                </button>
+            {settingsOpen && (
+              <button
+                onClick={() => {
+                  setSettingsOpen(false);
+                  setFeedbackOpen(false);
+                  setPreviousPath('');
+                }}
+                className="icon-btn"
+                title="Close Settings"
+              >
+                <X size={16} strokeWidth={2} />
+              </button>
+            )}
 
-                <button
-                  onClick={() => {
-                    setSettingsOpen(false);
-                    setFeedbackOpen(false);
-                    setPreviousPath('');
-                    setShowReciterDropdown(false);
-                  }}
-                  className="icon-btn"
-                  title="Close Settings"
-                >
-                  <X size={16} strokeWidth={2} />
-                </button>
-
-                {feedbackOpen && (
-                  <FeedbackModal
-                    onClose={() => {
-                      setFeedbackOpen(false);
-                      setPreviousPath('');
-                    }}
-                    modelStatus={modelStatus}
-                    installProgress={installProgress}
-                    installMessage={installMessage}
-                    showInstallPrompt={showInstallPrompt}
-                    confirmInstall={confirmInstall}
-                    setShowInstallPrompt={setShowInstallPrompt}
-                    isNative={isNative}
-                  />
-                )}
-              </div>
-            ) : (
-              <>
-                <button
-                  onClick={() => setView('weaknesses')}
-                  className="icon-btn"
-                  title="Mistake Book (Weaknesses)"
-                  style={{ position: 'relative' }}
-                >
-                  <BookOpen size={16} strokeWidth={2} />
-                </button>
-
-                <button
-                  onClick={() => setTheme(isDark ? 'light' : 'dark')}
-                  className="icon-btn"
-                  title="Toggle Theme"
-                >
-                  {isDark ? <Moon size={16} strokeWidth={2} /> : <Sun size={16} strokeWidth={2} />}
-                </button>
-
-                <button
-                  onClick={() => {
-                    setShowReciterDropdown(false);
-                    if (window.location.pathname !== '/settings' && window.location.pathname !== '/feedback') {
-                      setPreviousPath(window.location.pathname);
-                    }
-                    setFeedbackOpen(false);
-                    setSettingsOpen(true);
-                  }}
-                  className="icon-btn"
-                  title="Settings"
-                >
-                  <Settings size={16} strokeWidth={2} />
-                </button>
-              </>
+            {feedbackOpen && (
+              <FeedbackModal
+                onClose={() => {
+                  setFeedbackOpen(false);
+                  setPreviousPath('');
+                }}
+                modelStatus={modelStatus}
+                installProgress={installProgress}
+                installMessage={installMessage}
+                showInstallPrompt={showInstallPrompt}
+                confirmInstall={confirmInstall}
+                setShowInstallPrompt={setShowInstallPrompt}
+                isNative={isNative}
+              />
             )}
           </div>
         </div>
