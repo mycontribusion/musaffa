@@ -151,25 +151,92 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     return finalChunks;
   };
 
-  const playAyahAudioAsync = (ayah) => {
+  /**
+   * Play one ayah; resolves when it finishes.
+   *
+   * This is the only place a recitation can halt on its own, so it is the
+   * place that had three defects which showed up as "the session paused for no
+   * reason":
+   *
+   *  1. **No retries.** These files come from public CDNs, and a single 404 or
+   *     timeout on one ayah used to reject straight into the `catch` in
+   *     `playCurrentIndex`, which stops the entire recitation. Transient
+   *     failures are now retried twice with a backoff before giving up.
+   *  2. **Leaked handlers.** `audioRef`/`nextAudioRef` are two long-lived
+   *     elements reused across every ayah. `onended`/`onerror` were never
+   *     detached, so an event from an interrupted preload — or from a `src`
+   *     reassignment done by us — could reject whichever attempt was current.
+   *     Handlers are now detached the moment a promise settles.
+   *  3. **`AbortError` treated as failure.** `play()` rejects with
+   *     `AbortError` whenever the `src` is replaced or the element is paused —
+   *     including the user tapping Pause and the preload/swap dance below.
+   *     That surfaced a spurious "audio error" plus a paused state. It is now
+   *     flagged `silent` so the caller can exit quietly without touching
+   *     `audioError`.
+   *
+   * Assigning `src` only when it actually changed also avoids reloading the
+   * element unnecessarily (setting `src` to the current value still resets it).
+   */
+  const playAyahAudioAsync = (ayah, attempt = 0) => {
     return new Promise((resolve, reject) => {
       const audio = getAudio(audioRef);
       const nextAudio = getAudio(nextAudioRef);
       const url = getAudioUrl(ayah.number, reciter, ayah.surahNumber, ayah.numberInSurah);
 
-      // Use preloaded audio ONLY if it perfectly matches the requested URL (including reciter)
-      if (nextAudio.src === url) {
-        const temp = audioRef.current;
-        audioRef.current = nextAudioRef.current;
-        nextAudioRef.current = temp;
-        audioRef.current.onended = resolve;
-        audioRef.current.onerror = () => reject(new Error('Audio playback failed'));
-        audioRef.current.play().catch(() => reject(new Error('Audio playback failed')));
+      // Consume the preloaded audio ONLY if it perfectly matches the request,
+      // and only on the first attempt — a retry has to re-fetch.
+      let el;
+      if (attempt === 0 && nextAudio.src === url) {
+        el = nextAudio;
+        nextAudioRef.current = audio;
+        audioRef.current = el;
       } else {
-        audio.src = url;
-        audio.onended = resolve;
-        audio.onerror = () => reject(new Error('Audio playback failed'));
-        audio.play().catch(() => reject(new Error('Audio playback failed')));
+        el = audio;
+      }
+
+      let settled = false;
+
+      const cleanup = () => {
+        el.onended = null;
+        el.onerror = null;
+      };
+
+      const settle = (fn, arg) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        fn(arg);
+      };
+
+      const failWith = (err) => {
+        // Our own doing: the src was swapped, or the user paused/stopped.
+        if (err && err.name === 'AbortError') {
+          // Guard the assignment — `play()` hands back a DOMException, but a
+          // primitive rejection would throw here under strict mode.
+          if (typeof err === 'object') err.silent = true;
+          settle(reject, err);
+          return;
+        }
+        if (attempt < 2) {
+          settled = true;
+          cleanup();
+          setTimeout(() => {
+            // Do not resurrect playback the user already stopped.
+            if (shouldStopRef.current) return;
+            playAyahAudioAsync(ayah, attempt + 1).then(resolve, reject);
+          }, 500 * (attempt + 1));
+          return;
+        }
+        console.warn(`Audio failed after ${attempt + 1} attempts:`, url, err);
+        settle(reject, err instanceof Error ? err : new Error('Audio playback failed'));
+      };
+
+      if (el.src !== url) el.src = url;
+      el.onended = () => settle(resolve, undefined);
+      el.onerror = () => failWith(new Error('Audio playback failed'));
+      const playPromise = el.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch((err) => failWith(err));
       }
     });
   };
@@ -228,9 +295,19 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
       try {
         await playAyahAudioAsync(ayah);
       } catch (err) {
-        // Pause session and expose error state
-        setAudioError(true);
         pausedAyahIndexRef.current = i;
+
+        if (err && err.silent) {
+          // Interrupted by us or by the user (Pause, stop, src swap). The pause
+          // state is already correct, so leave it alone — reporting an audio
+          // error here is what made manual pauses look like failures.
+          isPlayingRef.current = false;
+          setCurrentAyahNumber(null);
+          return;
+        }
+
+        // Genuine failure: pause the session and expose the error state.
+        setAudioError(true);
         setCurrentAyahNumber(null);
         isPlayingRef.current = false;
         

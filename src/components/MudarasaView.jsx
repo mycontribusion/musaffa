@@ -252,7 +252,15 @@ import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
           <AnimatePresence mode="wait">
             {mudarasaTurn === 'user' && (
               <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-4)' }}>
-                {(enableErrorDetection && isSttListening) || isHintActive ? (
+                {/* Keyed on the MODE, not on `isSttListening`.
+                    `handleFinishedTurn` in PartnerSession calls `stopAndCheck()`
+                    and then advances the chunk ~200ms later, which takes
+                    `isSttListening` false for that whole window while the turn
+                    is still 'user'. Testing it here made the smart-mode controls
+                    briefly disappear and the hands-free "Finished Reciting"
+                    button take their place — a mode flip that never happened.
+                    Smart mode is still smart mode while the mic restarts. */}
+                {(enableErrorDetection || isHintActive) ? (
                   <>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.6rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }}>

@@ -122,6 +122,12 @@ export const MudarasaHeader = ({
               Text
             </span>
           </button>
+          {/* This chip only renders in Smart Mode (and only on the user's turn),
+              so `isSttListening === false` does NOT mean "not in smart mode".
+              It means the recogniser is briefly stopped — `handleFinishedTurn`
+              calls `stopAndCheck()` before advancing the chunk, and the restart
+              happens a moment later. Labelling that window "Ready" read as the
+              mode having switched, so it now says what is actually true. */}
           {enableErrorDetection && mudarasaTurn === 'user' && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: '0.35rem',
@@ -136,7 +142,12 @@ export const MudarasaHeader = ({
                    ? 'Installing Model...'
                    : isSttListening
                      ? (!isOnline ? 'Checking (Offline)' : 'Checking')
-                     : 'Ready'
+                     // Deliberately NOT keyed on `modelStatus`. That flag is only
+                     // ever driven to 'ready' on native Android (the Vosk path);
+                     // on web the recogniser is `window.SpeechRecognition` and
+                     // the flag stays 'idle' forever, so a model-based label here
+                     // would sit on a stale word instead of describing the mic.
+                     : 'Restarting...'
                  }
                </span>
             </div>
