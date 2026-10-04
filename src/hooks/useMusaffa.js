@@ -14,6 +14,10 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
   const currentIndexRef = useRef(0);
   const wakeLockRef = useRef(null);
   const isPlayingRef = useRef(false);
+  /** A Musaffa session is running — independent of whose turn it is. */
+  const sessionActiveRef = useRef(false);
+  /** The user explicitly paused, so the screen is allowed to sleep. */
+  const isPausedRef = useRef(false);
   const shouldStopRef = useRef(false);
   const pausedAyahIndexRef = useRef(0); // Track which ayah we paused at
 
@@ -24,11 +28,30 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
   };
 
   // ── Wake Lock ────────────────────────────────────────────────────────────
-  const acquireWakeLock = async () => {
+  /**
+   * Fire-and-forget on purpose.
+   *
+   * Awaiting this consumed the user-gesture token and made Safari block the
+   * first audio of the session. It is idempotent instead: a live sentinel is
+   * left alone, a released one is replaced. That `released` check matters
+   * because the browser silently drops the lock whenever the page is hidden,
+   * and a stale non-null ref would otherwise make us believe we still hold it.
+   */
+  const acquireWakeLock = () => {
     try {
-      if ('wakeLock' in navigator) {
-        wakeLockRef.current = await navigator.wakeLock.request('screen');
-      }
+      if (!('wakeLock' in navigator)) return;
+      const held = wakeLockRef.current;
+      if (held && !held.released) return;
+      navigator.wakeLock.request('screen')
+        .then((sentinel) => {
+          wakeLockRef.current = sentinel;
+          // Clearing the ref on release is what lets the visibility handler
+          // take a fresh lock instead of no-op'ing against a dead sentinel.
+          sentinel.addEventListener?.('release', () => {
+            if (wakeLockRef.current === sentinel) wakeLockRef.current = null;
+          });
+        })
+        .catch((e) => { console.warn('Wake Lock unavailable:', e); });
     } catch (e) { console.warn('Wake Lock unavailable:', e); }
   };
 
@@ -37,16 +60,42 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     wakeLockRef.current = null;
   };
 
-  // Re-acquire wake lock if page becomes visible again
+  /**
+   * Keep the screen on for the whole session — including the user's turn.
+   *
+   * A screen wake lock is released by the browser every time the page goes
+   * hidden (screen off, tab switch, device lock), so surviving a sleep depends
+   * entirely on re-requesting it when the page becomes visible again.
+   *
+   * The previous guard was
+   *   `visible && mudarasaTurn === 'app' && isPlayingRef.current`
+   * which was self-defeating: `playCurrentIndex` sets `isPlayingRef.current =
+   * false` and hands the turn to `'user'` the instant the app finishes
+   * reading, yet the code deliberately keeps the lock across that handover
+   * ("keep screen on during user's recitation turn"). So once the lock was
+   * dropped it was never restored during the longest part of the session —
+   * the user reciting — and the display went to sleep.
+   *
+   * `sessionActiveRef` / `isPausedRef` capture the state that actually matters:
+   * is a session running, and has the user paused it. Using refs also lets
+   * this subscribe once instead of re-binding on every turn change.
+   */
   useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible' && mudarasaTurn === 'app' && isPlayingRef.current) {
-        acquireWakeLock();
-      }
+    const reAcquire = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!sessionActiveRef.current || isPausedRef.current) return;
+      acquireWakeLock();
     };
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [mudarasaTurn]);
+    document.addEventListener('visibilitychange', reAcquire);
+    // bfcache restores and tab re-focus do not always emit visibilitychange.
+    window.addEventListener('pageshow', reAcquire);
+    window.addEventListener('focus', reAcquire);
+    return () => {
+      document.removeEventListener('visibilitychange', reAcquire);
+      window.removeEventListener('pageshow', reAcquire);
+      window.removeEventListener('focus', reAcquire);
+    };
+  }, []);
 
   const createChunks = (params = musaffaParams) => {
     const { startSurah, startAyah, endSurah, endAyah, portion } = params;
@@ -189,6 +238,7 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
         if (audioRef.current) audioRef.current.pause();
         if (nextAudioRef.current) nextAudioRef.current.pause();
         releaseWakeLock();
+        isPausedRef.current = true;
         setIsPaused(true);
         return;
       }
@@ -228,6 +278,11 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     currentIndexRef.current = startChunkIndex;
     setCurrentChunkIndex(startChunkIndex);
     pausedAyahIndexRef.current = 0; // Reset pause position for new session
+    // From here on the screen must stay on for the whole session, whichever
+    // turn it is — this is what the visibility handler checks before
+    // re-requesting the lock after a sleep.
+    sessionActiveRef.current = true;
+    isPausedRef.current = false;
     setPartnerSubView('mudarasa');
     // If initialTurn is provided (for resume), use it; otherwise check whoStarts
     if (initialTurn) {
@@ -278,12 +333,14 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
       nextAudioRef.current.pause();
     }
     releaseWakeLock();
+    isPausedRef.current = true;
     setIsPaused(true);
   }, []);
 
   // Resume musaffa - re-acquire wake lock and continue playback from where it was paused
   const resumeMusaffa = useCallback(() => {
     setAudioError(false);
+    isPausedRef.current = false;
     acquireWakeLock();
     setIsPaused(false);
     // Resume playback if we were in the middle of app playback
@@ -311,6 +368,8 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     }
     releaseWakeLock();
     isPlayingRef.current = false;
+    sessionActiveRef.current = false;
+    isPausedRef.current = false;
     setIsPaused(false);
     setAudioError(false);
   }, []);

@@ -405,6 +405,50 @@ const PartnerSession = ({
     />
   );
 
+  /* `subView === 'mudarasa'` with no active chunk means there is nothing to
+     recite: `chunks` only lives in memory, so it is empty after a reload. A
+     refresh on a session URL no longer reaches here — `syncStateWithURL` sends
+     it to `config`, where ResumeBanner resumes the saved session in one tap —
+     so this is only a safety net for the remaining ways in. It used to fall
+     through to `return null`, and since `mudarasa` hides the global header
+     that was a completely blank page with no way out. */
+  if (subView === 'mudarasa') return (
+    <div style={{
+      maxWidth: '640px',
+      margin: '0 auto',
+      padding: '3rem 1rem',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '1.25rem',
+      textAlign: 'center',
+      color: 'var(--text-secondary)',
+    }}>
+      <h1 style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+        Session ended
+      </h1>
+      <p style={{ lineHeight: 1.5 }}>
+        This recitation session is no longer running. Start a new one from the
+        configuration screen.
+      </p>
+      <button
+        type="button"
+        onClick={() => setSubView('config')}
+        style={{
+          padding: '0.75rem 1.5rem',
+          background: 'var(--gold-gradient)',
+          color: 'var(--text-on-gold)',
+          borderRadius: '0.75rem',
+          fontWeight: 'var(--fw-strong)',
+          border: 'none',
+          cursor: 'pointer',
+        }}
+      >
+        Open Musaffa config
+      </button>
+    </div>
+  );
+
   return null;
 };
 

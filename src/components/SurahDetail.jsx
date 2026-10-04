@@ -289,19 +289,36 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
               <h2 style={{ fontSize: 'var(--fs-page)', fontWeight: '800', color: 'var(--text-primary)' }}>{selectedSurah.englishName}</h2>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-              {/* Mutashabih Quiz — same destination as the homepage "Mutashabih Quiz"
-                  card. `CircleHelp` is the icon already used for "Mutashabihat
-                  Quiz" in PartnerMenu and MutashabihSelection. Only rendered when
-                  the currently selected surah has Mutashabihat data, reusing the
-                  exact same smart condition as the previous below-title
-                  Mutashabihat Session button
-                  (`waqarData && waqarData[selectedSurah.number]`). */}
+              {/* Mutashabih Quiz — jumps straight into this surah's quiz session
+                  rather than the cross-surah selection screen.
+
+                  `mutashabihat-session` was already a first-class view that
+                  renders `MutashabihatSession` for exactly one surah, and every
+                  input it needs is already satisfied on this screen:
+                  `selectedSurah` is the surah being viewed, `waqarData` is loaded,
+                  and the guard below guarantees its entries exist. App wires the
+                  remaining props (`allSurahEntries`, `quranAr`, `surahs`,
+                  `onClose`) itself, so no new plumbing is needed here.
+
+                  Routing already round-trips correctly: this view maps to
+                  `/surah/:n/mutashabihat`, which `syncStateWithURL` parses back
+                  into `mutashabihat-session`, and the session's own `onClose`
+                  returns to `detail`. Browser Back therefore still lands on the
+                  surah page rather than being trapped on the session.
+
+                  The homepage "Mutashabih Quiz" card still opens
+                  `mutashabihat-selection` — that entry point is for picking
+                  surahs, so the two are intentionally different.
+
+                  `CircleHelp` is the icon already used for "Mutashabihat Quiz" in
+                  PartnerMenu and MutashabihSelection, so the feature keeps one
+                  glyph. */}
               {waqarData && waqarData[selectedSurah.number] && (
                 <button
-                  onClick={() => setView('mutashabihat-selection')}
+                  onClick={() => setView('mutashabihat-session')}
                   className="icon-btn"
-                  aria-label="Open Mutashabih Quiz"
-                  title="Mutashabih Quiz"
+                  aria-label={`Start Mutashabih quiz for ${selectedSurah.englishName}`}
+                  title="Start Mutashabih Quiz"
                 >
                   <CircleHelp size={18} />
                 </button>

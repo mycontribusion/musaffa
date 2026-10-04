@@ -67,12 +67,39 @@ export const useMusaffaSession = (
     startMusaffa(null, saved.chunkIndex || 0, saved.turn || 'app', saved.params);
   }, [savedMusaffaSession, startMusaffa, setView, surahs, setSelectedSurah, setMusaffaParams]);
 
+  /**
+   * Treat a refresh on a session URL as "the user tapped Resume".
+   *
+   * Two details make this safe, and both were learned the hard way:
+   *
+   *  1. **Gate on the data, then latch.** `startMusaffa` -> `createChunks`
+   *     dereferences `quranAr`, which is still null on the first commit. An
+   *     earlier version latched its one-shot flag *before* attempting, so the
+   *     attempt threw AND the retry that would have fixed it was suppressed —
+   *     the session never resumed. Latching only once `surahs` is populated
+   *     means this effect simply re-runs and resumes when the data lands.
+   *     (`surahs` and `quranAr` are set in the same batch, so a non-empty
+   *     `surahs` is a valid proxy for both.)
+   *  2. **Latch per page load.** The auto-save effect above rewrites
+   *     `savedMusaffaSession` on every portion advance, so without the ref this
+   *     would re-fire continuously and `startMusaffa` would restart the
+   *     session mid-recitation.
+   *
+   * If the browser's autoplay policy blocks the first ayah, `useMusaffa` sets
+   * `audioError`, which surfaces the existing audio-error modal with a retry —
+   * so the session is never silently stuck.
+   */
+  const autoResumedRef = useRef(false);
+
   useEffect(() => {
-    if (savedMusaffaSession && typeof window !== 'undefined' && window.location.pathname.startsWith('/partner/mudarasa')) {
-      const t = setTimeout(() => resumeMusaffaSession(), 0);
-      return () => clearTimeout(t);
-    }
-  }, [savedMusaffaSession, resumeMusaffaSession]);
+    if (autoResumedRef.current) return;
+    if (!savedMusaffaSession) return;
+    if (!surahs || surahs.length === 0) return; // data not ready — retry later
+    const isMudarasaUrl = /^\/(?:surah\/\d+\/)?partner\/mudarasa\/?$/.test(window.location.pathname);
+    if (!isMudarasaUrl) return;
+    autoResumedRef.current = true;
+    resumeMusaffaSession();
+  }, [savedMusaffaSession, resumeMusaffaSession, surahs]);
 
   return {
     savedMusaffaSession,

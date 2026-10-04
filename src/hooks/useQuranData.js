@@ -11,6 +11,19 @@ export const useQuranData = (syncStateWithURL) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  /**
+   * True until the optional `waqar114.txt` fetch settles (either way).
+   *
+   * `loading` only covers the core data; waqar is deliberately fetched
+   * afterwards so a slow/failed optional file cannot hold the whole app on
+   * the splash screen. The side effect is that the two views gated on
+   * `waqarData` (Mutashabih quiz, Waqar session) used to render *nothing*
+   * during that window — on a direct URL refresh that window is the whole
+   * first paint, so the page looked blank. Consumers use this flag to show a
+   * real loading state instead of empty DOM.
+   */
+  const [waqarPending, setWaqarPending] = useState(true);
+
   useEffect(() => {
     const fetchData = async () => {
       let hasError = false;
@@ -38,6 +51,9 @@ export const useQuranData = (syncStateWithURL) => {
         hasError = true;
       } finally {
         setLoading(false);
+        // Nothing below will run when core data failed, so release the gate
+        // here to keep it from hanging on a route that will never resolve.
+        if (hasError) setWaqarPending(false);
       }
 
       // Waqar114 — optional, loaded separately so it never blocks the app
@@ -50,6 +66,8 @@ export const useQuranData = (syncStateWithURL) => {
           setWaqarData(parsed);
         } catch (err) {
           console.warn('Waqar114 load error (Mastery Sessions unavailable):', err);
+        } finally {
+          setWaqarPending(false);
         }
       }
 
@@ -86,5 +104,5 @@ export const useQuranData = (syncStateWithURL) => {
     fetchData();
   }, []);
 
-  return { surahs, quranAr, quranEn, mutashabihatData, waqarData, quranSimple, loading, error };
+  return { surahs, quranAr, quranEn, mutashabihatData, waqarData, quranSimple, loading, error, waqarPending };
 };
