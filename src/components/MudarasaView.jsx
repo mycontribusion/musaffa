@@ -6,7 +6,7 @@ import { hasBismillahHeader, BISMILLAH_SIMPLE, removeTashkeel, normalizeArabic, 
 
 // New Extracted Components & Hooks, Alhamdulillah
 import { MudarasaHeader } from './mudarasa/MudarasaHeader';
-// import { AudioErrorModal } from './mudarasa/AudioErrorModal';
+import { AudioErrorModal } from './mudarasa/AudioErrorModal';
 import { RetryPrompt } from './mudarasa/RetryPrompt';
 import { AyahCard } from './mudarasa/AyahCard';
 import { useActiveVerseIndex } from './mudarasa/hooks/useActiveVerseIndex';
@@ -26,8 +26,8 @@ import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
    isPaused,
    onPause,
    onResume,
-   // audioError,
-   // setAudioError,
+   audioError,
+   setAudioError,
    enableErrorDetection,
    isSttListening,
    liveResults,
@@ -168,12 +168,15 @@ import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
             onResume={onResume}
           />
 
-        {/* <AudioErrorModal
+        {/* Rendered only once `playAyahAudioAsync` has exhausted its retries, so
+            a genuine outage explains itself and offers Retry / Skip rather than
+            leaving the session silently sitting paused with no reason shown. */}
+        <AudioErrorModal
           audioError={audioError}
           setAudioError={setAudioError}
           onResume={onResume}
           onNext={onNext}
-        /> */}
+        />
 
         <div style={{ flex: 1, padding: '1rem 0 6rem 0' }}>
           <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 'var(--space-8)' }}>

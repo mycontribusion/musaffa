@@ -16,6 +16,9 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
   const isPlayingRef = useRef(false);
   /** A Musaffa session is running — independent of whose turn it is. */
   const sessionActiveRef = useRef(false);
+  /** True while a `playCurrentIndex` loop is in flight. Guards against two
+      concurrent loops sharing the same two audio elements. */
+  const playLoopActiveRef = useRef(false);
   /** The user explicitly paused, so the screen is allowed to sleep. */
   const isPausedRef = useRef(false);
   const shouldStopRef = useRef(false);
@@ -241,8 +244,24 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     });
   };
 
-  const playCurrentIndex = async (currentChunks = chunks, startFromAyahIndex = 0) => {
+  const playCurrentIndex = async (currentChunks = chunks, startFromAyahIndex = 0, force = false) => {
     if (currentChunks.length === 0) return;
+
+    // Hands-free can fire this twice for one portion. `useMic` calls
+    // `onSilence` straight from its requestAnimationFrame loop, and a second
+    // 3.5s-silence window can be detected before React has re-rendered with the
+    // new turn, leaving `onSilenceRef.current` stale. Without this guard the
+    // second call started a *second* play loop over the same two `Audio`
+    // elements: both loops reassigned `src` and overwrote each other's
+    // `onended`, so the first loop's promise never settled and playback stalled
+    // — which surfaced as a session paused on the app's turn that only a manual
+    // Resume could clear.
+    //
+    // `force` is for explicit user intent (Resume), where the previous loop is
+    // legitimately parked mid-await after a Pause and must be replaced.
+    if (playLoopActiveRef.current && !force) return;
+    playLoopActiveRef.current = true;
+
     isPlayingRef.current = true;
     shouldStopRef.current = false;
     // Keep screen on for the full session (both app-reading and user-reciting)
@@ -261,6 +280,7 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
         pausedAyahIndexRef.current = i;
         setCurrentAyahNumber(null);
         isPlayingRef.current = false;
+        playLoopActiveRef.current = false;
         return;
       }
       
@@ -277,7 +297,7 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
           setCurrentAyahNumber('bismillah-' + ayah.number);
           // Play Bismillah (Ayah 1 of Surah 1)
           await playAyahAudioAsync({ number: 1, surahNumber: 1, numberInSurah: 1 });
-        } catch (err) {
+        } catch {
           console.warn('Failed to play Bismillah, skipping...');
         }
       }
@@ -303,6 +323,7 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
           // error here is what made manual pauses look like failures.
           isPlayingRef.current = false;
           setCurrentAyahNumber(null);
+          playLoopActiveRef.current = false;
           return;
         }
 
@@ -310,6 +331,7 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
         setAudioError(true);
         setCurrentAyahNumber(null);
         isPlayingRef.current = false;
+        playLoopActiveRef.current = false;
         
         // Manual pause logic to prevent stale state issues
         if (audioRef.current) audioRef.current.pause();
@@ -323,6 +345,7 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
 
     setCurrentAyahNumber(null);
     isPlayingRef.current = false;
+    playLoopActiveRef.current = false;
     // Do NOT release wake lock here — keep screen on during user's recitation turn
 
     const nextIdx = (idx + 1) % currentChunks.length;
@@ -342,7 +365,9 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
       if (!a2.src) a2.src = silentWav;
       a1.play().then(() => a1.pause()).catch(() => {});
       a2.play().then(() => a2.pause()).catch(() => {});
-    } catch (e) {}
+    } catch {
+      // Audio already unlocked or unavailable; playback retries handle failures.
+    }
 
     // If overrideParams is provided, use it to create chunks; otherwise use overrideChunks or createChunks()
     let finalChunks;
@@ -360,6 +385,10 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     // re-requesting the lock after a sleep.
     sessionActiveRef.current = true;
     isPausedRef.current = false;
+    // A new session supersedes any loop left parked by a previous one (e.g. the
+    // user paused, went back to config and started again). Without this the
+    // guard in `playCurrentIndex` would refuse to begin.
+    playLoopActiveRef.current = false;
     setPartnerSubView('mudarasa');
     // If initialTurn is provided (for resume), use it; otherwise check whoStarts
     if (initialTurn) {
@@ -379,6 +408,15 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
 
   const handleNextTurnManual = () => {
     if (chunks.length === 0) return;
+
+    // Reject a spurious advance. `isPlayingRef.current` is true for the whole
+    // time the app is reading and false during the user's turn, so a silence
+    // trigger that arrives while audio is playing cannot be a legitimate
+    // "I'm done" signal — it is `useMic`'s rAF loop firing on a stale
+    // `onSilenceRef` before React has re-rendered the new turn. Advancing there
+    // started a competing play loop and stalled the app's turn.
+    if (isPlayingRef.current) return;
+
     if (window.navigator.vibrate) window.navigator.vibrate([40, 150]);
     
     // The user just finished their turn on the current chunk. 
@@ -420,9 +458,11 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
     isPausedRef.current = false;
     acquireWakeLock();
     setIsPaused(false);
-    // Resume playback if we were in the middle of app playback
+    // Resume playback if we were in the middle of app playback.
+    // `force` because after a Pause the previous loop is still parked on a
+    // promise that can never settle — this Resume must be allowed to replace it.
     if (mudarasaTurn === 'app' && chunks.length > 0) {
-      playCurrentIndex(chunks, pausedAyahIndexRef.current);
+      playCurrentIndex(chunks, pausedAyahIndexRef.current, true);
     }
   }, [chunks, mudarasaTurn]);
 
@@ -430,6 +470,7 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
   const stopMusaffa = useCallback(() => {
     // Signal to stop the playback loop
     shouldStopRef.current = true;
+    playLoopActiveRef.current = false;
     
     if (audioRef.current) {
       audioRef.current.pause();
