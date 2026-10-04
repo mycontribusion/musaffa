@@ -245,7 +245,18 @@ const compareRecitation = (expectedText, spokenText, ayahWordCounts = []) => {
     for (let idx = 0; idx < ayahWordCounts.length; idx++) {
       const count = ayahWordCounts[idx];
       if (count === 0) {
-        verseStats.push({ index: idx, accuracy: 0, hasPending: false });
+        // An ayah that contributes no words must not gate progression.
+        //
+        // This stat used to be `{accuracy: 0, hasPending: false}` with no
+        // `hasStarted`, so `computeActiveVerseIndex` fell back to inferring
+        // `hasStarted` as `!hasPending` -> true, then failed `accuracy >=
+        // threshold` on 0 and stopped advancing there. The active verse was
+        // pinned to this ayah for the rest of the session: the grammar never
+        // moved past it, nothing could ever be marked as passed, and Smart Mode
+        // was stuck on a verse with nothing to recite.
+        //
+        // An empty verse is vacuously complete and vacuously accurate.
+        verseStats.push({ index: idx, accuracy: 100, hasPending: false, hasStarted: true });
         continue;
       }
       const verseSlice = results.slice(wordIdx, wordIdx + count);
@@ -300,13 +311,23 @@ const compareRecitation = (expectedText, spokenText, ayahWordCounts = []) => {
 };
 
 // ── Message handler ───────────────────────────────────────────────────────────
+/**
+ * `threshold` is echoed back on every response.
+ *
+ * The worker is created once for the lifetime of the hook so that in-flight
+ * comparisons are not destroyed by re-renders, which means the handler that
+ * consumes these messages closed over the `threshold` from the render in which
+ * it was created. Changing the accuracy target mid-session would therefore
+ * have kept scoring against the old value. Returning the threshold the
+ * comparison actually ran with keeps the two in step.
+ */
 self.onmessage = (event) => {
-  const { type, expected, spoken, id, ayahWordCounts } = event.data;
+  const { type, expected, spoken, id, ayahWordCounts, threshold } = event.data;
   if (type === 'COMPARE') {
     const payload = compareRecitation(expected, spoken, ayahWordCounts || []);
-    self.postMessage({ type: 'RESULT', payload, id });
+    self.postMessage({ type: 'RESULT', payload, id, threshold });
   } else if (type === 'COMPARE_FINAL') {
     const payload = compareRecitation(expected, spoken, ayahWordCounts || []);
-    self.postMessage({ type: 'RESULT_FINAL', payload, id });
+    self.postMessage({ type: 'RESULT_FINAL', payload, id, threshold });
   }
 };

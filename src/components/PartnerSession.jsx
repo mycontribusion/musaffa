@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef, useState } from 'react';
+import { useEffect, useCallback, useMemo, useRef, useState } from 'react';
 import PartnerConfig from './PartnerConfig';
 import MudarasaView from './MudarasaView';
 import QuizEngine from './QuizEngine';
@@ -74,6 +74,16 @@ const PartnerSession = ({
   const [retryStartIndex, setRetryStartIndex] = useState(0);
   const [completedResults, setCompletedResults] = useState(null);
   const [isHintActive, setIsHintActive] = useState(false);
+  /**
+   * Incremented once each time the recogniser reports the user has recited to
+   * the end of the portion and stopped. MudarasaView watches this and runs the
+   * real finish check (advance if the target was met, otherwise offer retry).
+   *
+   * A counter rather than a boolean on purpose: the check must be able to fire
+   * again for a later portion without being blocked by a flag that is already
+   * true.
+   */
+  const [turnSettledToken, setTurnSettledToken] = useState(0);
 
   // Reset retryStartIndex and completedResults on chunk index change
   useEffect(() => {
@@ -82,8 +92,17 @@ const PartnerSession = ({
   }, [currentChunkIndex]);
 
   // Build expected text for the current chunk (sliced by retryStartIndex)
+  //
+  // `activeChunkSlice` is memoised because its identity is load-bearing twice
+  // over. It is a dependency of the `grammar` memo in useRecitationCheck, and
+  // of the `handleStuck` callback below; `Array.prototype.slice` hands back a
+  // fresh array on every render, so leaving it unmemoised produced a new
+  // grammar string and a new hint handler several times per second.
   const currentChunk = chunks[currentChunkIndex] || null;
-  const activeChunkSlice = currentChunk ? currentChunk.slice(retryStartIndex) : [];
+  const activeChunkSlice = useMemo(
+    () => (currentChunk ? currentChunk.slice(retryStartIndex) : []),
+    [currentChunk, retryStartIndex]
+  );
   const expectedText = activeChunkSlice.length > 0 ? buildExpectedText(activeChunkSlice, quranSimple) : '';
   const ayahWordCounts = activeChunkSlice.length > 0 ? buildAyahWordCounts(activeChunkSlice, quranSimple) : [];
 
@@ -97,6 +116,17 @@ const PartnerSession = ({
   const hintResumeTimerRef = useRef(null);
   const hintFallbackTimerRef = useRef(null);
   const sttActionsRef = useRef({});
+  /**
+   * Mirrors `sttActive` for the hint callbacks below.
+   *
+   * `handleStuck` is defined *before* `sttActive` exists, so it cannot close
+   * over the binding directly (that is a temporal-dead-zone read at definition
+   * time) and must not list it as a dependency either. A ref is the only way to
+   * give it the current value: `handleStuck` decides whether to resume the
+   * recogniser after a hint, and resuming it on the app's turn would start the
+   * mic listening to the Quran being played back.
+   */
+  const sttActiveRef = useRef(false);
 
   const clearResultsRef = useRef(null);
 
@@ -162,61 +192,70 @@ const PartnerSession = ({
       console.warn('Failed to play hint audio:', e);
       setAudioError(true);
       interruptHint();
-      sttActionsRef.current.resumeRecognition?.(sttActive);
+      sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
     });
 
     // Resume STT after 3 seconds regardless of whether audio is still playing
     hintResumeTimerRef.current = setTimeout(() => {
-      sttActionsRef.current.resumeRecognition?.(sttActive);
+      sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
     }, 3000);
 
     // 5-second fallback in case onended/onerror never fire due to network hang
     hintFallbackTimerRef.current = setTimeout(() => {
       interruptHint();
-      sttActionsRef.current.resumeRecognition?.(sttActive);
+      sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
     }, 5000);
 
     hintAudio.onended = () => {
       interruptHint();
-      sttActionsRef.current.resumeRecognition?.(sttActive);
+      sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
     };
     hintAudio.onerror = () => {
       setAudioError(true);
       interruptHint();
-      sttActionsRef.current.resumeRecognition?.(sttActive);
+      sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
     };
   }, [activeChunkSlice, params.reciter, interruptHint, setAudioError]);
 
   // STT error detection — active during user's recitation turn only
   // onAutoFinish fires automatically after silence, triggering handleFinishedTurn
   const sttActive = !!(enableErrorDetection && subView === 'mudarasa' && turn === 'user');
+  // Synced post-commit rather than during render: this is an input to committed
+  // work (the hint timers), not render output, and a render that gets thrown
+  // away must not advance it.
+  useEffect(() => { sttActiveRef.current = sttActive; }, [sttActive]);
+
    const {
-     isSupported: sttSupported,
-     isListening: isSttListening,
-     transcript,
-     liveResults,
-     results: recitationResults,
-     stopAndCheck,
-     clearResults,
-     pauseRecognition,
-     resumeRecognition,
-     notifyHintEnded,
-     clearTranscript,
+      isSupported: sttSupported,
+      isListening: isSttListening,
+      transcript,
+      liveResults,
+      results: recitationResults,
+      stopAndCheck,
+      clearResults,
+      resetTurn,
+      pauseRecognition,
+      resumeRecognition,
+      notifyHintEnded,
+      clearTranscript,
     } = useRecitationCheck(
-     sttActive,
-     expectedText,
-     useCallback(() => { handleFinishedTurnRef.current?.(); }, []),
-     params.errorThreshold ?? 50,
-     ayahWordCounts,
-     handleStuck,
-     interruptHint,
-     null,
-     modelReady,
-     modelStatus,
-     ensureModelReady,
-     activeChunkSlice,
-     quranSimple
-   );
+      sttActive,
+      expectedText,
+      useCallback(() => { handleFinishedTurnRef.current?.(); }, []),
+      params.errorThreshold ?? 50,
+      ayahWordCounts,
+      handleStuck,
+      interruptHint,
+      null,
+      // The user recited to the end of the portion and then went quiet.
+      // MudarasaView decides what that means; all this does is raise the token.
+      () => setTurnSettledToken((n) => n + 1),
+      modelReady,
+      modelStatus,
+      ensureModelReady,
+      activeChunkSlice,
+      quranSimple
+    );
 
   sttActionsRef.current = { pauseRecognition, resumeRecognition, notifyHintEnded };
 
@@ -225,6 +264,16 @@ const PartnerSession = ({
   }, [clearResults]);
 
   const autoAdvanceTimerRef = useRef(null);
+
+  /**
+   * `handleFinishedTurn` is memoised without `liveResults` in its deps, so the
+   * copy it read was whichever one existed when the memo was last rebuilt —
+   * potentially many worker updates ago. `completedResults` is what renders the
+   * final per-word colouring of the portion the user just recited, so a stale
+   * snapshot showed them the marking for an earlier state of their own turn.
+   */
+  const liveResultsRef = useRef(liveResults);
+  useEffect(() => { liveResultsRef.current = liveResults; }, [liveResults]);
 
   // When feedback card "Continue" is clicked, clear and advance turn
   const handleContinueAfterFeedback = useCallback(() => {
@@ -244,7 +293,7 @@ const PartnerSession = ({
       // Advance immediately — if triggered by auto-finish, 100% is already confirmed.
       // If triggered manually, we give a brief moment for final comparison to log.
       autoAdvanceTimerRef.current = setTimeout(() => {
-        setCompletedResults(liveResults);
+        setCompletedResults(liveResultsRef.current);
         clearResults();
         handleNextTurn();
       }, 200);
@@ -379,7 +428,8 @@ const PartnerSession = ({
       liveResults={liveResults}
       transcript={transcript}
       onFinishedTurn={handleFinishedTurn}
-      onRetryTurn={clearResults}
+      onRetryTurn={resetTurn}
+      turnSettledToken={turnSettledToken}
       quranSimple={quranSimple}
       targetAccuracy={params.errorThreshold ?? 50}
       retryStartIndex={retryStartIndex}

@@ -14,6 +14,13 @@ export const useRecitationCheck = (
   onStuck = null,
   interruptHint = null,
   onUserSpeechAfterHint = null,
+  /**
+   * Fired when the user has recited to the end of the portion and then gone
+   * quiet. This is the exit that was missing: without it a turn could only end
+   * by passing the accuracy threshold on *every* ayah, so any shortfall left
+   * the session open indefinitely with no way to move on.
+   */
+  onTurnSettled = null,
   modelReady = false,
   modelStatus = 'idle',
   ensureModelReady = null,
@@ -23,31 +30,29 @@ export const useRecitationCheck = (
   const {
     clearStuckTimer,
     clearSilenceTimer,
-    triggerHint,
+    armStuckTimer,
+    armSettleTimer,
     notifyHintEnded,
     clearStuckState,
     checkAutoFinish,
     latestPayloadRef,
-    latestVerseStatsRef,
-    silenceTimerRef,
     interruptHintRef,
     hintedVerseIndexRef,
     hintTranscriptSnapshotRef,
     hintPayloadSnapshotRef,
     hintPassedRef,
-    isHintPlayingRef,
   } = useStuckDetection({
     onStuck,
     interruptHint,
     onAutoFinish,
+    onTurnSettled,
     threshold: accuracyThreshold,
-    ayahWordCounts,
   });
 
   // ── useSpeechRecognition MUST come before useRecitationWorker ─────────────
-  // transcriptRef is passed into the worker's triggerHint closure, so it must
-  // exist before the worker effect captures it. Callbacks are defined after
-  // both hooks; they read transcriptRef.current (always fresh, no stale closure).
+  // transcriptRef is read by the wrappers handed to the worker, so it must exist
+  // before the worker is created. Callbacks are defined after both hooks; they
+  // read transcriptRef.current (always fresh, no stale closure).
   const dispatchLiveCompareRef = useRef(null);
 
   // ── liveResults state is OWNED HERE, not inside useRecitationWorker ────────
@@ -78,10 +83,18 @@ export const useRecitationCheck = (
     if (interruptHintRef.current) interruptHintRef.current();
   }, [clearStuckTimer, clearSilenceTimer, interruptHintRef]);
 
+  /**
+   * Speech stopped. Disarm the stuck countdown — the user is mid-thought, not
+   * stuck — but deliberately leave the settle timer alone.
+   *
+   * It used to cancel the silence timer here, which is now the very signal we
+   * rely on to end a turn: the absence of new results *is* the silence. Killing
+   * it on speech end meant a completed recitation could never settle.
+   */
   const onSpeechEndCallback = useCallback(() => {
-    clearSilenceTimer();
+    clearStuckTimer();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clearSilenceTimer]);
+  }, [clearStuckTimer]);
 
   // Compute active verse index reactively from liveResults state.
   // Reading liveResults as *state* (not a ref snapshot) ensures this useMemo
@@ -143,10 +156,12 @@ export const useRecitationCheck = (
     hintTranscriptSnapshotRef,
     hintPayloadSnapshotRef,
     hintPassedRef,
-    // Pass transcriptRef (stable ref object) so the worker closure always reads
-    // the current transcript without creating a stale-closure dependency.
-    triggerHint: (idx) => triggerHint(idx, transcriptRef, setLiveResults),
+    // Both wrappers read transcriptRef (a stable ref object) at call time, so
+    // they stay referentially stable for the life of the hook — which is what
+    // lets the worker be created exactly once instead of on every render.
+    armStuckTimer: (verseIndex) => armStuckTimer(verseIndex, transcriptRef.current),
     checkAutoFinish,
+    armSettleTimer,
     latestPayloadRef,
     // The worker owns no liveResults state of its own — the setter is supplied
     // by this hook (see the ownership note above) so that activeVerseIndex and
@@ -174,6 +189,28 @@ export const useRecitationCheck = (
     clearStuckState();
     clearWorkerResults();
   }, [clearStuckState, clearWorkerResults]);
+
+  /**
+   * Full reset of the current attempt — used when the user chooses "Try Again"
+   * on a verse.
+   *
+   * `clearResults` alone was not enough: it reset the scoring but left the
+   * accumulated transcript in place. The retry therefore re-compared the
+   * *previous* attempt's words against the new expected text, which had been
+   * re-sliced to start at the retried ayah. The DP then aligned old, already
+   * recited text against a different expected sequence, so the verse appeared
+   * to pass instantly and the retry prompt was worthless. Clearing the
+   * transcript is what makes the retry mean anything.
+   */
+  const resetTurn = useCallback(() => {
+    clearStuckState();
+    clearWorkerResults();
+    clearTranscript();
+    if (liveDebounceRef.current) {
+      clearTimeout(liveDebounceRef.current);
+      liveDebounceRef.current = null;
+    }
+  }, [clearStuckState, clearWorkerResults, clearTranscript, liveDebounceRef]);
 
   // Resume without clearing stuck/worker state or resetting the transcript.
   // This preserves the full conversation history across temporary pauses
@@ -203,6 +240,7 @@ export const useRecitationCheck = (
      startListening,
      stopAndCheck,
      clearResults,
+     resetTurn,
      pauseRecognition,
      resumeRecognition,
      notifyHintEnded,

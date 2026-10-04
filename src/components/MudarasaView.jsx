@@ -34,7 +34,13 @@ import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
    transcript,
    onFinishedTurn,
    onRetryTurn,
-   onClearResults,
+   /**
+    * Bumped by PartnerSession when the recogniser decides the user has recited
+    * to the end of the portion and gone quiet. Drives `handleManualFinish`,
+    * which is the only path that can end a Smart Mode turn on the user's own
+    * initiative — see the effect below.
+    */
+   turnSettledToken = 0,
    quranSimple,
    targetAccuracy,
    retryStartIndex = 0,
@@ -84,6 +90,17 @@ import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
     }
   };
 
+  /**
+   * The finish check: advance when the final verse met the target, otherwise
+   * put the shortfall in front of the user instead of hiding it.
+   *
+   * This existed but could never run. It was only ever wired to the
+   * "Finished Reciting" button, and that button lives in the `else` branch of
+   * the control-bar ternary below — the branch that is unreachable whenever
+   * `enableErrorDetection` is true, which is exactly when this function is
+   * needed. So Smart Mode had no completion path at all except bypassing the
+   * check outright with "Mark Satisfied".
+   */
   const handleManualFinish = () => {
     if (!enableErrorDetection) {
       onFinishedTurn();
@@ -95,6 +112,9 @@ import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
       return;
     }
 
+    // Check the verse the user actually finished on. `sliceActiveAyahIndex` is
+    // derived from the scoring state and is clamped to the last verse once the
+    // whole portion has been recited, which is precisely the verse to judge.
     const stat = liveResults.verseStats[sliceActiveAyahIndex];
     const reasons = [];
 
@@ -113,6 +133,34 @@ import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
       handleMarkSatisfied();
     }
   };
+
+  /**
+   * Run the finish check whenever the recogniser reports the turn has settled.
+   *
+   * The previous token is tracked explicitly because the effect also depends on
+   * `mudarasaTurn`: without the diff, every 'app' -> 'user' handover would
+   * re-run it and open the retry prompt at the very *start* of a turn, before
+   * the user had recited anything. `retryPrompt` is a dependency too, so
+   * opening the prompt re-runs the effect harmlessly (the token no longer
+   * differs) rather than stacking a second one.
+   */
+  const lastSettledTokenRef = useRef(turnSettledToken);
+  useEffect(() => {
+    if (turnSettledToken === lastSettledTokenRef.current) return;
+    lastSettledTokenRef.current = turnSettledToken;
+    if (turnSettledToken === 0) return;
+    if (mudarasaTurn !== 'user') return;
+    if (retryPrompt) return;
+    // This is not a derived-state effect. It is the reaction to an event the
+    // recogniser raised from outside React, which reached us as a prop. The
+    // token-diff guard above makes it fire exactly once per settle, so the
+    // resulting state change is the intended output rather than a cascade.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    handleManualFinish();
+    // `handleManualFinish` is deliberately not a dependency: the token is the
+    // trigger, and it reads live scoring state at the moment it fires.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [turnSettledToken, mudarasaTurn, retryPrompt]);
 
   const flashError = useFeedbackDebounce(enableErrorDetection, liveResults, mudarasaTurn);
   const overlayMode = flashError ? 'error' : null;

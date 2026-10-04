@@ -36,7 +36,20 @@ export const useSpeechRecognition = ({
 }) => {
   const isNative = Capacitor.isNativePlatform();
   const SR = getSpeechRecognition();
-  const isSupported = true;
+
+  /**
+   * Smart Mode depends on there being *some* speech engine to drive.
+   *
+   * This used to be hardcoded `true`, so `PartnerSession` passed
+   * `enableErrorDetection && sttSupported` straight through to MudarasaView as
+   * `true` on every platform. In a browser without the Web Speech API (Firefox,
+   * most in-app webviews) `startListening` silently falls through every branch:
+   * there is no Vosk plugin and no `SR`, so `isListening` never becomes true,
+   * no `onResult` ever fires, and the recogniser-driven UI sits there showing
+   * "Restarting..." forever with no fallback to the manual control. The session
+   * looked broken instead of telling the user the platform cannot do it.
+   */
+  const isSupported = isNative || !!SR;
 
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -161,6 +174,36 @@ export const useSpeechRecognition = ({
 
   const lastGrammarRef = useRef(grammar);
 
+  /**
+   * Live handle on the current grammar.
+   *
+   * `startListening` / `resumeListening` read the grammar through this ref
+   * instead of closing over the `grammar` prop.
+   *
+   * This is load-bearing, not cosmetic. `grammar` is a useMemo that changes
+   * value every time the active verse advances, and these two callbacks are
+   * consumed as the dependency of the turn-lifecycle effect in
+   * `useRecitationCheck`:
+   *
+   *   useEffect(() => { isActive ? startListening() : ... }, [isActive, startListening])
+   *
+   * When `grammar` was in their dep arrays, every verse transition produced a
+   * new `startListening`, which re-fired that effect mid-turn. `startListening`
+   * calls `clearWorkerResults()` and resets `confirmedTranscriptRef`, so on each
+   * new ayah the app wiped the accumulated transcript, nulled `liveResults`
+   * (which drove `activeVerseIndex` back to 0 and flipped the grammar back to
+   * ayah 1) and restarted the recogniser. That is an oscillation loop: the
+   * session could never get past the first verse, which is what made Smart Mode
+   * look completely dead.
+   *
+   * Reading through a ref keeps both callbacks referentially stable for the
+   * whole mount while still handing the *current* grammar to Vosk at call
+   * time. Verse-to-verse vocabulary updates are handled separately and without
+   * side effects by the dynamic-grammar effect below.
+   */
+  const grammarRef = useRef(grammar);
+  useEffect(() => { grammarRef.current = grammar; }, [grammar]);
+
   // Dynamic single-verse grammar update on verse change while listening.
   // CRITICAL: We DO NOT reset confirmedTranscriptRef here, keeping the full
   // turn transcript accumulated so far.
@@ -212,9 +255,10 @@ export const useSpeechRecognition = ({
       // ── NATIVE VOSK IMPLEMENTATION (Android) ───────────────────────────
       if (isNative) {
         try {
+          const currentGrammar = grammarRef.current;
           const voskOptions = {};
-          if (grammar) {
-            voskOptions.grammar = grammar;
+          if (currentGrammar) {
+            voskOptions.grammar = currentGrammar;
           }
           await VoskSpeechRecognition.startListening(voskOptions);
           setIsListening(true);
@@ -243,10 +287,11 @@ export const useSpeechRecognition = ({
        // SpeechGrammarList is supported in Chrome. Most cloud ASR engines ignore
        // it, but it marginally biases recognition toward known Quranic words and
        // costs nothing. The real fix for full constraint is the native Vosk path.
-       if (grammar && window.SpeechGrammarList) {
+       const currentGrammar = grammarRef.current;
+       if (currentGrammar && window.SpeechGrammarList) {
          try {
            const grammarList = new window.SpeechGrammarList();
-           const words = JSON.parse(grammar);
+           const words = JSON.parse(currentGrammar);
            // Convert word array to JSGF format (the format Web Speech API accepts)
            const jsgf = `#JSGF V1.0; grammar words; public <word> = ${words.join(' | ')};`;
            grammarList.addFromString(jsgf, 1);
@@ -325,7 +370,9 @@ export const useSpeechRecognition = ({
           setIsListening(false);
         }
       }
-    }, [isNative, SR, modelReady, modelStatus, ensureModelReady, grammar, onResult, onSpeechStart, onSpeechEnd, onEnd]);
+    // `grammar` is read via grammarRef — see the note on that ref for why it
+    // must not appear here.
+    }, [isNative, SR, modelReady, modelStatus, ensureModelReady, onResult, onSpeechStart, onSpeechEnd, onEnd]);
 
    // Resume listening without resetting the accumulated transcript.
    // Used after temporary pauses (e.g. hint playback) so the full
@@ -336,9 +383,10 @@ export const useSpeechRecognition = ({
       // ── NATIVE VOSK IMPLEMENTATION (Android) ───────────────────────────
       if (isNative) {
         try {
+          const currentGrammar = grammarRef.current;
           const voskOptions = {};
-          if (grammar) {
-            voskOptions.grammar = grammar;
+          if (currentGrammar) {
+            voskOptions.grammar = currentGrammar;
           }
           await VoskSpeechRecognition.startListening(voskOptions);
           setIsListening(true);
@@ -431,7 +479,8 @@ export const useSpeechRecognition = ({
           setIsListening(false);
         }
       }
-    }, [isNative, SR, grammar, onResult, onSpeechStart, onSpeechEnd, onEnd]);
+    // `grammar` is read via grammarRef — see the note on that ref.
+    }, [isNative, SR, onResult, onSpeechStart, onSpeechEnd, onEnd]);
 
   const stopRecognition = useCallback(async () => {
     if (isNative) {
