@@ -32,22 +32,45 @@ export const MudarasaHeader = ({
   }, []);
 
   return (
-    <div style={{ position: 'sticky', top: 'calc(var(--control-md-h) + var(--space-4) + 1px)', zIndex: 'var(--z-sticky)', padding: '1rem 0' }}>
-      {/* Offset by the global header's rendered height so this bar parks directly
-          beneath it at every viewport: `--control-md-h` (36px, 42px from 640px up)
-          + `py-2` (--space-4) + the 1px hairline border. The previous fixed 70px
-          left a 19px/11px gap that also ignored the 14px mobile root. */}
-      <div className="glass-card" style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--glass-bg)', backdropFilter: 'blur(20px)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-          {/* Deliberately .icon-btn-sm: sub-page header, tighter tap target than the global header. */}
-          <button onClick={onBack} className="icon-btn icon-btn-sm"><ChevronLeft size={16} /></button>
-          <div>
-            <span style={{ fontSize: 'var(--fs-micro)', fontWeight: 'var(--fw-strong)', color: mudarasaTurn === 'app' ? 'var(--accent-gold)' : 'var(--accent-emerald)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-              {mudarasaTurn === 'app' ? 'Listen' : 'Recite'}
-            </span>
-            <p style={{ fontSize: 'var(--fs-secondary)', fontWeight: '700', color: 'var(--text-primary)' }}>Portion {currentChunkIndex + 1} of {chunksLength}</p>
-          </div>
-        </div>
+    /* Top-level header, built to the same spec as every other standalone header
+       in the app (SurahDetail, WeaknessTracker, AudioManager, MutashabihSelection,
+       MutashabihatSession) so the bar is interchangeable as you move between
+       views:
+
+         - full-bleed (`100vw` + centred negative margin) so the background and
+           the `var(--border-hairline)` bottom rule span the whole viewport,
+         - `--bg-primary` fill, no card chrome — the previous `.glass-card`
+           wrapper (border, radius, blur, `margin: 1rem 0`) is gone, which is
+           what made this bar both taller and visually distinct from its siblings,
+         - `sticky` at `top: 0`, `z-header` (100),
+         - inner `.app-container` restoring the standard page gutter, holding a
+           `flex items-center justify-between py-2` row with a 44px `.icon-btn`,
+         - total height `py-2` (16px) + the 44px row + the 1px hairline = 61px,
+           identical to the other headers, so content below the bar does not
+           shift when entering or leaving the session.
+
+       Note the row holds three children, not two: `justify-between` spreads the
+       back button, the counter and the controls across the full width, which is
+       what centres the counter the same way SurahDetail centres its title.
+
+       `flexShrink: 0` is required because MudarasaView is a flex column and the
+       ayah list would otherwise compress the bar.
+
+       The "Listen"/"Recite" turn label was removed: the header now carries only
+       the back control and the `x/x` portion counter. Turn state is still
+       communicated by the two status dots on the right, which recolour gold
+       (app's turn) and emerald (user's turn) from the same `mudarasaTurn`. */
+    <div style={{
+      position: 'sticky', top: 0, zIndex: 'var(--z-header)',
+      width: '100vw', marginLeft: 'calc(50% - 50vw)', flexShrink: 0,
+      backgroundColor: 'var(--bg-primary)', borderBottom: 'var(--border-hairline)',
+    }}>
+      <div className="app-container">
+        <div className="flex items-center justify-between py-2" style={{ paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>
+          <button onClick={onBack} className="icon-btn" title="Back to Musaffa config"><ChevronLeft size={18} /></button>
+          {/* Compact `3/12` counter at `--fs-page` — the same token and weight
+              the Surah Detail and Mistake Book headers use for their titles. */}
+          <p style={{ fontSize: 'var(--fs-page)', fontWeight: 'var(--fw-strong)', color: 'var(--text-primary)', margin: 0 }}>{currentChunkIndex + 1}/{chunksLength}</p>
         <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
           {/* Session Pause/Resume — driven by the same isPaused/pauseMusaffa/
               resumeMusaffa state the global header used to control. */}
@@ -117,20 +140,21 @@ export const MudarasaHeader = ({
                  }
                </span>
             </div>
-          )}
-          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: mudarasaTurn === 'app' ? 'var(--accent-gold)' : 'var(--bg-accent)', boxShadow: mudarasaTurn === 'app' ? '0 0 10px var(--accent-gold)' : 'none' }} />
-          <div style={{
-            width: '8px', height: '8px', borderRadius: '50%',
-            background: mudarasaTurn === 'user'
-              ? (isListening ? (currentVolume > sensitivity ? 'var(--accent-emerald)' : 'var(--glass-border)') : 'var(--accent-emerald)')
-              : 'var(--bg-accent)',
-            boxShadow: mudarasaTurn === 'user'
-              ? (isListening ? (currentVolume > sensitivity ? '0 0 10px var(--accent-emerald)' : 'none') : '0 0 10px var(--accent-emerald)')
-              : 'none',
-            transition: 'all 0.1s'
-          }} />
-        </div>
-      </div>
-    </div>
-  );
+         )}
+         <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: mudarasaTurn === 'app' ? 'var(--accent-gold)' : 'var(--bg-accent)', boxShadow: mudarasaTurn === 'app' ? '0 0 10px var(--accent-gold)' : 'none' }} />
+         <div style={{
+           width: '8px', height: '8px', borderRadius: '50%',
+           background: mudarasaTurn === 'user'
+             ? (isListening ? (currentVolume > sensitivity ? 'var(--accent-emerald)' : 'var(--glass-border)') : 'var(--accent-emerald)')
+             : 'var(--bg-accent)',
+           boxShadow: mudarasaTurn === 'user'
+             ? (isListening ? (currentVolume > sensitivity ? '0 0 10px var(--accent-emerald)' : 'none') : '0 0 10px var(--accent-emerald)')
+             : 'none',
+           transition: 'all 0.1s'
+         }} />
+       </div>
+       </div>
+     </div>
+   </div>
+ );
 };

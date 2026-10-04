@@ -255,7 +255,21 @@ const App = () => {
 
   const modelReady = modelStatus === 'ready';
 
-  const showGlobalHeader = !VIEWS_WITHOUT_GLOBAL_HEADER.has(view);
+  /**
+   * The Musaffa session replaces the global header instead of stacking under it.
+   *
+   * `MudarasaHeader` already carries the full set of session controls (back,
+   * portion counter, Pause/Resume, Text toggle, STT status), so keeping the
+   * global bar above it only pushed the recitation area down the viewport and
+   * duplicated the back affordance.
+   *
+   * Scoped to `subView === 'mudarasa'` deliberately: the other `partner`
+   * sub-views (`config`, `quiz`, `quiz-result`) have no local header at all and
+   * must keep the global one, otherwise they would render with no header.
+   */
+  const isMusaffaSession = view === 'partner' && partnerSubView === 'mudarasa';
+
+  const showGlobalHeader = !VIEWS_WITHOUT_GLOBAL_HEADER.has(view) && !isMusaffaSession;
 
   return (
     <>

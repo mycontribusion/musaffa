@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Search, CheckCircle, BrainCircuit, Pencil, Plus, Play, Mic, Hand, BookOpen, ScrollText } from 'lucide-react';
 import { useQuranSearch } from '../hooks/useQuranSearch';
+import { ResumeBanner } from './partnerConfig/ResumeBanner';
 
 const SurahList = ({
   surahs,
@@ -288,34 +289,16 @@ const SurahList = ({
         </div>
       )}
 
-      {/* Resume Session Banner */}
+      {/* Resume Session Banner — the shared component, so the `X` dismiss icon
+          and copy match the Partner config page instead of drifting again.
+          Suppressed while a search is active so it doesn't crowd the results. */}
       {savedMusaffaSession && searchQuery === '' && (
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)',
-          borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)',
-          margin: '0 0.5rem',
-        }}>
-          <div>
-            <p style={{ fontWeight: '800', fontSize: 'var(--fs-body)', color: 'var(--accent-gold)' }}>Active Musaffa Session</p>
-            <p style={{ fontSize: 'var(--fs-secondary)', color: 'var(--text-secondary)' }}>
-              {savedMusaffaSession.surahNumber
-                ? `Surah ${savedMusaffaSession.surahNumber} · Chunk ${savedMusaffaSession.chunkIndex + 1}`
-                : 'Continue your recitation'}
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-            <button onClick={clearMusaffaSession} style={{
-              padding: '0.5rem 0.8rem', borderRadius: 'var(--radius-md)', border: 'var(--border-hairline)',
-              background: 'var(--bg-accent)', color: 'var(--text-secondary)', fontSize: 'var(--fs-secondary)',
-              fontWeight: '700', cursor: 'pointer',
-            }}>Dismiss</button>
-            <button onClick={resumeMusaffaSession} style={{
-              padding: '0.5rem 0.8rem', borderRadius: 'var(--radius-md)', border: 'none',
-              background: 'var(--gold-gradient)', color: 'var(--text-on-gold)', fontSize: 'var(--fs-secondary)',
-              fontWeight: '800', cursor: 'pointer',
-            }}>Resume</button>
-          </div>
+        <div style={{ margin: '0 0.5rem' }}>
+          <ResumeBanner
+            savedSession={savedMusaffaSession}
+            onResume={resumeMusaffaSession}
+            onDismiss={clearMusaffaSession}
+          />
         </div>
       )}
 
