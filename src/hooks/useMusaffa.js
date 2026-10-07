@@ -1,6 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getAudioUrl } from '../utils/quranUtils';
 
+/**
+ * How many times a single ayah's play() may be retried before giving up.
+ *
+ * Chosen to clear the browser's autoplay gate on the first app turn without
+ * looping for minutes: a blocked element keeps rejecting with AbortError, so
+ * the retries must reset the element and re-attempt rather than hammer the same
+ * call. Each retry also has to survive a fresh user gesture, which is exactly
+ * what Pause + Resume / leaving and restarting provides.
+ */
+const MAX_PLAY_ATTEMPTS = 5;
+/** Backoff between play() retries, in ms. */
+const PLAY_RETRY_MS = 400;
+
 export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 'ar.alafasy') => {
   const [chunks, setChunks] = useState([]);
   const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
@@ -211,6 +224,25 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
         fn(arg);
       };
 
+      /**
+       * Force the element back to a clean, loadable state.
+       *
+       * A `<audio>` whose `src` was set via `.load()` and then paused (the
+       * preloaded "next ayah", or an element left paused by cleanup) keeps
+       * rejecting `play()` with AbortError even though the file is already
+       * cached. Pausing, clearing `src` and re-assigning it resets the element
+       * so a fresh play() attempt can succeed.
+       */
+      const resetElement = () => {
+        try { el.pause(); } catch { /* ignore */ }
+        try { el.src = ''; } catch { /* ignore */ }
+        try { el.load(); } catch { /* ignore */ }
+        if (el.src !== url) {
+          try { el.src = url; } catch { /* ignore */ }
+        }
+        try { el.load(); } catch { /* ignore */ }
+      };
+
       const failWith = (err) => {
         // Our own doing: the src was swapped, or the user paused/stopped.
         if (err && err.name === 'AbortError') {
@@ -226,33 +258,34 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
           // `.load()` during the previous turn's preload, or was paused during
           // cleanup. The audio is already cached; only the play() call is
           // rejected, so the turn silently stops and the user has to tap
-          // Pause + Resume to restart it.
+          // Pause + Resume (or leave and restart) to get it going again.
           //
           // Only treat it as a deliberate pause when the user actually paused
-          // or stopped. Anything else is a transient that must retry — the
-          // file is on disk, a fresh play() attempt usually succeeds.
+          // or stopped. Anything else is a transient: the file is on disk, and
+          // resetting the element plus a fresh play() attempt usually succeeds.
           if (isPausedRef.current || shouldStopRef.current) {
             settle(reject, err);
             return;
           }
-          if (attempt < 2) {
+          if (attempt < MAX_PLAY_ATTEMPTS) {
             settled = true;
             cleanup();
+            resetElement();
             setTimeout(() => {
               if (shouldStopRef.current || isPausedRef.current) return;
               playAyahAudioAsync(ayah, attempt + 1).then(resolve, reject);
-            }, 500 * (attempt + 1));
+            }, PLAY_RETRY_MS * (attempt + 1));
             return;
           }
         }
-        if (attempt < 2) {
+        if (attempt < MAX_PLAY_ATTEMPTS) {
           settled = true;
           cleanup();
           setTimeout(() => {
             // Do not resurrect playback the user already stopped.
             if (shouldStopRef.current || isPausedRef.current) return;
             playAyahAudioAsync(ayah, attempt + 1).then(resolve, reject);
-          }, 500 * (attempt + 1));
+          }, PLAY_RETRY_MS * (attempt + 1));
           return;
         }
         console.warn(`Audio failed after ${attempt + 1} attempts:`, url, err);
@@ -380,14 +413,30 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
   };
 
   const startMusaffa = (overrideChunks, startChunkIndex = 0, initialTurn, overrideParams) => {
-    // Attempt to unlock audio elements for Safari/Chrome autoplay policy
+    // Unlock audio elements for Safari/Chrome autoplay policy.
+    //
+    // This MUST run on every session start, unconditionally. The previous
+    // guard (`if (!a1.src)`) skipped it whenever the elements already carried a
+    // `src` — which is exactly the case on a resumed session or after a
+    // previous turn's preload. With the unlock skipped, the document stayed in
+    // a "not allowed to play" state and the first real `play()` of the app's
+    // turn was rejected with AbortError. The turn then sat silent until the
+    // user made a fresh gesture (Pause + Resume, leave and restart, or go back
+    // and return) — the only thing that re-authorises playback.
+    //
+    // The silent wav is reset unconditionally so a leftover real `src` never
+    // blocks the unlock, and the play() calls are fire-and-forget (not awaited)
+    // so the user-gesture token is preserved for the first real ayah instead of
+    // being consumed by the unlock — awaiting it is what made Safari block the
+    // first audio.
     try {
       const a1 = getAudio(audioRef);
       const a2 = getAudio(nextAudioRef);
-      // Small silent wav to safely unlock play
       const silentWav = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
-      if (!a1.src) a1.src = silentWav;
-      if (!a2.src) a2.src = silentWav;
+      a1.src = silentWav;
+      a2.src = silentWav;
+      a1.load();
+      a2.load();
       a1.play().then(() => a1.pause()).catch(() => {});
       a2.play().then(() => a2.pause()).catch(() => {});
     } catch {
