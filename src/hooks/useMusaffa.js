@@ -217,15 +217,40 @@ export const useMusaffa = (quranAr, musaffaParams, setPartnerSubView, reciter = 
           // Guard the assignment — `play()` hands back a DOMException, but a
           // primitive rejection would throw here under strict mode.
           if (typeof err === 'object') err.silent = true;
-          settle(reject, err);
-          return;
+
+          // Distinguish a deliberate user pause from a spurious AbortError.
+          //
+          // `play()` rejects with AbortError whenever the element's `src` is
+          // replaced or the element is paused — and at the *start* of an app
+          // turn the preloaded `<audio>` has often just had its `src` set via
+          // `.load()` during the previous turn's preload, or was paused during
+          // cleanup. The audio is already cached; only the play() call is
+          // rejected, so the turn silently stops and the user has to tap
+          // Pause + Resume to restart it.
+          //
+          // Only treat it as a deliberate pause when the user actually paused
+          // or stopped. Anything else is a transient that must retry — the
+          // file is on disk, a fresh play() attempt usually succeeds.
+          if (isPausedRef.current || shouldStopRef.current) {
+            settle(reject, err);
+            return;
+          }
+          if (attempt < 2) {
+            settled = true;
+            cleanup();
+            setTimeout(() => {
+              if (shouldStopRef.current || isPausedRef.current) return;
+              playAyahAudioAsync(ayah, attempt + 1).then(resolve, reject);
+            }, 500 * (attempt + 1));
+            return;
+          }
         }
         if (attempt < 2) {
           settled = true;
           cleanup();
           setTimeout(() => {
             // Do not resurrect playback the user already stopped.
-            if (shouldStopRef.current) return;
+            if (shouldStopRef.current || isPausedRef.current) return;
             playAyahAudioAsync(ayah, attempt + 1).then(resolve, reject);
           }, 500 * (attempt + 1));
           return;
