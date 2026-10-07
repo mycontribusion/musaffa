@@ -122,36 +122,44 @@ export const MudarasaHeader = ({
               Text
             </span>
           </button>
-          {/* This chip only renders in Smart Mode (and only on the user's turn),
-              so `isSttListening === false` does NOT mean "not in smart mode".
-              It means the recogniser is briefly stopped — `handleFinishedTurn`
-              calls `stopAndCheck()` before advancing the chunk, and the restart
-              happens a moment later. Labelling that window "Ready" read as the
-              mode having switched, so it now says what is actually true. */}
+          {/* Smart Mode status chip. Renders only in Smart Mode and only on the
+              user's turn, so its absence on the app's turn is itself the signal
+              that scoring is paused. It shows ONE steady state for the whole
+              turn — it no longer flips to "Restarting..." between verses.
+              
+              That transient label was an implementation detail of the Web Speech
+              API: the recogniser fires `onend`/`onspeechend` between verses and
+              auto-restarts a moment later. Showing it just flickered the chip
+              and, worse, was the same flag the live word-by-word overlay used to
+              gate on — which is what killed the per-verse coloring after the
+              first verse. The overlay is now gated on the turn instead (see
+              MudarasaView), so the chip has nothing useful left to say about the
+              mic's internal restarts and is reduced to the single steady label.
+              
+              `modelStatus` is deliberately NOT the primary key: it is only ever
+              driven to 'ready' on native Android (the Vosk path). On web the
+              recogniser is `window.SpeechRecognition` and the flag stays 'idle'
+              forever, so a model-based label here would sit on a stale word
+              instead of describing what the user is experiencing. */}
           {enableErrorDetection && mudarasaTurn === 'user' && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: '0.35rem',
               padding: '0.3rem 0.6rem', borderRadius: 'var(--radius-full)',
-              background: isSttListening ? 'rgba(16,185,129,0.15)' : 'var(--bg-accent)',
-              border: `1px solid ${isSttListening ? 'rgba(16,185,129,0.4)' : 'var(--glass-border)'}`,
-              transition: 'all 0.3s',
+              background: 'rgba(16,185,129,0.15)',
+              border: '1px solid rgba(16,185,129,0.4)',
             }}>
-              <BrainCircuit size={12} color={isSttListening ? 'var(--accent-emerald)' : 'var(--text-muted)'} />
-               <span style={{ fontSize: 'var(--fs-micro)', fontWeight: '800', color: isSttListening ? 'var(--accent-emerald)' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-status)' }}>
+              <BrainCircuit size={12} color="var(--accent-emerald)" />
+               <span style={{ fontSize: 'var(--fs-micro)', fontWeight: '800', color: 'var(--accent-emerald)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-status)' }}>
                  {modelStatus === 'installing' || modelStatus === 'needs_install'
                    ? 'Installing Model...'
-                   : isSttListening
-                     ? (!isOnline ? 'Checking (Offline)' : 'Checking')
-                     // Deliberately NOT keyed on `modelStatus`. That flag is only
-                     // ever driven to 'ready' on native Android (the Vosk path);
-                     // on web the recogniser is `window.SpeechRecognition` and
-                     // the flag stays 'idle' forever, so a model-based label here
-                     // would sit on a stale word instead of describing the mic.
-                     : 'Restarting...'
+                   : (!isOnline ? 'Checking (Offline)' : 'Checking')
                  }
                </span>
             </div>
          )}
+          {/* `isSttListening` is intentionally no longer consumed here. It was
+              only ever used to drive the transient "Restarting..." label, which
+              served no purpose once the live overlay stopped gating on it. */}
          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: mudarasaTurn === 'app' ? 'var(--accent-gold)' : 'var(--bg-accent)', boxShadow: mudarasaTurn === 'app' ? '0 0 10px var(--accent-gold)' : 'none' }} />
          <div style={{
            width: '8px', height: '8px', borderRadius: '50%',

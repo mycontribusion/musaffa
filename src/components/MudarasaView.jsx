@@ -246,7 +246,20 @@ import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
               const isActive = !enableErrorDetection || idx === activeAyahIndex;
               const isLocked = enableErrorDetection && idx > activeAyahIndex;
 
-              const showLiveOverlay = enableErrorDetection && isSttListening && liveResults && mudarasaTurn === 'user' && isActive;
+              // Live word-by-word coloring is gated on the TURN and on Smart
+              // Mode being active — NOT on `isSttListening`.
+              //
+              // `isSttListening` drops to false on every `onend`/`onspeechend`
+              // the Web Speech API fires, which happens between every verse. Gating
+              // the live overlay on it made the word-by-word coloring die after the
+              // first verse: the chip flipped to "Restarting..." and only the
+              // completed-verse one-pass coloring kept working, even though the
+              // recogniser was still running (it auto-restarts via `_shouldRestart`).
+              // The chip and overlay were reporting a transient mic state instead of
+              // the real mode. What actually defines "we're live" is that it is the
+              // user's turn and Smart Mode is on — both are stable across the whole
+              // turn, so the overlay now stays on until the turn hands over.
+              const showLiveOverlay = enableErrorDetection && liveResults && mudarasaTurn === 'user' && isActive;
               const showCompletedOverlay = enableErrorDetection && isCompleted && (completedResults || liveResults);
 
               if (isActive) {
