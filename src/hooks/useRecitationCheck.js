@@ -27,6 +27,9 @@ export const useRecitationCheck = (
   activeChunkSlice = [],
   quranSimple = null,
 ) => {
+  // ── liveResults state is OWNED HERE, not inside useRecitationWorker ────────
+  const [liveResults, setLiveResults] = useState(null);
+
   const {
     clearStuckTimer,
     clearSilenceTimer,
@@ -47,6 +50,8 @@ export const useRecitationCheck = (
     onAutoFinish,
     onTurnSettled,
     threshold: accuracyThreshold,
+    ayahWordCounts,
+    lastMatchedExpIdx: liveResults?.lastMatchedExpIdx ?? -1,
   });
 
   // ── useSpeechRecognition MUST come before useRecitationWorker ─────────────
@@ -54,23 +59,6 @@ export const useRecitationCheck = (
   // before the worker is created. Callbacks are defined after both hooks; they
   // read transcriptRef.current (always fresh, no stale closure).
   const dispatchLiveCompareRef = useRef(null);
-
-  // ── liveResults state is OWNED HERE, not inside useRecitationWorker ────────
-  // `grammar` is an input to useSpeechRecognition, `grammar` needs
-  // `activeVerseIndex`, and `activeVerseIndex` needs `liveResults` — but
-  // liveResults used to be produced by the useRecitationWorker() call further
-  // DOWN this function. Reading it from the memos above therefore hit the
-  // temporal dead zone on every single render:
-  //
-  //   ReferenceError: Cannot access 'liveResults' before initialization
-  //
-  // which crashed PartnerSession and therefore the whole Musaffa route.
-  //
-  // Owning the state here breaks that render-order cycle: it is declared before
-  // both memos, and useRecitationWorker only ever needs its setter — a stable
-  // useState reference that it invokes from worker.onmessage — which is now
-  // passed in as a parameter. No behaviour changes; only ownership does.
-  const [liveResults, setLiveResults] = useState(null);
 
   const onResultCallback = useCallback((combined) => {
     if (combined) dispatchLiveCompareRef.current?.(combined);
@@ -159,7 +147,7 @@ export const useRecitationCheck = (
     // Both wrappers read transcriptRef (a stable ref object) at call time, so
     // they stay referentially stable for the life of the hook — which is what
     // lets the worker be created exactly once instead of on every render.
-    armStuckTimer: (verseIndex) => armStuckTimer(verseIndex, transcriptRef.current),
+    armStuckTimer: (verseIndex, _transcript, _delay, matchedIdx) => armStuckTimer(verseIndex, transcriptRef.current, _delay, matchedIdx),
     checkAutoFinish,
     armSettleTimer,
     latestPayloadRef,

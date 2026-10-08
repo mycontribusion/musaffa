@@ -106,7 +106,7 @@ export const useRecitationWorker = ({
             stuckVerseIndex = activeVerseIndex;
           }
         }
-        armStuckTimerRef.current?.(stuckVerseIndex);
+        armStuckTimerRef.current?.(stuckVerseIndex, undefined, undefined, payload?.lastMatchedExpIdx);
 
         // Turn completion: the user has recited to the end of the portion once
         // the final ayah has been started with nothing left pending. Accuracy is

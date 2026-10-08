@@ -150,6 +150,9 @@ const PartnerSession = ({
   }, []);
 
   const handleStuck = useCallback(async (stuckIndex) => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[HINT HANDLER]', { stuckIndex, hasHint: !!hintAudioRef.current, hasVerse: !!activeChunkSlice[stuckIndex] });
+    }
     if (hintAudioRef.current || !activeChunkSlice[stuckIndex]) {
       sttActionsRef.current.notifyHintEnded?.();
       return;
@@ -188,6 +191,9 @@ const PartnerSession = ({
 
     const hintAudio = new Audio(audioSrc);
     hintAudioRef.current = hintAudio;
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[HINT PLAY]', { audioSrc: audioSrc.substring(0, 60) });
+    }
     hintAudio.play().catch(e => {
       console.warn('Failed to play hint audio:', e);
       setAudioError(true);
@@ -195,16 +201,11 @@ const PartnerSession = ({
       sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
     });
 
-    // Resume STT after 3 seconds regardless of whether audio is still playing
-    hintResumeTimerRef.current = setTimeout(() => {
-      sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
-    }, 3000);
-
-    // 5-second fallback in case onended/onerror never fire due to network hang
+    // Resume when audio ends; fallback in case onended/onerror never fire
     hintFallbackTimerRef.current = setTimeout(() => {
       interruptHint();
       sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
-    }, 5000);
+    }, 8000);
 
     hintAudio.onended = () => {
       interruptHint();

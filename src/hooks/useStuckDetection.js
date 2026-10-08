@@ -9,7 +9,8 @@ import { useRef, useCallback, useEffect } from 'react';
  * instant a verse is *attempted*, so with no timer the hint fired on the very
  * first result of every verse and talked over the user.
  */
-export const STUCK_HINT_DELAY_MS = 7000;
+export const STUCK_HINT_DELAY_MS = 4000;
+export const PROGRESSION_MISMATCH_DELAY_MS = 2500; // Faster for hands-free case
 
 /**
  * How long the recogniser must stay quiet — producing no new words at all —
@@ -24,12 +25,25 @@ export const STUCK_HINT_DELAY_MS = 7000;
  */
 export const TURN_SETTLE_DELAY_MS = 3500;
 
+const computeVerseWordRanges = (ayahWordCounts = []) => {
+  const ranges = [];
+  let start = 0;
+  for (let i = 0; i < ayahWordCounts.length; i++) {
+    const count = ayahWordCounts[i];
+    ranges.push({ start, end: start + count - 1 });
+    start += count;
+  }
+  return ranges;
+};
+
 export const useStuckDetection = ({
   onStuck,
   interruptHint,
   onAutoFinish,
   onTurnSettled,
   threshold,
+  ayahWordCounts = [],
+  lastMatchedExpIdx = -1,
 }) => {
   const stuckTimerRef = useRef(null);
   const settleTimerRef = useRef(null);
@@ -47,6 +61,9 @@ export const useStuckDetection = ({
   const hintPassedRef = useRef(false);
   /** Latches once a settle has been reported, so one quiet period reports once. */
   const settleFiredRef = useRef(false);
+  const mismatchCountRef = useRef(0);
+  const lastMatchedAtRef = useRef({ idx: -1, verse: -1, ts: Date.now() });
+  const noProgressMsRef = useRef(0);
 
   useEffect(() => { onStuckRef.current = onStuck; }, [onStuck]);
   useEffect(() => { interruptHintRef.current = interruptHint; }, [interruptHint]);
@@ -83,6 +100,7 @@ export const useStuckDetection = ({
     isHintPlayingRef.current = true;
     hintPassedRef.current = false;
     hintedVerseIndexRef.current = verseIndex;
+    mismatchCountRef.current = 0;
 
     // Snapshot what the user had produced at the moment we decided to help.
     // Without these the "did the retry after the hint succeed?" check in
@@ -90,6 +108,9 @@ export const useStuckDetection = ({
     hintTranscriptSnapshotRef.current = transcript || '';
     hintPayloadSnapshotRef.current = payload;
 
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[HINT TRIGGER]', { verseIndex, reason: 'trigger', mismatchCount: mismatchCountRef.current });
+    }
     onStuckRef.current(verseIndex);
   }, [clearStuckTimer]);
 
@@ -100,16 +121,51 @@ export const useStuckDetection = ({
    * so the timer measures *uninterrupted* time on a failing verse rather than
    * restarting on each new partial result.
    */
-  const armStuckTimer = useCallback((verseIndex, transcript = '', delay = STUCK_HINT_DELAY_MS) => {
+  const armStuckTimer = useCallback((verseIndex, transcript = '', delay = STUCK_HINT_DELAY_MS, matchedIdx) => {
     clearStuckTimer();
     if (verseIndex === null || verseIndex === undefined) return;
     if (hintedVerseIndexRef.current === verseIndex) return;
 
+    const verseRanges = computeVerseWordRanges(ayahWordCounts);
+    const currentRange = verseRanges[verseIndex];
+    const lastMatched = matchedIdx !== undefined ? matchedIdx : (latestPayloadRef.current?.lastMatchedExpIdx ?? lastMatchedExpIdx ?? -1);
+    let effectiveDelay = delay;
+    const now = Date.now();
+
+    // Check for progression mismatch: user has aligned speech beyond current verse range
+    if (currentRange && lastMatched > currentRange.end) {
+      mismatchCountRef.current++;
+      if (mismatchCountRef.current >= 2) { // Require persistence across a couple of results
+        effectiveDelay = Math.min(delay, PROGRESSION_MISMATCH_DELAY_MS);
+      }
+    } else {
+      mismatchCountRef.current = 0;
+      // Track no progress case - stuck on same verse, lastMatched not advancing
+      if (lastMatchedAtRef.current.verse === verseIndex && lastMatchedAtRef.current.idx === lastMatched) {
+        const stalled = now - lastMatchedAtRef.current.ts;
+        if (stalled > 3000) { // No progress for 3s while results keep coming
+          effectiveDelay = Math.min(delay, PROGRESSION_MISMATCH_DELAY_MS);
+        }
+      } else {
+        lastMatchedAtRef.current = { idx: lastMatched, verse: verseIndex, ts: now };
+      }
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[HINT ARM]', {
+        verseIndex,
+        lastMatched,
+        currentRangeEnd: currentRange?.end,
+        mismatchCount: mismatchCountRef.current,
+        effectiveDelay,
+        ayahWordCountsLen: ayahWordCounts?.length
+      });
+    }
     stuckTimerRef.current = setTimeout(() => {
       stuckTimerRef.current = null;
       triggerHint(verseIndex, transcript, latestPayloadRef.current);
-    }, delay);
-  }, [clearStuckTimer, triggerHint]);
+    }, effectiveDelay);
+  }, [clearStuckTimer, triggerHint, ayahWordCounts, lastMatchedExpIdx]);
 
   const notifyHintEnded = useCallback(() => {
     isHintPlayingRef.current = false;
@@ -124,6 +180,9 @@ export const useStuckDetection = ({
     hintPassedRef.current = false;
     isHintPlayingRef.current = false;
     settleFiredRef.current = false;
+    mismatchCountRef.current = 0;
+    lastMatchedAtRef.current = { idx: -1, verse: -1, ts: Date.now() };
+    noProgressMsRef.current = 0;
   }, [clearStuckTimer, clearSettleTimer]);
 
   /**
