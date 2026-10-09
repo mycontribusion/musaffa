@@ -28,9 +28,8 @@ import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
    onResume,
    audioError,
    setAudioError,
-   enableErrorDetection,
-   isSttListening,
-   liveResults,
+    enableErrorDetection,
+    liveResults,
    transcript,
    onFinishedTurn,
    onRetryTurn,
@@ -205,9 +204,8 @@ import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
            chunksLength={chunks.length}
            showText={showText}
            setShowText={setShowText}
-           enableErrorDetection={enableErrorDetection}
-           isSttListening={isSttListening}
-           isListening={isListening}
+            enableErrorDetection={enableErrorDetection}
+            isListening={isListening}
            currentVolume={currentVolume}
            sensitivity={sensitivity}
             modelStatus={modelStatus}

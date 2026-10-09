@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, BookOpen, BookX, BrainCircuit, Play, Pause } from 'lucide-react';
+import { ChevronLeft, BookOpen, BookX, Play, Pause } from 'lucide-react';
 
 export const MudarasaHeader = ({
    onBack,
@@ -9,7 +9,6 @@ export const MudarasaHeader = ({
    showText,
    setShowText,
    enableErrorDetection,
-   isSttListening,
    isListening,
    currentVolume,
    sensitivity,
@@ -29,9 +28,44 @@ export const MudarasaHeader = ({
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+   }, []);
 
-  return (
+   /* Dot 2 encodes Smart Mode status as colour when error detection is on:
+      green = checking (STT active), orange = installing model, red = offline.
+      In hands-free mode the existing volume-pulsing behaviour is preserved. */
+   let dot2Bg, dot2Glow;
+   if (mudarasaTurn === 'user') {
+     if (enableErrorDetection) {
+       if (modelStatus === 'installing' || modelStatus === 'needs_install') {
+         dot2Bg = 'var(--accent-gold)';
+         dot2Glow = '0 0 10px var(--accent-gold)';
+       } else if (!isOnline) {
+         dot2Bg = 'var(--accent-red)';
+         dot2Glow = '0 0 10px var(--accent-red)';
+       } else {
+         dot2Bg = 'var(--accent-emerald)';
+         dot2Glow = '0 0 10px var(--accent-emerald)';
+       }
+     } else {
+       if (isListening) {
+         if (currentVolume > sensitivity) {
+           dot2Bg = 'var(--accent-emerald)';
+           dot2Glow = '0 0 10px var(--accent-emerald)';
+         } else {
+           dot2Bg = 'var(--glass-border)';
+           dot2Glow = 'none';
+         }
+       } else {
+         dot2Bg = 'var(--accent-emerald)';
+         dot2Glow = '0 0 10px var(--accent-emerald)';
+       }
+     }
+   } else {
+     dot2Bg = 'var(--bg-accent)';
+     dot2Glow = 'none';
+   }
+
+   return (
     /* Top-level header, built to the same spec as every other standalone header
        in the app (SurahDetail, WeaknessTracker, AudioManager, MutashabihSelection,
        MutashabihatSession) so the bar is interchangeable as you move between
@@ -56,10 +90,13 @@ export const MudarasaHeader = ({
        `flexShrink: 0` is required because MudarasaView is a flex column and the
        ayah list would otherwise compress the bar.
 
-       The "Listen"/"Recite" turn label was removed: the header now carries only
-       the back control and the `x/x` portion counter. Turn state is still
-       communicated by the two status dots on the right, which recolour gold
-       (app's turn) and emerald (user's turn) from the same `mudarasaTurn`. */
+        The "Listen"/"Recite" turn label was removed: the header now carries only
+        the back control and the `x/x` portion counter. Turn state is still
+        communicated by the two status dots on the right: Dot 1 is gold during
+        the app's turn and grey during the user's turn; Dot 2 is green during the
+        user's turn (with volume-pulsing in hands-free mode) and additionally
+        encodes Smart Mode status as colour — orange for installing, red for
+        offline — so no text chip is needed. */
     <div style={{
       position: 'sticky', top: 0, zIndex: 'var(--z-header)',
       width: '100vw', marginLeft: 'calc(50% - 50vw)', flexShrink: 0,
@@ -122,55 +159,16 @@ export const MudarasaHeader = ({
               Text
             </span>
           </button>
-          {/* Smart Mode status chip. Renders only in Smart Mode and only on the
-              user's turn, so its absence on the app's turn is itself the signal
-              that scoring is paused. It shows ONE steady state for the whole
-              turn — it no longer flips to "Restarting..." between verses.
-              
-              That transient label was an implementation detail of the Web Speech
-              API: the recogniser fires `onend`/`onspeechend` between verses and
-              auto-restarts a moment later. Showing it just flickered the chip
-              and, worse, was the same flag the live word-by-word overlay used to
-              gate on — which is what killed the per-verse coloring after the
-              first verse. The overlay is now gated on the turn instead (see
-              MudarasaView), so the chip has nothing useful left to say about the
-              mic's internal restarts and is reduced to the single steady label.
-              
-              `modelStatus` is deliberately NOT the primary key: it is only ever
-              driven to 'ready' on native Android (the Vosk path). On web the
-              recogniser is `window.SpeechRecognition` and the flag stays 'idle'
-              forever, so a model-based label here would sit on a stale word
-              instead of describing what the user is experiencing. */}
-          {enableErrorDetection && mudarasaTurn === 'user' && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '0.35rem',
-              padding: '0.3rem 0.6rem', borderRadius: 'var(--radius-full)',
-              background: 'rgba(16,185,129,0.15)',
-              border: '1px solid rgba(16,185,129,0.4)',
-            }}>
-              <BrainCircuit size={12} color="var(--accent-emerald)" />
-               <span style={{ fontSize: 'var(--fs-micro)', fontWeight: '800', color: 'var(--accent-emerald)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-status)' }}>
-                 {modelStatus === 'installing' || modelStatus === 'needs_install'
-                   ? 'Installing Model...'
-                   : (!isOnline ? 'Checking (Offline)' : 'Checking')
-                 }
-               </span>
-            </div>
-         )}
-          {/* `isSttListening` is intentionally no longer consumed here. It was
-              only ever used to drive the transient "Restarting..." label, which
-              served no purpose once the live overlay stopped gating on it. */}
-         <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: mudarasaTurn === 'app' ? 'var(--accent-gold)' : 'var(--bg-accent)', boxShadow: mudarasaTurn === 'app' ? '0 0 10px var(--accent-gold)' : 'none' }} />
-         <div style={{
-           width: '8px', height: '8px', borderRadius: '50%',
-           background: mudarasaTurn === 'user'
-             ? (isListening ? (currentVolume > sensitivity ? 'var(--accent-emerald)' : 'var(--glass-border)') : 'var(--accent-emerald)')
-             : 'var(--bg-accent)',
-           boxShadow: mudarasaTurn === 'user'
-             ? (isListening ? (currentVolume > sensitivity ? '0 0 10px var(--accent-emerald)' : 'none') : '0 0 10px var(--accent-emerald)')
-             : 'none',
-           transition: 'all 0.1s'
-         }} />
+          {/* Smart Mode status is now encoded as colour on Dot 2 below
+              (green = checking, orange = installing, red = offline) instead
+              of a text chip, keeping the header compact on the user's turn. */}
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: mudarasaTurn === 'app' ? 'var(--accent-gold)' : 'var(--bg-accent)', boxShadow: mudarasaTurn === 'app' ? '0 0 10px var(--accent-gold)' : 'none' }} />
+          <div style={{
+            width: '8px', height: '8px', borderRadius: '50%',
+            background: dot2Bg,
+            boxShadow: dot2Glow,
+            transition: 'all 0.1s'
+          }} />
        </div>
        </div>
      </div>
