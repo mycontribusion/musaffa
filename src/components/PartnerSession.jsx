@@ -5,7 +5,8 @@ import QuizEngine from './QuizEngine';
 import { ResumeBanner } from './partnerConfig/ResumeBanner';
 import { useMic } from '../hooks/useMic';
 import { useRecitationCheck } from '../hooks/useRecitationCheck';
-import { getAudioUrl, buildExpectedText, buildAyahWordCounts } from '../utils/quranUtils';
+import { useLocalStorageState } from '../hooks/useLocalStorageState';
+import { getAudioUrl, buildExpectedText, buildAyahWordCounts, getHintWords } from '../utils/quranUtils';
 
 const PartnerSession = ({
   subView,
@@ -103,8 +104,14 @@ const PartnerSession = ({
     () => (currentChunk ? currentChunk.slice(retryStartIndex) : []),
     [currentChunk, retryStartIndex]
   );
-  const expectedText = activeChunkSlice.length > 0 ? buildExpectedText(activeChunkSlice, quranSimple) : '';
-  const ayahWordCounts = activeChunkSlice.length > 0 ? buildAyahWordCounts(activeChunkSlice, quranSimple) : [];
+  const expectedText = useMemo(
+    () => (activeChunkSlice.length > 0 ? buildExpectedText(activeChunkSlice, quranSimple) : ''),
+    [activeChunkSlice, quranSimple]
+  );
+  const ayahWordCounts = useMemo(
+    () => (activeChunkSlice.length > 0 ? buildAyahWordCounts(activeChunkSlice, quranSimple) : []),
+    [activeChunkSlice, quranSimple]
+  );
 
   // Declare handleFinishedTurn BEFORE useRecitationCheck so it can be passed as onAutoFinish.
   // We use a ref to avoid stale closure issues with the initial callback registration.
@@ -115,7 +122,11 @@ const PartnerSession = ({
   const hintAudioRef = useRef(null);
   const hintResumeTimerRef = useRef(null);
   const hintFallbackTimerRef = useRef(null);
+  const visualHintTimerRef = useRef(null);
+  const [visualHint, setVisualHint] = useState(null);
   const sttActionsRef = useRef({});
+  const [audioHintsEnabled, setAudioHintsEnabled] = useLocalStorageState('quran_audio_hints_enabled', true);
+  const audioHintsEnabledRef = useRef(audioHintsEnabled);
   /**
    * Mirrors `sttActive` for the hint callbacks below.
    *
@@ -131,6 +142,9 @@ const PartnerSession = ({
   const clearResultsRef = useRef(null);
 
   const interruptHint = useCallback(() => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[INTERRUPT HINT CALLED]');
+    }
     if (hintResumeTimerRef.current) {
       clearTimeout(hintResumeTimerRef.current);
       hintResumeTimerRef.current = null;
@@ -139,84 +153,126 @@ const PartnerSession = ({
       clearTimeout(hintFallbackTimerRef.current);
       hintFallbackTimerRef.current = null;
     }
+    if (visualHintTimerRef.current) {
+      clearTimeout(visualHintTimerRef.current);
+      visualHintTimerRef.current = null;
+    }
     if (hintAudioRef.current) {
       try { hintAudioRef.current.pause(); } catch (e) {}
       hintAudioRef.current = null;
     }
+    setVisualHint(null);
     // Release the hook's authoritative in-flight lock so the trigger paths and
     // the audio element stay in agreement (prevents overlapping hint playback).
     sttActionsRef.current.notifyHintEnded?.();
     setIsHintActive(false);
   }, []);
 
+  useEffect(() => {
+    audioHintsEnabledRef.current = audioHintsEnabled;
+    if (!audioHintsEnabled && hintAudioRef.current) {
+      interruptHint();
+    }
+  }, [audioHintsEnabled, interruptHint]);
+
   const handleStuck = useCallback(async (stuckIndex) => {
     if (process.env.NODE_ENV !== 'production') {
-      console.log('[HINT HANDLER]', { stuckIndex, hasHint: !!hintAudioRef.current, hasVerse: !!activeChunkSlice[stuckIndex] });
+      console.log('[HINT HANDLER]', { stuckIndex, hasHint: !!hintAudioRef.current, hasVerse: !!activeChunkSlice[stuckIndex], turn, sttActive });
     }
     if (hintAudioRef.current || !activeChunkSlice[stuckIndex]) {
       sttActionsRef.current.notifyHintEnded?.();
       return;
     }
 
-    // Set placeholder to prevent concurrent hints while checking cache
-    hintAudioRef.current = { pause: () => {} };
-
     const ayah = activeChunkSlice[stuckIndex];
-    const reciterSlug = params.reciter || 'ar.alafasy';
-    const url = getAudioUrl(ayah.number, reciterSlug, ayah.surahNumber, ayah.numberInSurah);
+    const hintWords = getHintWords(
+      ayah,
+      stuckIndex,
+      ayahWordCounts,
+      liveResultsRef.current?.lastMatchedExpIdx ?? -1,
+      5
+    );
 
-    // Pause STT for the first 3 seconds so the hint plays without being cut.
-    sttActionsRef.current.pauseRecognition?.();
-
-    let audioSrc = url;
-    setIsHintActive(true);
-    try {
-      if ('caches' in window) {
-        const cache = await caches.open('quran-audio-v1');
-        const response = await cache.match(url);
-        if (response) {
-          const blob = await response.blob();
-          audioSrc = URL.createObjectURL(blob);
-        } else {
-          // Pre-fetch so it caches for next time
-          fetch(url, { mode: 'no-cors' }).catch(() => {});
-        }
-      }
-    } catch (e) {
-      console.warn('Cache check failed:', e);
-    }
-
-    // Double check if interrupted during async cache check
-    if (!hintAudioRef.current) return;
-
-    const hintAudio = new Audio(audioSrc);
-    hintAudioRef.current = hintAudio;
     if (process.env.NODE_ENV !== 'production') {
-      console.log('[HINT PLAY]', { audioSrc: audioSrc.substring(0, 60) });
+      console.log('[SET VISUAL HINT]', { hintWords, turn, sttActive });
     }
-    hintAudio.play().catch(e => {
-      console.warn('Failed to play hint audio:', e);
-      setAudioError(true);
-      interruptHint();
-      sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
+    // Get first 5 words of the full verse for the footer
+    const fullVerseText = ayah.text || '';
+    const firstWords = fullVerseText.trim().split(/\s+/).filter(Boolean).slice(0, 5).join(' ');
+    setVisualHint({
+      words: hintWords,
+      text: hintWords.join(' '),
+      surahNumber: ayah.surahNumber,
+      numberInSurah: ayah.numberInSurah,
+      ayahNumber: ayah.number,
+      verseStartText: firstWords,
     });
+    setIsHintActive(true);
 
-    // Resume when audio ends; fallback in case onended/onerror never fire
-    hintFallbackTimerRef.current = setTimeout(() => {
-      interruptHint();
-      sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
-    }, 8000);
+    if (audioHintsEnabledRef.current) {
+      // Set placeholder to prevent concurrent hints while checking cache
+      hintAudioRef.current = { pause: () => {} };
 
-    hintAudio.onended = () => {
-      interruptHint();
-      sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
-    };
-    hintAudio.onerror = () => {
-      setAudioError(true);
-      interruptHint();
-      sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
-    };
-  }, [activeChunkSlice, params.reciter, interruptHint, setAudioError]);
+      const reciterSlug = params.reciter || 'ar.alafasy';
+      const url = getAudioUrl(ayah.number, reciterSlug, ayah.surahNumber, ayah.numberInSurah);
+
+      // Pause STT for audio hint so it doesn't pick up speaker sound
+      sttActionsRef.current.pauseRecognition?.();
+
+      let audioSrc = url;
+      try {
+        if ('caches' in window) {
+          const cache = await caches.open('quran-audio-v1');
+          const response = await cache.match(url);
+          if (response) {
+            const blob = await response.blob();
+            audioSrc = URL.createObjectURL(blob);
+          }
+          // If not cached, play directly from URL (stream online)
+        }
+      } catch (e) {
+        console.warn('Cache check failed:', e);
+      }
+
+      // Double check if interrupted during async cache check
+      if (!hintAudioRef.current) return;
+
+      const hintAudio = new Audio(audioSrc);
+      hintAudioRef.current = hintAudio;
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[HINT PLAY]', { audioSrc: audioSrc.substring(0, 60) });
+      }
+      hintAudio.play().catch(e => {
+        console.warn('Failed to play hint audio:', e);
+        setAudioError(true);
+        // Don't interruptHint - keep visual hint until verse solved or user dismisses
+        hintAudioRef.current = null;
+        sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
+      });
+
+      // Resume STT when audio ends; fallback in case onended/onerror never fire
+      // Visual hint persists until verse solved or user dismisses
+      hintFallbackTimerRef.current = setTimeout(() => {
+        hintAudioRef.current = null;
+        sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
+      }, 8000);
+
+      hintAudio.onended = () => {
+        hintAudioRef.current = null;
+        sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
+      };
+      hintAudio.onerror = () => {
+        setAudioError(true);
+        hintAudioRef.current = null;
+        sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
+      };
+    } else {
+      // Audio hints disabled: visual hint stays until verse is solved or user dismisses
+      // No auto-dismiss timer
+      if (visualHintTimerRef.current) clearTimeout(visualHintTimerRef.current);
+      visualHintTimerRef.current = null;
+    }
+  }, [activeChunkSlice, ayahWordCounts, params.reciter, interruptHint, setAudioError]);
 
   // STT error detection — active during user's recitation turn only
   // onAutoFinish fires automatically after silence, triggering handleFinishedTurn
@@ -254,7 +310,9 @@ const PartnerSession = ({
       modelStatus,
       ensureModelReady,
       activeChunkSlice,
-      quranSimple
+      quranSimple,
+      audioHintsEnabled,
+      params.stuckTimerDuration ?? 5
     );
 
   sttActionsRef.current = { pauseRecognition, resumeRecognition, notifyHintEnded };
@@ -313,9 +371,30 @@ const PartnerSession = ({
     };
   }, [interruptHint]);
 
+  // Auto-dismiss visual hint when the hinted verse is fully solved
+  useEffect(() => {
+    if (!visualHint || !liveResults?.verseStats) return;
+    // verseStats.index is 0-based chunk index; visualHint.numberInSurah is ayah number in surah
+    // Find the verse stat for the hinted verse by matching surah + ayah number
+    const verseStat = liveResults.verseStats.find(v => {
+      const chunk = chunks[currentChunkIndex];
+      const ayah = chunk?.[v.index];
+      return ayah && ayah.number === visualHint.ayahNumber;
+    });
+    if (verseStat && verseStat.accuracy >= (params.errorThreshold ?? 50) && !verseStat.hasPending) {
+      interruptHint();
+    }
+  }, [visualHint, liveResults, params.errorThreshold, interruptHint, chunks, currentChunkIndex]);
+
    // Stop hint audio if the turn changes or we exit Mudarasa view
    useEffect(() => {
+     if (process.env.NODE_ENV !== 'production') {
+       console.log('[TURN CHANGE EFFECT]', { sttActive, turn, subView, enableErrorDetection });
+     }
      if (!sttActive) {
+       if (process.env.NODE_ENV !== 'production') {
+         console.log('[INTERRUPT HINT - sttActive false]');
+       }
        interruptHint();
      }
    }, [sttActive, interruptHint]);
@@ -435,6 +514,10 @@ const PartnerSession = ({
       setRetryStartIndex={setRetryStartIndex}
       completedResults={completedResults}
       isHintActive={isHintActive}
+      audioHintsEnabled={audioHintsEnabled}
+      onToggleAudioHints={() => setAudioHintsEnabled((prev) => !prev)}
+      visualHint={visualHint}
+      onDismissVisualHint={interruptHint}
     />
   );
 

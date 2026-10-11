@@ -369,4 +369,30 @@ export const getSingleAyahGrammar = (ayah, quranSimple = null) => {
   return buildVoskGrammar(normalized);
 };
 
+/**
+ * Extract up to maxWords (default 5) for a visual hint on a stuck verse,
+ * starting from the word where the user hesitated/got stuck.
+ */
+export const getHintWords = (ayah, stuckIndex = 0, ayahWordCounts = [], lastMatchedExpIdx = -1, maxWords = 5) => {
+  if (!ayah) return [];
+  const rawText = ayah.text || '';
+  const text = stripBismillah(rawText, ayah.surahNumber, ayah.numberInSurah);
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [];
+
+  let startIndex = 0;
+  if (ayahWordCounts && ayahWordCounts.length > stuckIndex && lastMatchedExpIdx !== undefined && lastMatchedExpIdx >= 0) {
+    let verseStart = 0;
+    for (let i = 0; i < stuckIndex; i++) {
+      verseStart += (ayahWordCounts[i] || 0);
+    }
+    if (lastMatchedExpIdx >= verseStart) {
+      const matchedInVerse = lastMatchedExpIdx - verseStart;
+      startIndex = Math.min(matchedInVerse + 1, words.length - 1);
+    }
+  }
+
+  return words.slice(startIndex, startIndex + maxWords);
+};
+
 

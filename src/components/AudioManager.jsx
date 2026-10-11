@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronDown, Download, Trash2, Volume2, X } from 'lucide-react';
+import { ChevronLeft, ChevronDown, Download, Trash2, Volume2, X, ArrowUp, ArrowDown } from 'lucide-react';
 import { RECITERS } from '../utils/quranUtils';
 
 /**
@@ -19,8 +19,11 @@ import { RECITERS } from '../utils/quranUtils';
  * using the same `reciter` / `setReciter` state the rest of the app uses.
  */
 const AudioManager = ({ surahs, audioDownloadControls, reciter, setReciter, setView }) => {
-  const [downloadingSurah, setDownloadingSurah] = useState(null);
   const [deletingSurah, setDeletingSurah] = useState(null);
+  // Sort direction for the list: ascending (1 → 114) is the natural order, so
+  // it's the default and the toggle only flips to descending. Toggling back
+  // returns to ascending rather than cycling, keeping the control simple.
+  const [sortDescending, setSortDescending] = useState(false);
   /* Deleting is destructive and the cached files are not recoverable, so the
      trash button no longer deletes directly — it stages the surah number here
      and the confirm modal below performs the actual delete. */
@@ -33,17 +36,16 @@ const AudioManager = ({ surahs, audioDownloadControls, reciter, setReciter, setV
     deleteSurahAudio,
     isSurahAudioDownloaded,
     downloadedSurahs,
+    downloadQueue,
   } = audioDownloadControls;
 
-  const handleDownload = useCallback(async (surahNumber) => {
-    setDownloadingSurah(surahNumber);
-    try {
-      await downloadSurahAudio(surahNumber);
-    } catch (err) {
-      console.error('Download failed:', err);
-    } finally {
-      setDownloadingSurah(null);
-    }
+  // `downloadSurahAudio` no longer blocks: a request that arrives while another
+  // is running is queued by the hook, so clicking several download icons just
+  // lines them up. The active download and the waiting list are both reported
+  // back through `downloadStatus` / `downloadQueue`, so the rows derive their
+  // state from those instead of a local flag that would go stale.
+  const handleDownload = useCallback((surahNumber) => {
+    downloadSurahAudio(surahNumber);
   }, [downloadSurahAudio]);
 
   const handleDelete = useCallback(async (surahNumber) => {
@@ -85,10 +87,16 @@ const AudioManager = ({ surahs, audioDownloadControls, reciter, setReciter, setV
    * Surah X…" message, which carried no information the row didn't already
    * show. Falls back to `Starting…` for the first paint, before the hook has
    * reported a total ayah count.
+   *
+   * A surah waiting behind the active download shows `Queued` so the user can
+   * see their clicks were registered and are lined up in order.
    */
+  const isQueued = (surahNumber) => downloadQueue.includes(surahNumber);
+
   const getStatusText = (surahNumber) => {
     if (deletingSurah === surahNumber) return 'Deleting…';
-    if (downloadingSurah === surahNumber || (downloadStatus?.surahNumber === surahNumber && downloadStatus?.isDownloading)) {
+    if (isQueued(surahNumber)) return 'Queued';
+    if (downloadStatus?.surahNumber === surahNumber && downloadStatus?.isDownloading) {
       if (downloadStatus?.total > 0) {
         return `${downloadStatus.progress}% (${downloadStatus.completed}/${downloadStatus.total})`;
       }
@@ -101,10 +109,22 @@ const AudioManager = ({ surahs, audioDownloadControls, reciter, setReciter, setV
   };
 
   const getStatusColor = (surahNumber) => {
-    if (deletingSurah === surahNumber || downloadingSurah === surahNumber) return 'var(--accent-gold)';
+    if (deletingSurah === surahNumber) return 'var(--accent-red)';
+    if (isQueued(surahNumber)) return 'var(--accent-gold)';
+    if (downloadStatus?.surahNumber === surahNumber && downloadStatus?.isDownloading) return 'var(--accent-gold)';
     if (isSurahAudioDownloaded(surahNumber)) return 'var(--accent-emerald)';
     return 'var(--text-muted)';
   };
+
+  // The list renders in ascending order by default (1 → 114); the sort toggle
+  // flips it to descending (114 → 1). A stable copy is needed so the rows keep
+  // their identity across the toggle rather than remounting.
+  const sortedSurahs = useMemo(() => {
+    const copy = surahs.slice();
+    if (sortDescending) copy.sort((a, b) => b.number - a.number);
+    else copy.sort((a, b) => a.number - b.number);
+    return copy;
+  }, [surahs, sortDescending]);
 
   return (
     <motion.div
@@ -206,9 +226,37 @@ const AudioManager = ({ surahs, audioDownloadControls, reciter, setReciter, setV
         fontSize: 'var(--fs-secondary)', color: 'var(--text-muted)', fontWeight: '600',
       }}>
         <span>{downloadedSurahs.length} of {surahs.length} surahs downloaded</span>
+        {downloadQueue.length > 0 && (
+          <span style={{ color: 'var(--accent-gold)' }}>
+            • {downloadQueue.length} queued {downloadQueue.length === 1 ? '' : '(waiting)'}
+          </span>
+        )}
         {downloadStatus?.notice && (
           <span style={{ color: 'var(--accent-gold)' }}>• {downloadStatus.notice}</span>
         )}
+        {/* Sort toggle — aligned to the right edge of the row. Ascending
+            (1 → 114) is the default; the single button flips to descending
+            (114 → 1) and back. The "X of 114" count stays in its original
+            position on the left. */}
+        <button
+          type="button"
+          onClick={() => setSortDescending((prev) => !prev)}
+          title={sortDescending ? 'Show ascending (1 → 114)' : 'Show descending (114 → 1)'}
+          aria-label={sortDescending ? 'Show ascending (1 → 114)' : 'Show descending (114 → 1)'}
+          style={{
+            marginLeft: 'auto', flexShrink: 0,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            gap: '0.3rem', padding: '0.35rem 0.6rem',
+            borderRadius: 'var(--radius-sm)',
+            border: 'var(--border-hairline)',
+            background: 'var(--bg-accent)',
+            color: 'var(--accent-gold)',
+            cursor: 'pointer', fontSize: '0.75rem', fontWeight: '700',
+          }}
+        >
+          {sortDescending ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+          <span>{sortDescending ? '114 → 1' : '1 → 114'}</span>
+        </button>
       </div>
 
       {/* List — the page scrolls, the list is no longer its own scroll container */}
@@ -216,9 +264,10 @@ const AudioManager = ({ surahs, audioDownloadControls, reciter, setReciter, setV
         display: 'flex', flexDirection: 'column', gap: '0.35rem',
         padding: '0.5rem 0 1.5rem',
       }}>
-        {surahs.map((surah) => {
+        {sortedSurahs.map((surah) => {
           const isDownloaded = isSurahAudioDownloaded(surah.number);
           const isDownloading = downloadStatus?.surahNumber === surah.number && downloadStatus?.isDownloading;
+          const isQueued = downloadQueue.includes(surah.number);
           const isDeleting = deletingSurah === surah.number;
 
           return (
@@ -244,8 +293,9 @@ const AudioManager = ({ surahs, audioDownloadControls, reciter, setReciter, setV
               }}>
                 {surah.englishName}
               </span>
-              {/* Live progress (`42% (120/286)`) while downloading. `minWidth` is
-                  wide enough for a 3-digit ayah count on the longest surahs
+              {/* Live progress (`42% (120/286)`) while downloading, or `Queued`
+                  while waiting behind the active download. `minWidth` is wide
+                  enough for a 3-digit ayah count on the longest surahs
                   (Al-Baqarah, 286) without the name column reflowing. */}
               <span style={{
                 fontSize: 'var(--fs-meta)', fontWeight: '700', color: getStatusColor(surah.number),
@@ -297,17 +347,17 @@ const AudioManager = ({ surahs, audioDownloadControls, reciter, setReciter, setV
                 ) : (
                   <button
                     onClick={() => handleDownload(surah.number)}
-                    disabled={isDeleting || downloadStatus?.isDownloading}
-                    title="Download audio for offline use"
-                    aria-label={`Download audio for Surah ${surah.englishName}`}
+                    disabled={isDeleting || isQueued}
+                    title={isQueued ? 'Already queued' : 'Download audio for offline use'}
+                    aria-label={isQueued ? `Surah ${surah.englishName} is queued to download` : `Download audio for Surah ${surah.englishName}`}
                     style={{
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                       width: '2.25rem', height: '2.25rem', borderRadius: 'var(--radius-sm)',
                       border: '1px solid var(--glass-border)',
                       background: 'var(--bg-secondary)',
-                      color: downloadStatus?.isDownloading ? 'var(--text-muted)' : 'var(--accent-gold)',
-                      cursor: downloadStatus?.isDownloading ? 'not-allowed' : 'pointer',
-                      opacity: downloadStatus?.isDownloading || isDeleting ? 0.5 : 1,
+                      color: isQueued ? 'var(--accent-gold)' : 'var(--accent-gold)',
+                      cursor: isQueued ? 'default' : 'pointer',
+                      opacity: isDeleting ? 0.5 : 1,
                     }}
                   >
                     <Download size={15} />

@@ -69,7 +69,7 @@ const App = () => {
   const [multiSurahSession, setMultiSurahSession] = useLocalStorageState('quran_multi_surah_session', null);
   const [targetAyah, setTargetAyah] = useState(null);
 
-  const DEFAULT_PARAMS = { startSurah: 1, startAyah: 1, endSurah: 2, endAyah: 286, portion: 'page', whoStarts: 'app', autoNext: true, micSensitivity: 15, errorDetection: false, errorThreshold: 50 };
+  const DEFAULT_PARAMS = { startSurah: 1, startAyah: 1, endSurah: 2, endAyah: 286, portion: 'page', whoStarts: 'app', autoNext: true, micSensitivity: 15, errorDetection: false, errorThreshold: 50, stuckTimerDuration: 5 };
   
   const [musaffaParams, setMusaffaParams] = useLocalStorageState('quran_musaffa_params', DEFAULT_PARAMS);
   const [reciter, setReciter] = useLocalStorageState('quran_reciter', 'ar.saoodshuraym', true);

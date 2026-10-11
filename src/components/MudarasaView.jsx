@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import RecitationStatusOverlay from './RedBlinkOverlay';
-import { Mic, CheckCircle2 } from 'lucide-react';
+import { Mic, CheckCircle2, Volume2, VolumeX } from 'lucide-react';
 import { hasBismillahHeader, BISMILLAH_SIMPLE, removeTashkeel, normalizeArabic, expandMuqattaat } from '../utils/quranUtils';
 
 // New Extracted Components & Hooks, Alhamdulillah
@@ -9,6 +9,7 @@ import { MudarasaHeader } from './mudarasa/MudarasaHeader';
 import { AudioErrorModal } from './mudarasa/AudioErrorModal';
 import { RetryPrompt } from './mudarasa/RetryPrompt';
 import { AyahCard } from './mudarasa/AyahCard';
+import VisualHintOverlay from './mudarasa/VisualHintOverlay';
 import { useActiveVerseIndex } from './mudarasa/hooks/useActiveVerseIndex';
 import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
 
@@ -46,6 +47,10 @@ import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
    setRetryStartIndex,
    completedResults,
    isHintActive,
+   audioHintsEnabled = true,
+   onToggleAudioHints,
+   visualHint,
+   onDismissVisualHint,
    modelStatus,
  }) => {
   const [showText, setShowText] = useState(() => {
@@ -186,6 +191,11 @@ import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
   return (
     <>
       <RecitationStatusOverlay mode={overlayMode} />
+      <VisualHintOverlay
+        hint={visualHint}
+        onDismiss={onDismissVisualHint}
+        isAudioPlaying={isHintActive && audioHintsEnabled}
+      />
       {/* {showInternetBanner && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, padding: '0.5rem 1rem',
@@ -340,6 +350,38 @@ import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
                         >
                           <CheckCircle2 size={10} /> Mark Satisfied
                         </button>
+                        {onToggleAudioHints && (
+                          <button
+                            type="button"
+                            onClick={onToggleAudioHints}
+                            title={audioHintsEnabled ? 'Disable audio hints' : 'Enable audio hints'}
+                            style={{
+                              padding: '0.45rem 0.85rem',
+                              borderRadius: 'var(--radius-full)',
+                              cursor: 'pointer',
+                              border: audioHintsEnabled
+                                ? '1px solid var(--accent-gold-soft)'
+                                : '1px solid rgba(148, 163, 184, 0.25)',
+                              background: audioHintsEnabled
+                                ? 'rgba(251, 191, 36, 0.08)'
+                                : 'rgba(148, 163, 184, 0.06)',
+                              color: audioHintsEnabled
+                                ? 'var(--accent-gold)'
+                                : 'var(--text-muted)',
+                              fontWeight: '800',
+                              fontSize: 'var(--fs-label)',
+                              textTransform: 'uppercase',
+                              letterSpacing: 'var(--tracking-status)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              transition: 'all 0.2s',
+                            }}
+                          >
+                            {audioHintsEnabled ? <Volume2 size={11} /> : <VolumeX size={11} />}
+                            {audioHintsEnabled ? 'Audio Hint: On' : 'Audio Hint: Off'}
+                          </button>
+                        )}
                       </div>
                       {activeStat && (
                         <span style={{ color: activeStat.accuracy < targetAccuracy ? 'rgba(245,158,11,0.8)' : 'var(--accent-emerald)', opacity: 0.9, fontWeight: '800', fontSize: 'var(--fs-label)' }}>

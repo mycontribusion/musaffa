@@ -6,12 +6,11 @@ export const useRecitationWorker = ({
   ayahWordCounts,
   threshold,
   hintedVerseIndexRef,
-  hintTranscriptSnapshotRef,
-  hintPayloadSnapshotRef,
   hintPassedRef,
   armStuckTimer,
   checkAutoFinish,
   armSettleTimer,
+  checkGreenWords,
   latestPayloadRef,
   // Injected by useRecitationCheck, which owns the liveResults state. It must be
   // owned there because activeVerseIndex/grammar are derived from liveResults and
@@ -51,11 +50,13 @@ export const useRecitationWorker = ({
   const armStuckTimerRef = useRef(armStuckTimer);
   const checkAutoFinishRef = useRef(checkAutoFinish);
   const armSettleTimerRef = useRef(armSettleTimer);
+  const checkGreenWordsRef = useRef(checkGreenWords);
 
   useEffect(() => {
     armStuckTimerRef.current = armStuckTimer;
     checkAutoFinishRef.current = checkAutoFinish;
     armSettleTimerRef.current = armSettleTimer;
+    checkGreenWordsRef.current = checkGreenWords;
   });
 
   useEffect(() => {
@@ -91,10 +92,15 @@ export const useRecitationWorker = ({
         const verseStats = payload?.verseStats || [];
         const activeVerseIndex = computeActiveVerseIndex(verseStats, activeThreshold);
 
-        // Stuck detection: arm only while the active verse has been attempted
-        // and is still short of target, and disarm on every other result. The
-        // hint is now reached through a real countdown rather than firing on
-        // the first under-threshold result and talking over the user.
+        // ── New "no green word" stuck detection ──────────────────────────────
+        // Check if any new words have turned green (correct) and manage the
+        // 3-second no-green-word timer.
+        checkGreenWordsRef.current?.(payload?.results, activeVerseIndex);
+
+        // Stuck detection (original): arm only while the active verse has been
+        // attempted and is still short of target, and disarm on every other
+        // result. The hint is now reached through a real countdown rather than
+        // firing on the first under-threshold result and talking over the user.
         let stuckVerseIndex = null;
         if (activeVerseIndex < verseStats.length) {
           const activeVerseStat = verseStats[activeVerseIndex];

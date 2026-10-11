@@ -135,6 +135,17 @@ export const useAudioDownload = (quranData, reciterId = 'ar.alafasy') => {
 
   /** Non-render lock so the guard works even in the same tick as a state update. */
   const activeRef = useRef(null);
+  /** Pending download requests that wait for the active download to finish.
+   *  Kept as a ref (not state) so the drain logic can mutate it synchronously
+   *  inside the active download's `finally` without a render cycle. */
+  const queueRef = useRef([]);
+  /** Mirror of `queueRef` exposed to the UI so rows can render a "Queued"
+   *  label for surahs waiting their turn. */
+  const [downloadQueue, setDownloadQueue] = useState([]);
+  /** Always points at the latest `downloadSurahAudio` so the queue drain can
+   *  call it from inside its own `finally` without a self-reference lint error
+   *  or a stale-closure bug if the callback identity ever changes. */
+  const downloadFnRef = useRef(null);
   /** Legacy entries already probed for a given reciter, so unresolvable
    *  entries settle instead of being re-probed on every effect run. */
   const legacyTriedRef = useRef(new Set());
@@ -230,21 +241,45 @@ export const useAudioDownload = (quranData, reciterId = 'ar.alafasy') => {
   }, []);
 
   /**
+   * Drain the queue once the active download finishes. Only one download runs
+   * at a time, so this pops the next surah and starts it — or settles to idle
+   * when nothing is waiting. Called from the active download's `finally`.
+   */
+  const drainQueue = useCallback(() => {
+    const next = queueRef.current.shift();
+    setDownloadQueue([...queueRef.current]);
+    if (next == null) {
+      setDownloadStatus((prev) => ({ ...prev, notice: null }));
+      return;
+    }
+    // `downloadFnRef.current` is the latest downloadSurahAudio, so the drain
+    // keeps working even if this callback's identity changes.
+    downloadFnRef.current(next);
+  }, []);
+
+  /**
    * Download audio for a specific surah.
-   * Only one download may run at a time; a second attempt is rejected rather
-   * than queued. Marks the surah downloaded for THIS reciter only, and only
-   * when every ayah succeeded.
+   *
+   * Only one download runs at a time. A request that arrives while another is
+   * in flight is *queued* rather than rejected, so users can click several
+   * download icons and they'll each run in turn — no downloads are lost.
+   * Marks the surah downloaded for THIS reciter only, and only when every
+   * ayah succeeded.
    * @param {number} surahNumber - The surah number (1-114)
    * @returns {Promise<void>}
    */
   const downloadSurahAudio = useCallback(
     async (surahNumber) => {
-      // Engine-level single-download guard (no queue).
+      // Already the active download — nothing to do.
+      if (activeRef.current?.surahNumber === surahNumber) return;
+
+      // A different download is running: queue this one for after it finishes.
+      // Dedupe so the same surah isn't queued twice (a second click on an
+      // already-waiting row would otherwise stack a duplicate entry).
       if (activeRef.current) {
-        setDownloadStatus((prev) => ({
-          ...prev,
-          notice: 'Another audio download is already in progress.',
-        }));
+        if (queueRef.current.includes(surahNumber)) return;
+        queueRef.current.push(surahNumber);
+        setDownloadQueue([...queueRef.current]);
         return;
       }
 
@@ -277,6 +312,8 @@ export const useAudioDownload = (quranData, reciterId = 'ar.alafasy') => {
       const controller = new AbortController();
       const { signal } = controller;
       activeRef.current = { surahNumber, controller };
+      setDownloadQueue([...queueRef.current]);
+      setDownloadStatus((prev) => ({ ...prev, notice: null }));
 
       const base = {
         status: DOWNLOAD_STATUS.DOWNLOADING,
@@ -421,19 +458,33 @@ export const useAudioDownload = (quranData, reciterId = 'ar.alafasy') => {
         });
       } finally {
         activeRef.current = null;
+        // The active download is done (finished, failed, or was cancelled).
+        // Start the next queued surah if one is waiting, otherwise settle to
+        // idle. `drainQueue` reads `queueRef` directly so it works even when
+        // this `finally` runs in the same tick as the request that queued.
+        drainQueue();
       }
     },
-    [quranData, reciterId, requestPersistentStorage]
+    [quranData, reciterId, requestPersistentStorage, drainQueue]
   );
 
   /**
    * Cancel the active download. Already-cached audio is left untouched and the
-   * surah is not marked downloaded. A new download can start immediately after.
+   * surah is not marked downloaded. A new download can start immediately after,
+   * and any queued requests then proceed in order.
    */
   const cancelDownload = useCallback(() => {
     if (!activeRef.current) return;
     activeRef.current.controller.abort();
   }, []);
+
+  // Keep the ref aimed at the latest download implementation so the queue
+  // drain (which runs from inside a download's `finally`) can call it without
+  // a self-reference or a stale closure. Done in an effect rather than during
+  // render — refs must not be written as part of the render output.
+  useEffect(() => {
+    downloadFnRef.current = downloadSurahAudio;
+  }, [downloadSurahAudio]);
 
   /**
    * Delete downloaded audio for a specific surah, for the CURRENT reciter only.
@@ -516,6 +567,8 @@ export const useAudioDownload = (quranData, reciterId = 'ar.alafasy') => {
     isSurahAudioDownloaded,
     /** Downloaded surahs for the current reciter (kept for existing consumers). */
     downloadedSurahs: downloadedByReciter[reciterId] || [],
+    /** Surah numbers waiting their turn behind the active download. */
+    downloadQueue,
     downloadedByReciter,
     reciterId,
     requestPersistentStorage,

@@ -203,6 +203,31 @@ export const AdvancedSettingsPanel = ({
                 </motion.div>
               )}
 
+              {/* Stuck Timer Duration — Smart Detection only */}
+              {(params.autoNext && params.errorDetection) && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
+                  <div style={{
+                    background: 'var(--bg-accent)', padding: 'var(--space-4)',
+                    borderRadius: 'var(--radius-lg)', border: '1px solid var(--glass-border)',
+                    display: 'flex', flexDirection: 'column', gap: 'var(--space-3)',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
+                      <span style={{ fontSize: 'var(--fs-secondary)', fontWeight: '800', color: 'var(--text-secondary)' }}>Stuck Timer</span>
+                      <span style={{ fontSize: 'var(--fs-secondary)', fontWeight: '800', color: 'var(--accent-gold)' }}>{params.stuckTimerDuration ?? 5}s</span>
+                    </div>
+                    <input
+                      type="range" min="3" max="9" step="1"
+                      value={params.stuckTimerDuration ?? 5}
+                      onChange={e => onChange('stuckTimerDuration', parseInt(e.target.value))}
+                      style={{ width: '100%', accentColor: 'var(--accent-gold)' }}
+                    />
+                    <p style={{ fontSize: 'var(--fs-label)', color: 'var(--text-muted)', marginTop: 'var(--space-2)', lineHeight: '1.4' }}>
+                      Time without a correct word before hint plays. <strong style={{ color: 'var(--accent-gold)' }}>{params.stuckTimerDuration ?? 5}s</strong> default. Increase if speech recognition lags.
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+
             </div>
           </motion.div>
         )}

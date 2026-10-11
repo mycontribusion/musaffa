@@ -26,6 +26,8 @@ export const useRecitationCheck = (
   ensureModelReady = null,
   activeChunkSlice = [],
   quranSimple = null,
+  audioHintsEnabled = true,
+  stuckTimerDuration = 5,
 ) => {
   // ── liveResults state is OWNED HERE, not inside useRecitationWorker ────────
   const [liveResults, setLiveResults] = useState(null);
@@ -35,6 +37,8 @@ export const useRecitationCheck = (
     clearSilenceTimer,
     armStuckTimer,
     armSettleTimer,
+    armNoGreenWordTimer,
+    checkGreenWords,
     notifyHintEnded,
     clearStuckState,
     checkAutoFinish,
@@ -52,6 +56,7 @@ export const useRecitationCheck = (
     threshold: accuracyThreshold,
     ayahWordCounts,
     lastMatchedExpIdx: liveResults?.lastMatchedExpIdx ?? -1,
+    stuckTimerDuration,
   });
 
   // ── useSpeechRecognition MUST come before useRecitationWorker ─────────────
@@ -68,8 +73,10 @@ export const useRecitationCheck = (
   const onSpeechStartCallback = useCallback(() => {
     clearStuckTimer();
     clearSilenceTimer();
-    if (interruptHintRef.current) interruptHintRef.current();
-  }, [clearStuckTimer, clearSilenceTimer, interruptHintRef]);
+    // Do NOT interrupt visual hint when user starts speaking.
+    // Visual hint persists until verse solved or user clicks close button.
+    // Audio hint (if playing) continues in background.
+  }, [clearStuckTimer, clearSilenceTimer]);
 
   /**
    * Speech stopped. Disarm the stuck countdown — the user is mid-thought, not
@@ -150,6 +157,7 @@ export const useRecitationCheck = (
     armStuckTimer: (verseIndex, _transcript, _delay, matchedIdx) => armStuckTimer(verseIndex, transcriptRef.current, _delay, matchedIdx),
     checkAutoFinish,
     armSettleTimer,
+    checkGreenWords,
     latestPayloadRef,
     // The worker owns no liveResults state of its own — the setter is supplied
     // by this hook (see the ownership note above) so that activeVerseIndex and
@@ -211,6 +219,11 @@ export const useRecitationCheck = (
   useEffect(() => {
     if (isActive) {
       startListening();
+      // Arm the no-green-word hint timer immediately from turn-start.
+      // checkGreenWords only fires when worker results arrive, so without this
+      // the 3-second countdown never starts if the user is silent or the STT
+      // model hasn't produced output yet.
+      armNoGreenWordTimer(0);
     } else {
       stopRecognition();
       clearStuckState();

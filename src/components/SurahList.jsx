@@ -159,17 +159,67 @@ const SurahList = ({
                     </button>
                   </div>
 
-                  {/* Mode badge */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                      padding: '0.25rem 0.6rem', borderRadius: 'var(--radius-full)',
+                  {/* Mode badge + settings indicators - all on one line */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {/* Mode icon only */}
+                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      width: '28px', height: '28px', borderRadius: 'var(--radius-full)',
                       background: `${mode.color}18`, border: `1px solid ${mode.color}40`,
-                      fontSize: 'var(--fs-meta)', fontWeight: '800', color: mode.color,
+                      flexShrink: 0,
                     }}>
-                      <ModeIcon size={12} /> {mode.label}
-                    </span>
-                    <span style={{ fontSize: 'var(--fs-meta)', fontWeight: '600', color: 'var(--text-muted)' }}>{preset.portion === 'page' ? 'Full Pg' : preset.portion === 'half' ? '½ Pg' : preset.portion === 'verse' ? '1 Verse' : preset.portion}</span>
+                      <ModeIcon size={14} style={{ color: mode.color }} />
+                    </div>
+                    {/* Compact settings row - only show relevant settings per mode */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                      {/* Portion - always shown */}
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        minWidth: '22px', height: '20px', padding: '0 0.35rem',
+                        borderRadius: 'var(--radius-sm)', fontSize: '0.6rem', fontWeight: '800',
+                        background: 'var(--bg-accent)', border: '1px solid var(--glass-border)',
+                        color: 'var(--text-secondary)', textTransform: 'uppercase',
+                      }}>
+                        {preset.portion === 'verse' ? 'V' :
+                         preset.portion === 'third' ? 'T' :
+                         preset.portion === 'half' ? 'H' :
+                         preset.portion === 'page' ? 'P' :
+                         preset.portion === 'rubu' ? 'R' : 'Z'}
+                      </span>
+                      {/* Who Starts - always shown */}
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        minWidth: '22px', height: '20px', padding: '0 0.35rem',
+                        borderRadius: 'var(--radius-sm)', fontSize: '0.6rem', fontWeight: '800',
+                        background: 'var(--bg-accent)', border: '1px solid var(--glass-border)',
+                        color: 'var(--text-secondary)', textTransform: 'uppercase',
+                      }}>
+                        {preset.whoStarts === 'app' ? 'A' : 'U'}
+                      </span>
+                      {/* Mic Sensitivity - only for Hands-Free (autoNext but not errorDetection) */}
+                      {preset.autoNext && !preset.errorDetection && (
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          minWidth: '22px', height: '20px', padding: '0 0.35rem',
+                          borderRadius: 'var(--radius-sm)', fontSize: '0.6rem', fontWeight: '800',
+                          background: 'var(--bg-accent)', border: '1px solid var(--glass-border)',
+                          color: 'var(--text-secondary)',
+                        }}>
+                          {Math.round(((40 - (preset.micSensitivity ?? 15)) / 35) * 90 + 10)}%
+                        </span>
+                      )}
+                      {/* Error Threshold - only for Smart (errorDetection) */}
+                      {preset.errorDetection && (
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          minWidth: '22px', height: '20px', padding: '0 0.35rem',
+                          borderRadius: 'var(--radius-sm)', fontSize: '0.6rem', fontWeight: '800',
+                          background: 'var(--bg-accent)', border: '1px solid var(--glass-border)',
+                          color: 'var(--text-secondary)',
+                        }}>
+                          {preset.errorThreshold ?? 50}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Start button */}

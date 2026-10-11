@@ -25,6 +25,13 @@ export const PROGRESSION_MISMATCH_DELAY_MS = 2500; // Faster for hands-free case
  */
 export const TURN_SETTLE_DELAY_MS = 3500;
 
+/**
+ * New "no green word" stuck detection: if no word turns green (status === 'correct')
+ * within this many milliseconds, the user is considered stuck.
+ * Default 5000ms (5s), configurable via stuckTimerDuration prop (3-9s).
+ */
+export const NO_GREEN_WORD_DELAY_MS = 5000;
+
 const computeVerseWordRanges = (ayahWordCounts = []) => {
   const ranges = [];
   let start = 0;
@@ -44,6 +51,7 @@ export const useStuckDetection = ({
   threshold,
   ayahWordCounts = [],
   lastMatchedExpIdx = -1,
+  stuckTimerDuration = 5, // seconds, default 5s
 }) => {
   const stuckTimerRef = useRef(null);
   const settleTimerRef = useRef(null);
@@ -62,8 +70,25 @@ export const useStuckDetection = ({
   /** Latches once a settle has been reported, so one quiet period reports once. */
   const settleFiredRef = useRef(false);
   const mismatchCountRef = useRef(0);
-  const lastMatchedAtRef = useRef({ idx: -1, verse: -1, ts: Date.now() });
+  const lastMatchedAtRef = useRef(() => ({ idx: -1, verse: -1, ts: Date.now() }));
   const noProgressMsRef = useRef(0);
+
+  // ── New "no green word" stuck detection refs ──────────────────────────────
+  /** Highest expected-word index (within current verse) that has been marked 'correct'. */
+  const lastCorrectVerseWordIdxRef = useRef(-1);
+  /** Timer that fires if NO_GREEN_WORD_DELAY_MS passes without a new green word. */
+  const noGreenWordTimerRef = useRef(null);
+  /** Whether the no-green-word detection is currently armed. */
+  const noGreenWordArmedRef = useRef(false);
+  /** The verse index for which the timer is currently armed. */
+  const armedVerseIndexRef = useRef(null);
+  /** The verse word ranges for the current chunk (updated when ayahWordCounts changes). */
+  const verseWordRangesRef = useRef([]);
+
+  // Keep verse word ranges in sync with ayahWordCounts
+  useEffect(() => {
+    verseWordRangesRef.current = computeVerseWordRanges(ayahWordCounts);
+  }, [ayahWordCounts]);
 
   useEffect(() => { onStuckRef.current = onStuck; }, [onStuck]);
   useEffect(() => { interruptHintRef.current = interruptHint; }, [interruptHint]);
@@ -92,12 +117,30 @@ export const useStuckDetection = ({
    */
   const clearSilenceTimer = clearSettleTimer;
 
+  /**
+   * Clear the "no green word" timer.
+   */
+  const clearNoGreenWordTimer = useCallback(() => {
+    if (noGreenWordTimerRef.current) {
+      clearTimeout(noGreenWordTimerRef.current);
+      noGreenWordTimerRef.current = null;
+    }
+    noGreenWordArmedRef.current = false;
+    armedVerseIndexRef.current = null;
+  }, []);
+
   const triggerHint = useCallback((verseIndex, transcript = '', payload = null) => {
     if (!onStuckRef.current || isHintPlayingRef.current) return;
     if (hintedVerseIndexRef.current === verseIndex) return;
 
-    clearStuckTimer();
+    // Lock immediately — before any async boundary or further state writes — so
+    // a second timer that fires in the same event-loop turn cannot also pass the
+    // guard above. JS callbacks are run sequentially, but two setTimeout(0)
+    // callbacks CAN both read isHintPlayingRef as false before either writes it.
     isHintPlayingRef.current = true;
+
+    clearStuckTimer();
+    clearNoGreenWordTimer();
     hintPassedRef.current = false;
     hintedVerseIndexRef.current = verseIndex;
     mismatchCountRef.current = 0;
@@ -108,11 +151,44 @@ export const useStuckDetection = ({
     hintTranscriptSnapshotRef.current = transcript || '';
     hintPayloadSnapshotRef.current = payload;
 
-    if (process.env.NODE_ENV !== 'production') {
+    if (import.meta.env.MODE !== 'production') {
       console.log('[HINT TRIGGER]', { verseIndex, reason: 'trigger', mismatchCount: mismatchCountRef.current });
     }
     onStuckRef.current(verseIndex);
-  }, [clearStuckTimer]);
+  }, [clearStuckTimer, clearNoGreenWordTimer]);
+
+  /**
+   * Arm the "no green word" timer for a verse immediately — without needing a
+   * worker result to arrive first.
+   *
+   * `checkGreenWords` only runs when the worker returns a RESULT, so if the
+   * user hasn't spoken yet (or the STT model hasn't produced output), the
+   * 3-second countdown is never started. This function is called when the
+   * user's turn begins so the timer is always armed from turn-start.
+   */
+  const armNoGreenWordTimer = useCallback((verseIndex) => {
+    if (verseIndex === null || verseIndex === undefined || verseIndex < 0) return;
+    if (hintedVerseIndexRef.current !== null) return;
+    if (isHintPlayingRef.current) return;
+    if (armedVerseIndexRef.current === verseIndex) return; // already armed for this verse
+
+    clearNoGreenWordTimer();
+    lastCorrectVerseWordIdxRef.current = -1;
+    armedVerseIndexRef.current = verseIndex;
+    noGreenWordArmedRef.current = true;
+    noGreenWordTimerRef.current = setTimeout(() => {
+      if (!noGreenWordArmedRef.current || armedVerseIndexRef.current !== verseIndex) return;
+      noGreenWordTimerRef.current = null;
+      noGreenWordArmedRef.current = false;
+      if (import.meta.env.MODE !== 'production') {
+        console.log('[NO GREEN WORD STUCK — turn start]', { verseIndex });
+      }
+      triggerHint(verseIndex, '', latestPayloadRef.current);
+    }, NO_GREEN_WORD_DELAY_MS);
+    if (import.meta.env.MODE !== 'production') {
+      console.log('[NO GREEN WORD ARMED — turn start]', { verseIndex });
+    }
+  }, [clearNoGreenWordTimer, triggerHint]);
 
   /**
    * Arm (or re-arm) the stuck countdown for `verseIndex`.
@@ -125,6 +201,10 @@ export const useStuckDetection = ({
     clearStuckTimer();
     if (verseIndex === null || verseIndex === undefined) return;
     if (hintedVerseIndexRef.current === verseIndex) return;
+    // Don't arm the 4s stuck timer when the 3s no-green-word timer is already
+    // watching this verse — two independent countdowns racing to the same hint
+    // is the source of duplicate triggers.
+    if (noGreenWordArmedRef.current && armedVerseIndexRef.current === verseIndex) return;
 
     const verseRanges = computeVerseWordRanges(ayahWordCounts);
     const currentRange = verseRanges[verseIndex];
@@ -151,7 +231,7 @@ export const useStuckDetection = ({
       }
     }
 
-    if (process.env.NODE_ENV !== 'production') {
+    if (import.meta.env.MODE !== 'production') {
       console.log('[HINT ARM]', {
         verseIndex,
         lastMatched,
@@ -167,13 +247,117 @@ export const useStuckDetection = ({
     }, effectiveDelay);
   }, [clearStuckTimer, triggerHint, ayahWordCounts, lastMatchedExpIdx]);
 
+  /**
+   * Check for new 'correct' (green) words in the results and manage the
+   * "no green word" stuck timer.
+   *
+   * Arms the timer when a verse becomes active. Resets the timer on each new
+   * green word within that verse. Fires hint after 3s with no green words.
+   *
+   * @param {Array} results - Array of word result objects with { word, status, ... }
+   * @param {number} verseIndex - Current active verse index (for hint targeting)
+   */
+  const checkGreenWords = useCallback((results, verseIndex) => {
+    if (!results || results.length === 0) return;
+    if (hintedVerseIndexRef.current !== null) return; // Don't arm while hint is active
+    if (isHintPlayingRef.current) return;
+    if (verseIndex === null || verseIndex === undefined || verseIndex < 0) return;
+
+    const verseRanges = verseWordRangesRef.current;
+    const currentRange = verseRanges[verseIndex];
+    if (!currentRange) return; // Verse has no words (empty ayah)
+
+    const delayMs = stuckTimerDuration * 1000;
+
+    // Check if the active verse has changed
+    if (armedVerseIndexRef.current !== verseIndex) {
+      // New verse became active — clear stale timer first (it nulls armedVerseIndexRef),
+      // then set armedVerseIndexRef to the new verse so the timeout guard can pass.
+      clearNoGreenWordTimer();
+      lastCorrectVerseWordIdxRef.current = -1;
+      armedVerseIndexRef.current = verseIndex;
+      noGreenWordArmedRef.current = true;
+      noGreenWordTimerRef.current = setTimeout(() => {
+        // Guard: verify timer is still armed for this verse
+        if (!noGreenWordArmedRef.current || armedVerseIndexRef.current !== verseIndex) return;
+        noGreenWordTimerRef.current = null;
+        noGreenWordArmedRef.current = false;
+        if (import.meta.env.MODE !== 'production') {
+          console.log('[NO GREEN WORD STUCK]', { verseIndex, lastCorrectVerseIdx: lastCorrectVerseWordIdxRef.current });
+        }
+        triggerHint(verseIndex, '', latestPayloadRef.current);
+      }, delayMs);
+      if (import.meta.env.MODE !== 'production') {
+        console.log('[NO GREEN WORD ARMED]', { verseIndex, range: currentRange });
+      }
+    }
+
+    // Find the highest verse-relative index of a word marked 'correct' in this verse
+    let highestVerseCorrectIdx = -1;
+    for (let i = currentRange.start; i <= currentRange.end && i < results.length; i++) {
+      if (results[i]?.status === 'correct') {
+        highestVerseCorrectIdx = i - currentRange.start; // verse-relative index
+      }
+    }
+
+    // If new green word(s) in this verse, reset the timer
+    if (highestVerseCorrectIdx > lastCorrectVerseWordIdxRef.current) {
+      lastCorrectVerseWordIdxRef.current = highestVerseCorrectIdx;
+      if (noGreenWordArmedRef.current && armedVerseIndexRef.current === verseIndex) {
+        // clearNoGreenWordTimer nulls armedVerseIndexRef — re-set it immediately after
+        // so the timeout guard (armedVerseIndexRef.current !== verseIndex) can pass.
+        clearNoGreenWordTimer();
+        armedVerseIndexRef.current = verseIndex;
+        noGreenWordArmedRef.current = true;
+        noGreenWordTimerRef.current = setTimeout(() => {
+          if (!noGreenWordArmedRef.current || armedVerseIndexRef.current !== verseIndex) return;
+          noGreenWordTimerRef.current = null;
+          noGreenWordArmedRef.current = false;
+          if (import.meta.env.MODE !== 'production') {
+            console.log('[NO GREEN WORD STUCK]', { verseIndex, lastCorrectVerseIdx: lastCorrectVerseWordIdxRef.current });
+          }
+          triggerHint(verseIndex, '', latestPayloadRef.current);
+        }, delayMs);
+        if (import.meta.env.MODE !== 'production') {
+          console.log('[NO GREEN WORD RESET]', { verseIndex, highestVerseCorrectIdx });
+        }
+      }
+    }
+    // If no new green words, the existing timer (if armed for this verse) will fire on its own
+  }, [clearNoGreenWordTimer, triggerHint, stuckTimerDuration]);
+
   const notifyHintEnded = useCallback(() => {
+    const hintedVerse = hintedVerseIndexRef.current;
     isHintPlayingRef.current = false;
-  }, []);
+    // Allow the hint to repeat: clear the "already hinted" latch so the
+    // no-green-word timer can fire again if the user is still stuck.
+    hintedVerseIndexRef.current = null;
+    // Re-arm the 3-second countdown for the same verse. If the user recites
+    // a new green word the timer will be reset; if they don't, the hint plays again.
+    if (hintedVerse !== null && hintedVerse !== undefined) {
+      clearNoGreenWordTimer();
+      lastCorrectVerseWordIdxRef.current = -1; // reset green-word tracker so any new green word extends the window
+      armedVerseIndexRef.current = hintedVerse;
+      noGreenWordArmedRef.current = true;
+      noGreenWordTimerRef.current = setTimeout(() => {
+        if (!noGreenWordArmedRef.current || armedVerseIndexRef.current !== hintedVerse) return;
+        noGreenWordTimerRef.current = null;
+        noGreenWordArmedRef.current = false;
+        if (import.meta.env.MODE !== 'production') {
+          console.log('[NO GREEN WORD STUCK — repeat]', { verseIndex: hintedVerse });
+        }
+        triggerHint(hintedVerse, '', latestPayloadRef.current);
+      }, stuckTimerDuration * 1000);
+      if (import.meta.env.MODE !== 'production') {
+        console.log('[NO GREEN WORD RE-ARMED — after hint]', { verseIndex: hintedVerse });
+      }
+    }
+  }, [clearNoGreenWordTimer, triggerHint, stuckTimerDuration]);
 
   const clearStuckState = useCallback(() => {
     clearStuckTimer();
     clearSettleTimer();
+    clearNoGreenWordTimer();
     hintedVerseIndexRef.current = null;
     hintTranscriptSnapshotRef.current = '';
     hintPayloadSnapshotRef.current = null;
@@ -183,7 +367,9 @@ export const useStuckDetection = ({
     mismatchCountRef.current = 0;
     lastMatchedAtRef.current = { idx: -1, verse: -1, ts: Date.now() };
     noProgressMsRef.current = 0;
-  }, [clearStuckTimer, clearSettleTimer]);
+    lastCorrectVerseWordIdxRef.current = -1;
+    armedVerseIndexRef.current = null;
+  }, [clearStuckTimer, clearSettleTimer, clearNoGreenWordTimer]);
 
   /**
    * @param {boolean} shouldSettle - true once the user has recited to the end
@@ -222,6 +408,7 @@ export const useStuckDetection = ({
       if (allPassed) {
         clearStuckTimer();
         clearSettleTimer();
+        clearNoGreenWordTimer();
         // Latch so the settle path cannot also fire and stack a retry prompt on
         // top of the advance this schedules.
         settleFiredRef.current = true;
@@ -231,14 +418,17 @@ export const useStuckDetection = ({
         }, 300);
       }
     }
-  }, [threshold, clearStuckTimer, clearSettleTimer]);
+  }, [threshold, clearStuckTimer, clearSettleTimer, clearNoGreenWordTimer]);
 
   return {
     clearStuckTimer,
     clearSilenceTimer,
     clearSettleTimer,
+    clearNoGreenWordTimer,
+    armNoGreenWordTimer,
     armStuckTimer,
     armSettleTimer,
+    checkGreenWords,
     triggerHint,
     notifyHintEnded,
     clearStuckState,
