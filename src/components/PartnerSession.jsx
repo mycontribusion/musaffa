@@ -222,7 +222,7 @@ const PartnerSession = ({
       // Pause STT for audio hint so it doesn't pick up speaker sound
       sttActionsRef.current.pauseRecognition?.();
 
-      let audioSrc = url;
+      let audioSrc = null;
       try {
         if ('caches' in window) {
           const cache = await caches.open('quran-audio-v1');
@@ -231,44 +231,52 @@ const PartnerSession = ({
             const blob = await response.blob();
             audioSrc = URL.createObjectURL(blob);
           }
-          // If not cached, play directly from URL (stream online)
         }
       } catch (e) {
         console.warn('Cache check failed:', e);
       }
 
-      // Double check if interrupted during async cache check
-      if (!hintAudioRef.current) return;
+      // If not cached, don't play audio hint (offline-only)
+      if (!audioSrc) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[HINT SKIPPED] Audio not in cache for ayah:', ayah.number);
+        }
+        hintAudioRef.current = null;
+        sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
+      } else {
+        // Double check if interrupted during async cache check
+        if (!hintAudioRef.current) return;
 
-      const hintAudio = new Audio(audioSrc);
-      hintAudioRef.current = hintAudio;
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[HINT PLAY]', { audioSrc: audioSrc.substring(0, 60) });
+        const hintAudio = new Audio(audioSrc);
+        hintAudioRef.current = hintAudio;
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[HINT PLAY]', { audioSrc: audioSrc.substring(0, 60) });
+        }
+        hintAudio.play().catch(e => {
+          console.warn('Failed to play hint audio:', e);
+          setAudioError(true);
+          // Don't interruptHint - keep visual hint until verse solved or user dismisses
+          hintAudioRef.current = null;
+          sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
+        });
+
+        // Resume STT when audio ends; fallback in case onended/onerror never fire
+        // Visual hint persists until verse solved or user dismisses
+        hintFallbackTimerRef.current = setTimeout(() => {
+          hintAudioRef.current = null;
+          sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
+        }, 8000);
+
+        hintAudio.onended = () => {
+          hintAudioRef.current = null;
+          sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
+        };
+        hintAudio.onerror = () => {
+          setAudioError(true);
+          hintAudioRef.current = null;
+          sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
+        };
       }
-      hintAudio.play().catch(e => {
-        console.warn('Failed to play hint audio:', e);
-        setAudioError(true);
-        // Don't interruptHint - keep visual hint until verse solved or user dismisses
-        hintAudioRef.current = null;
-        sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
-      });
-
-      // Resume STT when audio ends; fallback in case onended/onerror never fire
-      // Visual hint persists until verse solved or user dismisses
-      hintFallbackTimerRef.current = setTimeout(() => {
-        hintAudioRef.current = null;
-        sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
-      }, 8000);
-
-      hintAudio.onended = () => {
-        hintAudioRef.current = null;
-        sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
-      };
-      hintAudio.onerror = () => {
-        setAudioError(true);
-        hintAudioRef.current = null;
-        sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
-      };
     } else {
       // Audio hints disabled or surah not downloaded: visual hint stays until verse is solved or user dismisses
       // No auto-dismiss timer
