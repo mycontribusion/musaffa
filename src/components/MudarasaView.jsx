@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import RecitationStatusOverlay from './RedBlinkOverlay';
 import { Mic, CheckCircle2, Volume2, VolumeX } from 'lucide-react';
 import { hasBismillahHeader, BISMILLAH_SIMPLE, removeTashkeel, normalizeArabic, expandMuqattaat } from '../utils/quranUtils';
 
@@ -11,7 +10,6 @@ import { RetryPrompt } from './mudarasa/RetryPrompt';
 import { AyahCard } from './mudarasa/AyahCard';
 import VisualHintOverlay from './mudarasa/VisualHintOverlay';
 import { useActiveVerseIndex } from './mudarasa/hooks/useActiveVerseIndex';
-import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
 
  const MudarasaView = ({
     chunks,
@@ -167,9 +165,6 @@ import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [turnSettledToken, mudarasaTurn, retryPrompt]);
 
-  const flashError = useFeedbackDebounce(enableErrorDetection, liveResults, mudarasaTurn);
-  const overlayMode = flashError ? 'error' : null;
-
   const transcriptRef = useRef(null);
   useEffect(() => {
     if (transcriptRef.current) transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
@@ -191,7 +186,6 @@ import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
 
   return (
     <>
-      <RecitationStatusOverlay mode={overlayMode} />
       <VisualHintOverlay
         hint={visualHint}
         onDismiss={onDismissVisualHint}
