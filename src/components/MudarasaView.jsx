@@ -14,45 +14,46 @@ import { useActiveVerseIndex } from './mudarasa/hooks/useActiveVerseIndex';
 import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
 
  const MudarasaView = ({
-   chunks,
-   currentChunkIndex,
-   currentAyahNumber,
-   mudarasaTurn,
-   onNext,
-   onBack,
-   onLogStumble,
-   isListening,
-   currentVolume,
-   sensitivity,
-   isPaused,
-   onPause,
-   onResume,
-   audioError,
-   setAudioError,
-    enableErrorDetection,
-    liveResults,
-   transcript,
-   onFinishedTurn,
-   onRetryTurn,
-   /**
-    * Bumped by PartnerSession when the recogniser decides the user has recited
-    * to the end of the portion and gone quiet. Drives `handleManualFinish`,
-    * which is the only path that can end a Smart Mode turn on the user's own
-    * initiative — see the effect below.
-    */
-   turnSettledToken = 0,
-   quranSimple,
-   targetAccuracy,
-   retryStartIndex = 0,
-   setRetryStartIndex,
-   completedResults,
-   isHintActive,
-   audioHintsEnabled = true,
-   onToggleAudioHints,
-   visualHint,
-   onDismissVisualHint,
-   modelStatus,
- }) => {
+    chunks,
+    currentChunkIndex,
+    currentAyahNumber,
+    mudarasaTurn,
+    onNext,
+    onBack,
+    onLogStumble,
+    isListening,
+    currentVolume,
+    sensitivity,
+    isPaused,
+    onPause,
+    onResume,
+    audioError,
+    setAudioError,
+     enableErrorDetection,
+     liveResults,
+    transcript,
+    onFinishedTurn,
+    onRetryTurn,
+    /**
+     * Bumped by PartnerSession when the recogniser decides the user has recited
+     * to the end of the portion and gone quiet. Drives `handleManualFinish`,
+     * which is the only path that can end a Smart Mode turn on the user's own
+     * initiative — see the effect below.
+     */
+    turnSettledToken = 0,
+    quranSimple,
+    targetAccuracy,
+    retryStartIndex = 0,
+    setRetryStartIndex,
+    completedResults,
+    isHintActive,
+    audioHintsEnabled = true,
+    onToggleAudioHints,
+    visualHint,
+    onDismissVisualHint,
+    modelStatus,
+    audioDownloadControls,
+  }) => {
   const [showText, setShowText] = useState(() => {
     try { return JSON.parse(localStorage.getItem('quran_musaffa_show_text') ?? 'true'); } catch { return true; }
   });
@@ -350,38 +351,50 @@ import { useFeedbackDebounce } from './mudarasa/hooks/useFeedbackDebounce';
                         >
                           <CheckCircle2 size={10} /> Mark Satisfied
                         </button>
-                        {onToggleAudioHints && (
-                          <button
-                            type="button"
-                            onClick={onToggleAudioHints}
-                            title={audioHintsEnabled ? 'Disable audio hints' : 'Enable audio hints'}
-                            style={{
-                              padding: '0.45rem 0.85rem',
-                              borderRadius: 'var(--radius-full)',
-                              cursor: 'pointer',
-                              border: audioHintsEnabled
-                                ? '1px solid var(--accent-gold-soft)'
-                                : '1px solid rgba(148, 163, 184, 0.25)',
-                              background: audioHintsEnabled
-                                ? 'rgba(251, 191, 36, 0.08)'
-                                : 'rgba(148, 163, 184, 0.06)',
-                              color: audioHintsEnabled
-                                ? 'var(--accent-gold)'
-                                : 'var(--text-muted)',
-                              fontWeight: '800',
-                              fontSize: 'var(--fs-label)',
-                              textTransform: 'uppercase',
-                              letterSpacing: 'var(--tracking-status)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.35rem',
-                              transition: 'all 0.2s',
-                            }}
-                          >
-                            {audioHintsEnabled ? <Volume2 size={11} /> : <VolumeX size={11} />}
-                            {audioHintsEnabled ? 'Audio Hint: On' : 'Audio Hint: Off'}
-                          </button>
-                        )}
+                        {onToggleAudioHints && (() => {
+                            // Determine current surah from active ayah
+                            const activeAyah = chunks[currentChunkIndex]?.[activeAyahIndex];
+                            const currentSurahNumber = activeAyah?.surahNumber;
+                            const isSurahDownloaded = currentSurahNumber
+                              ? audioDownloadControls?.isSurahAudioDownloaded?.(currentSurahNumber) ?? false
+                              : false;
+
+                            // Hide button entirely if surah not downloaded
+                            if (!isSurahDownloaded) return null;
+
+                            return (
+                              <button
+                                type="button"
+                                onClick={onToggleAudioHints}
+                                title={audioHintsEnabled ? 'Disable audio hints' : 'Enable audio hints'}
+                                style={{
+                                  padding: '0.45rem 0.85rem',
+                                  borderRadius: 'var(--radius-full)',
+                                  cursor: 'pointer',
+                                  border: audioHintsEnabled
+                                    ? '1px solid var(--accent-gold-soft)'
+                                    : '1px solid rgba(148, 163, 184, 0.25)',
+                                  background: audioHintsEnabled
+                                    ? 'rgba(251, 191, 36, 0.08)'
+                                    : 'rgba(148, 163, 184, 0.06)',
+                                  color: audioHintsEnabled
+                                    ? 'var(--accent-gold)'
+                                    : 'var(--text-muted)',
+                                  fontWeight: '800',
+                                  fontSize: 'var(--fs-label)',
+                                  textTransform: 'uppercase',
+                                  letterSpacing: 'var(--tracking-status)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.35rem',
+                                  transition: 'all 0.2s',
+                                }}
+                              >
+                                {audioHintsEnabled ? <Volume2 size={11} /> : <VolumeX size={11} />}
+                                {audioHintsEnabled ? 'Audio Hint: On' : 'Audio Hint: Off'}
+                              </button>
+                            );
+                          })()}
                       </div>
                       {activeStat && (
                         <span style={{ color: activeStat.accuracy < targetAccuracy ? 'rgba(245,158,11,0.8)' : 'var(--accent-emerald)', opacity: 0.9, fontWeight: '800', fontSize: 'var(--fs-label)' }}>

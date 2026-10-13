@@ -376,9 +376,35 @@ export const getSingleAyahGrammar = (ayah, quranSimple = null) => {
 export const getHintWords = (ayah, stuckIndex = 0, ayahWordCounts = [], lastMatchedExpIdx = -1, maxWords = 5) => {
   if (!ayah) return [];
   const rawText = ayah.text || '';
-  const text = stripBismillah(rawText, ayah.surahNumber, ayah.numberInSurah);
-  const words = text.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return [];
+
+  // Build the full word sequence for this ayah to match scoring's expected sequence
+  // (Bismillah + body for surahs with header; body only otherwise)
+  let fullWords = [];
+  if (hasBismillahHeader(ayah.surahNumber, ayah.numberInSurah)) {
+    // Add normalized Bismillah words
+    const bismillahNorm = normalizeArabic(BISMILLAH_SIMPLE);
+    const bismillahWords = bismillahNorm.trim().split(/\s+/).filter(Boolean);
+    fullWords.push(...bismillahWords);
+
+    // Add body words (strip baked Bismillah if present)
+    let bodyText = rawText;
+    if (bodyText.startsWith(BISMILLAH_SIMPLE)) {
+      bodyText = bodyText.slice(BISMILLAH_SIMPLE.length).trim();
+    } else {
+      bodyText = stripBismillah(rawText, ayah.surahNumber, ayah.numberInSurah);
+    }
+    const cleanBody = removeTashkeel(bodyText);
+    const bodyNorm = normalizeArabic(expandMuqattaat(cleanBody));
+    const bodyWords = bodyNorm.trim().split(/\s+/).filter(Boolean);
+    fullWords.push(...bodyWords);
+  } else {
+    const text = stripBismillah(rawText, ayah.surahNumber, ayah.numberInSurah);
+    const clean = removeTashkeel(text);
+    const normalized = normalizeArabic(expandMuqattaat(clean));
+    fullWords = normalized.trim().split(/\s+/).filter(Boolean);
+  }
+
+  if (fullWords.length === 0) return [];
 
   let startIndex = 0;
   if (ayahWordCounts && ayahWordCounts.length > stuckIndex && lastMatchedExpIdx !== undefined && lastMatchedExpIdx >= 0) {
@@ -388,11 +414,14 @@ export const getHintWords = (ayah, stuckIndex = 0, ayahWordCounts = [], lastMatc
     }
     if (lastMatchedExpIdx >= verseStart) {
       const matchedInVerse = lastMatchedExpIdx - verseStart;
-      startIndex = Math.min(matchedInVerse + 1, words.length - 1);
+      // Start from the next word after the last matched one
+      startIndex = Math.min(matchedInVerse + 1, fullWords.length - 1);
+      // If we're already at the last word, stay there
+      if (startIndex < 0) startIndex = 0;
     }
   }
 
-  return words.slice(startIndex, startIndex + maxWords);
+  return fullWords.slice(startIndex, startIndex + maxWords);
 };
 
 

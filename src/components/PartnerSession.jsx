@@ -209,7 +209,10 @@ const PartnerSession = ({
     });
     setIsHintActive(true);
 
-    if (audioHintsEnabledRef.current) {
+    // Check if the surah containing this ayah is downloaded for the current reciter
+    const isSurahDownloaded = audioDownloadControls?.isSurahAudioDownloaded?.(ayah.surahNumber) ?? false;
+
+    if (audioHintsEnabledRef.current && isSurahDownloaded) {
       // Set placeholder to prevent concurrent hints while checking cache
       hintAudioRef.current = { pause: () => {} };
 
@@ -267,12 +270,15 @@ const PartnerSession = ({
         sttActionsRef.current.resumeRecognition?.(sttActiveRef.current);
       };
     } else {
-      // Audio hints disabled: visual hint stays until verse is solved or user dismisses
+      // Audio hints disabled or surah not downloaded: visual hint stays until verse is solved or user dismisses
       // No auto-dismiss timer
       if (visualHintTimerRef.current) clearTimeout(visualHintTimerRef.current);
       visualHintTimerRef.current = null;
+      if (!isSurahDownloaded && process.env.NODE_ENV !== 'production') {
+        console.log('[HINT SKIPPED] Surah not downloaded for offline use:', ayah.surahNumber);
+      }
     }
-  }, [activeChunkSlice, ayahWordCounts, params.reciter, interruptHint, setAudioError]);
+  }, [activeChunkSlice, ayahWordCounts, params.reciter, interruptHint, setAudioError, audioDownloadControls]);
 
   // STT error detection — active during user's recitation turn only
   // onAutoFinish fires automatically after silence, triggering handleFinishedTurn
@@ -512,6 +518,7 @@ const PartnerSession = ({
       targetAccuracy={params.errorThreshold ?? 50}
       retryStartIndex={retryStartIndex}
       setRetryStartIndex={setRetryStartIndex}
+      audioDownloadControls={audioDownloadControls}
       completedResults={completedResults}
       isHintActive={isHintActive}
       audioHintsEnabled={audioHintsEnabled}
