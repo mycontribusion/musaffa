@@ -353,8 +353,8 @@ import { useActiveVerseIndex } from './mudarasa/hooks/useActiveVerseIndex';
                               ? audioDownloadControls?.isSurahAudioDownloaded?.(currentSurahNumber) ?? false
                               : false;
 
-                            // Hide button entirely if surah not downloaded
-                            if (!isSurahDownloaded) return null;
+                             // Hide audio hint button till further notice
+                             return null;
 
                             return (
                               <button
