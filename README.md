@@ -1,6 +1,6 @@
 # MusaffaPro
 
-**MusaffaPro** is a modern Progressive Web Application (PWA) — also buildable as an Android app via Capacitor — designed to be the ultimate companion for Quranic memorization (Hifz) and revision (Mudarasa). By simulating the traditional Mudarasa experience and providing advanced tools for mastering the most challenging aspects of Quranic memorization, it acts as a virtual recitation partner and a powerful study tool.
+**MusaffaPro** is a modern Progressive Web Application (PWA) designed to be the ultimate companion for Quranic memorization (Hifz) and revision (Mudarasa). By simulating the traditional Mudarasa experience and providing advanced tools for mastering the most challenging aspects of Quranic memorization, it acts as a virtual recitation partner and a powerful study tool.
 
 > **Deployed at:** https://musaffapro.vercel.app
 
@@ -31,9 +31,6 @@ MusaffaPro remembers your progress so you don't have to.
 - **Last-Read Tracking:** Automatically smooth-scrolls to the exact Ayah you were last reading when returning to a Surah.
 - **Presets:** Save and reload common session configurations for different revision goals.
 
-### 🤖 Offline Speech Recognition (Android)
-On Android, MusaffaPro can use the bundled **Vosk** speech-recognition model instead of the browser's Web Speech API. Vosk runs fully on-device, so Smart Mode keeps working even with the network off — and its model downloads are cached for repeat use.
-
 ### 🎨 Premium Aesthetic and Typography
 - **Glassmorphism Design:** A stunning UI with glass-like components, subtle glows, and fluid animations.
 - **Authentic Typography:** Uses the `Amiri Quran` font for complete and mathematically precise Unicode coverage of all specific Quranic glyphs (like Alef Wasla and Superscript Alef).
@@ -49,8 +46,7 @@ On Android, MusaffaPro can use the bundled **Vosk** speech-recognition model ins
 - **Routing:** React Router DOM
 - **State Management:** Custom Hooks (`useMusaffa`, `useQuiz`, `useMic`, `useRecitationCheck`, `useSpeechRecognition`)
 - **Animations:** Framer Motion
-- **Native Bridge:** Capacitor 8 (Android), with a custom Vosk speech-recognition plugin
-- **Speech-to-Text:** Web Speech API (web) + Vosk on-device model (Android) + onnxruntime-web error detection
+- **Speech-to-Text:** Web Speech API + onnxruntime-web error detection
 - **Storage:** LocalStorage for lightweight persistence; Service Worker caches (Workbox) for PWA offline
 - **Styling:** Vanilla CSS with custom properties (Variables)
 
@@ -85,16 +81,5 @@ To run MusaffaPro locally:
    npm run build
    ```
 
-### Android (Capacitor)
-To build and run the Android app:
-
-```bash
-npm run build
-npx capacitor sync
-npx capacitor run android
-```
-
-The Android project lives in `android/` and includes the custom `vosk-speech-recognition` module for offline speech recognition.
-
-## License
+ ## License
 [Add License Information Here]
