@@ -315,7 +315,7 @@ import { useActiveVerseIndex } from './mudarasa/hooks/useActiveVerseIndex';
         </div>
 
         {/* Control Bar */}
-        <div style={{ position: 'fixed', bottom: '2rem', left: '0', right: '0', zIndex: 'var(--z-header)', display: 'flex', justifyContent: 'center' }}>
+        <div style={{ position: 'fixed', bottom: '6rem', left: '0', right: '0', zIndex: 'var(--z-header)', display: 'flex', justifyContent: 'center' }}>
           <AnimatePresence mode="wait">
             {mudarasaTurn === 'user' && (
               <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-4)' }}>
@@ -396,29 +396,6 @@ import { useActiveVerseIndex } from './mudarasa/hooks/useActiveVerseIndex';
                         </span>
                       )}
                     </div>
-                    {transcript && (
-                      <div
-                        ref={transcriptRef}
-                        style={{
-                          maxWidth: '90vw',
-                          maxHeight: '3.5rem',
-                          overflowY: 'auto',
-                          padding: '0.6rem 1rem',
-                          borderRadius: 'var(--radius-md)',
-                          background: 'rgba(16,185,129,0.15)',
-                          border: '1px solid rgba(16,185,129,0.4)',
-                          color: 'var(--text-primary)',
-                          fontSize: 'var(--fs-secondary)',
-                          fontWeight: '600',
-                          textAlign: 'center',
-                          lineHeight: 1.5,
-                          wordBreak: 'break-word',
-                          backdropFilter: 'blur(8px)',
-                        }}
-                      >
-                        Hearing: {transcript}
-                      </div>
-                    )}
                   </>
                 ) : (
                   <>
@@ -444,7 +421,50 @@ import { useActiveVerseIndex } from './mudarasa/hooks/useActiveVerseIndex';
         </div>
       </motion.div>
 
-      <RetryPrompt 
+      {/* Transcript rendered above overlay with pointer-events disabled so it doesn't block hint interactions */}
+      <AnimatePresence>
+        {mudarasaTurn === 'user' && transcript && (
+          <motion.div
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 50, opacity: 0 }}
+            style={{
+              position: 'fixed',
+              bottom: '1rem',
+              left: '0',
+              right: '0',
+              zIndex: 1500,
+              display: 'flex',
+              justifyContent: 'center',
+              pointerEvents: 'none',
+            }}
+          >
+            <div
+              ref={transcriptRef}
+              style={{
+                maxWidth: '90vw',
+                maxHeight: '3.5rem',
+                overflowY: 'auto',
+                padding: '0.6rem 1rem',
+                borderRadius: 'var(--radius-md)',
+                background: 'rgba(16,185,129,0.15)',
+                border: '1px solid rgba(16,185,129,0.4)',
+                color: 'var(--text-primary)',
+                fontSize: 'var(--fs-secondary)',
+                fontWeight: '600',
+                textAlign: 'center',
+                lineHeight: 1.5,
+                wordBreak: 'break-word',
+                backdropFilter: 'blur(8px)',
+              }}
+            >
+              Hearing: {transcript}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <RetryPrompt
         retryPrompt={retryPrompt} 
         setRetryPrompt={setRetryPrompt} 
         handleRetryVerse={handleRetryVerse} 

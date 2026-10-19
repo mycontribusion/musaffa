@@ -132,20 +132,6 @@ export const VisualHintOverlay = ({ hint, onDismiss, isAudioPlaying }) => {
               fontWeight: '500',
             }}
           >
-            {isAudioPlaying && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  color: '#fef08a',
-                  fontWeight: '700',
-                }}
-              >
-                <Volume2 size={16} />
-                <span>Audio Hint Playing...</span>
-              </div>
-            )}
             <div style={{
               direction: 'rtl',
               textAlign: 'center',
