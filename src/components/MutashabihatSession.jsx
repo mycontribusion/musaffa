@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, CheckCircle2, XCircle, RotateCcw, CircleHelp } from 'lucide-react';
-import { buildSessionCards } from '../utils/mutashabihatParser';
+import { buildSessionCards, seededShuffle } from '../utils/mutashabihatParser';
 
 /**
  * Standard "stop" transport glyph: a circle with a *filled* square inside.
@@ -78,6 +78,19 @@ const OptionBtn = ({ opt, answered, selected, onClick }) => {
         {opt.text}
       </p>
       {answered && (
+        <span style={{
+          display: 'block',
+          fontSize: 'var(--fs-label)',
+          color: correct ? '#34d399' : 'var(--text-muted)',
+          marginTop: '0.45rem',
+          textAlign: 'left',
+          fontWeight: 700,
+          letterSpacing: '0.04em',
+        }}>
+          {opt.surahName} · {opt.surah}:{opt.ayah}
+        </span>
+      )}
+      {answered && (
         <span style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)' }}>
           {opt.isCorrect
             ? <CheckCircle2 size={22} color="#34d399" />
@@ -108,11 +121,10 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
           all.push(...buildSessionCards(entries, surahNum, quranAr, surahs));
         }
       });
-      return all.sort(() => Math.random() - 0.5);
+      return seededShuffle(all, (sessionKey || 0) + 1);
     }
     if (!allSurahEntries?.length) return [];
-    return buildSessionCards(allSurahEntries, surah.number, quranAr, surahs);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return buildSessionCards(allSurahEntries, surah?.number, quranAr, surahs);
   }, [allSurahEntries, surah?.number, quranAr, surahs, sessionKey, multiSurahData]);
 
   const card = cards[idx];
@@ -221,7 +233,7 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
                     {hist.card.options.map((o, j) => {
-                      const isChosen = hist.selectedOpt.surah === o.surah && hist.selectedOpt.ayah === o.ayah;
+                      const isChosen = hist.selectedOpt.surah === o.surah && hist.selectedOpt.ayah === o.ayah && hist.selectedOpt.text === o.text;
                       const isCorrect = o.isCorrect;
                       return (
                         <div key={j} style={{
@@ -410,9 +422,9 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
 
             {/* Options */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-              {card.options.map((opt) => (
+              {card.options.map((opt, oIdx) => (
                 <OptionBtn
-                  key={`${opt.surah}-${opt.ayah}`}
+                  key={`${opt.surah}-${opt.ayah}-${oIdx}`}
                   opt={opt}
                   answered={answered}
                   selected={selected === opt}

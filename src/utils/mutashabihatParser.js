@@ -37,112 +37,249 @@ export const groupMutashabihatBySurah = (lines) => {
   return groups;
 };
 
-const shuffle = arr => {
+export const seededShuffle = (arr, seed = 1) => {
   const newArr = [...arr];
+  let s = (seed <= 0 ? 1 : seed) * 16807;
+  const nextRand = () => {
+    s = (s * 9301 + 49297) % 233280;
+    return s / 233280;
+  };
   for (let i = newArr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(nextRand() * (i + 1));
     [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
   }
   return newArr;
 };
 
+export const shuffle = arr => seededShuffle(arr, Math.floor(Date.now() % 100000) + 1);
+
+/**
+ * Normalize Arabic text for deterministic alignment comparisons.
+ */
+export const normalizeForMatch = (text) => {
+  if (!text) return '';
+  return text
+    .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, '')
+    .replace(/[\u0622\u0623\u0625\u0671]/g, '\u0627')
+    .replace(/\u0649/g, '\u064A')
+    .replace(/\u0624/g, '\u0648')
+    .replace(/\u0626/g, '\u064A')
+    .replace(/\u0629/g, '\u0647')
+    .replace(/\u0640/g, '')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .trim();
+};
+
+/**
+ * Split two mutashabih verses at the exact point of divergence.
+ * Returns the shared question stem and the differing option segments.
+ */
+export const splitMutashabih = (textAnchor, textOther) => {
+  if (!textAnchor || !textOther) return null;
+  const wA = textAnchor.trim().split(/\s+/);
+  const wO = textOther.trim().split(/\s+/);
+  const nA = wA.map(normalizeForMatch);
+  const nO = wO.map(normalizeForMatch);
+
+  // Exact duplicate verse across surahs
+  if (nA.join(' ') === nO.join(' ')) {
+    return {
+      type: 'identical',
+      stem: textAnchor,
+      optAnchor: textAnchor,
+      optOther: textOther,
+    };
+  }
+
+  // 1. Longest Common Prefix (LCP)
+  let lcp = 0;
+  while (lcp < nA.length && lcp < nO.length && nA[lcp] === nO[lcp]) {
+    lcp++;
+  }
+
+  if (lcp >= 1 && lcp < wA.length) {
+    return {
+      type: 'continuation',
+      stem: wA.slice(0, lcp).join(' ') + ' ...',
+      optAnchor: wA.slice(lcp).join(' '),
+      optOther: wO.slice(lcp).join(' ') || textOther,
+      splitIdxAnchor: lcp,
+      splitIdxOther: lcp,
+    };
+  }
+
+  // 2. Longest Common Substring (shared block anywhere inside the verses)
+  let bestLen = 0, bestA = 0, bestO = 0;
+  for (let i = 0; i < nA.length; i++) {
+    for (let j = 0; j < nO.length; j++) {
+      let len = 0;
+      while (i + len < nA.length && j + len < nO.length && nA[i + len] === nO[j + len]) {
+        len++;
+      }
+      if (len > bestLen) {
+        bestLen = len;
+        bestA = i;
+        bestO = j;
+      }
+    }
+  }
+
+  if (bestLen >= 2) {
+    const endA = bestA + bestLen;
+    const endO = bestO + bestLen;
+
+    if (endA < wA.length) {
+      // Shared part comes first, then branches off (Continuation)
+      return {
+        type: 'continuation',
+        stem: wA.slice(0, endA).join(' ') + ' ...',
+        optAnchor: wA.slice(endA).join(' '),
+        optOther: wO.slice(endO).join(' ') || textOther,
+        splitIdxAnchor: endA,
+        splitIdxOther: endO,
+      };
+    } else {
+      // Shared part reaches the end of the verse (Divergence at beginning)
+      return {
+        type: 'beginning',
+        stem: '... ' + wA.slice(bestA).join(' '),
+        optAnchor: wA.slice(0, bestA).join(' '),
+        optOther: wO.slice(0, bestO).join(' ') || textOther,
+        splitIdxAnchor: bestA,
+        splitIdxOther: bestO,
+      };
+    }
+  }
+
+  // Fallback: subtle single-word swap or general mutashabih
+  return {
+    type: 'phrase',
+    stem: textAnchor.length > 80 ? textAnchor.slice(0, 80) + ' ...' : textAnchor,
+    optAnchor: textAnchor,
+    optOther: textOther,
+  };
+};
+
 export const buildSessionCards = (entries, surahNum, quranAr, surahs) => {
+  if (!entries?.length || !quranAr || !surahs) return [];
   const txt = (s, a) => quranAr?.surahs[s - 1]?.ayahs[a - 1]?.text || '';
   const nam = (s) => surahs?.[s - 1]?.englishName || `Surah ${s}`;
-  const v = (s, a) => ({ surah: s, ayah: a, text: txt(s, a), surahName: nam(s) });
 
-  const unmergedCards = entries.map(entry => {
-    const { sources, mutGroups, endOnly } = entry;
-    // sides: source block is side 0, each mutGroup is a subsequent side
+  const isBlockSide = (side) => {
+    return side.length > 1 &&
+      side.every(x => x.surah === side[0].surah) &&
+      side.every((x, i) => i === 0 || x.ayah === side[i - 1].ayah + 1);
+  };
+
+  const getSideText = (side) => side.map(r => txt(r.surah, r.ayah)).filter(Boolean).join(' ');
+
+  const unmergedCards = entries.map((entry, entryIdx) => {
+    const { sources, mutGroups } = entry;
     const sides = [sources, ...mutGroups];
 
-    // Find which side contains the current surah
+    // Find which side contains the active surah
     const anchorIdx = sides.findIndex(side => side.some(x => x.surah === surahNum));
     if (anchorIdx === -1) return null;
+
     const anchorSide = sides[anchorIdx];
+    const otherSides = sides.filter((_, idx) => idx !== anchorIdx);
+    if (!otherSides.length) return null;
 
-    // Find the specific verse(s) within the anchor side that belong to current surah
-    const anchorVerses = anchorSide.filter(x => x.surah === surahNum);
-    if (!anchorVerses.length) return null;
+    const anchorRef = anchorSide.find(x => x.surah === surahNum) || anchorSide[0];
+    const isAnchorBlock = isBlockSide(anchorSide);
+    const anchorText = isAnchorBlock ? getSideText(anchorSide) : txt(anchorRef.surah, anchorRef.ayah);
+    if (!anchorText) return null;
 
-    // Build options: one correct (from current surah) + one per other side
-    const buildOptions = (useNext) => {
-      const opts = [];
-      sides.forEach((side, si) => {
-        const isAnchor = si === anchorIdx;
+    // Determine primary other side for reference split
+    const primaryOtherSide = otherSides[0];
+    const isPrimaryBlock = isBlockSide(primaryOtherSide);
+    const primaryOtherRef = primaryOtherSide[0];
+    const primaryOtherText = isPrimaryBlock ? getSideText(primaryOtherSide) : txt(primaryOtherRef.surah, primaryOtherRef.ayah);
+    if (!primaryOtherText) return null;
 
-        if (isAnchor) {
-          // Use only the current surah's verse(s) from this side as the correct answer
-          const sorted = [...anchorVerses].sort((a, b) => a.ayah - b.ayah);
-          const isBlock = sorted.every((x, i) => i === 0 || x.ayah === sorted[i - 1].ayah + 1);
-          if (isBlock) {
-            const rep = useNext ? sorted[sorted.length - 1] : sorted[0];
-            const o = useNext ? v(rep.surah, rep.ayah + 1) : v(rep.surah, rep.ayah);
-            if (o.text) opts.push({ ...o, isCorrect: true });
-          } else {
-            sorted.forEach(x => {
-              const o = useNext ? v(x.surah, x.ayah + 1) : v(x.surah, x.ayah);
-              if (o.text) opts.push({ ...o, isCorrect: true });
-            });
-          }
-        } else {
-          // Distractor: pick one representative verse from the other side
-          const sorted = [...side].sort((a, b) => a.ayah - b.ayah);
-          const isBlock = side.every(x => x.surah === side[0].surah) &&
-            sorted.every((x, i) => i === 0 || x.ayah === sorted[i - 1].ayah + 1);
-          if (isBlock) {
-            const rep = useNext ? sorted[sorted.length - 1] : sorted[0];
-            const o = useNext ? v(rep.surah, rep.ayah + 1) : v(rep.surah, rep.ayah);
-            if (o.text) opts.push({ ...o, isCorrect: false });
-          } else {
-            // For non-consecutive mixed sides, pick first verse per unique surah
-            const seen = new Set();
-            sorted.forEach(x => {
-              if (!seen.has(x.surah)) {
-                seen.add(x.surah);
-                const o = useNext ? v(x.surah, x.ayah + 1) : v(x.surah, x.ayah);
-                if (o.text) opts.push({ ...o, isCorrect: false });
-              }
-            });
-          }
-        }
-      });
-      return opts;
+    const split = splitMutashabih(anchorText, primaryOtherText);
+    if (!split) return null;
+
+    // Correct option from current surah
+    const correctOpt = {
+      surah: anchorRef.surah,
+      ayah: anchorRef.ayah,
+      surahName: nam(anchorRef.surah),
+      text: split.optAnchor,
+      fullText: anchorText,
+      isCorrect: true,
     };
 
-    // Show verse BEFORE the anchor's first verse (must be within current surah)
-    const sortedAnchor = [...anchorVerses].sort((a, b) => a.ayah - b.ayah);
-    const first = sortedAnchor[0];
-    const prev = v(first.surah, first.ayah - 1);
-    if (!prev.text || prev.surah !== first.surah || first.ayah <= 1) return null;
-    const options = buildOptions(false);
-    if (options.length < 2) return null;
-    /* The question keeps naming the surah — it orients the test-taker and scopes
-       the ask to one surah's running order. What it must not carry is a *verse*
-       reference: `contextLabel` used to render "Al-Baqarah · 2:255" directly
-       above the context verse, pinning down the exact ayah preceding the blank,
-       which turned the card into a lookup of ayah n+1. That field is removed
-       outright rather than trimmed, and its label span was dropped from
-       MutashabihatSession accordingly. */
+    // Build distractors from other side(s)
+    const distractorOpts = [];
+    const seenDistractors = new Set();
+
+    otherSides.forEach(side => {
+      const isBlock = isBlockSide(side);
+      const candidates = isBlock ? [side] : side.map(ref => [ref]);
+
+      candidates.forEach(cand => {
+        const repRef = cand[0];
+        const sideText = isBlock ? getSideText(cand) : txt(repRef.surah, repRef.ayah);
+        if (!sideText) return;
+
+        const sideSplit = splitMutashabih(anchorText, sideText);
+        const optText = sideSplit?.optOther || sideText;
+        const key = `${repRef.surah}:${repRef.ayah}:${optText}`;
+
+        if (!seenDistractors.has(key) && optText !== correctOpt.text && distractorOpts.length < 3) {
+          seenDistractors.add(key);
+          distractorOpts.push({
+            surah: repRef.surah,
+            ayah: repRef.ayah,
+            surahName: nam(repRef.surah),
+            text: optText,
+            fullText: sideText,
+            isCorrect: false,
+          });
+        }
+      });
+    });
+
+    if (distractorOpts.length === 0) return null;
+
+    const options = [correctOpt, ...distractorOpts];
+
+    let question = `Which continuation follows in ${nam(surahNum)}?`;
+    if (split.type === 'beginning') {
+      question = `How does this verse begin in ${nam(surahNum)}?`;
+    } else if (split.type === 'phrase' || split.type === 'identical') {
+      question = `Which verse phrasing belongs to ${nam(surahNum)}?`;
+    }
+
     return {
-      id: `cont-${sources[0].surah}:${sources[0].ayah}-${surahNum}`,
-      contextVerse: prev,
-      question: `Which verse follows in ${nam(surahNum)}?`,
+      id: `mut-${anchorRef.surah}:${anchorRef.ayah}-${surahNum}-${entryIdx}`,
+      stem: split.stem,
+      contextVerse: {
+        surah: anchorRef.surah,
+        ayah: anchorRef.ayah,
+        text: split.stem,
+        surahName: nam(surahNum),
+      },
+      question,
       options,
+      splitType: split.type,
     };
   }).filter(Boolean);
 
+  // Deduplicate cards by their question & stem
   const mergedMap = new Map();
   unmergedCards.forEach(card => {
-    const key = `${card.contextVerse.surah}-${card.contextVerse.ayah}-${card.question}`;
+    const key = `${card.stem}-${card.question}`;
     if (!mergedMap.has(key)) {
       mergedMap.set(key, { ...card, options: [...card.options] });
     } else {
-      const existingCard = mergedMap.get(key);
+      const existing = mergedMap.get(key);
       card.options.forEach(opt => {
-        // Only add if not already in existingCard.options
-        if (!existingCard.options.some(o => o.surah === opt.surah && o.ayah === opt.ayah)) {
-          existingCard.options.push(opt);
+        if (!existing.options.some(o => o.surah === opt.surah && o.ayah === opt.ayah && o.text === opt.text)) {
+          if (existing.options.length < 4) {
+            existing.options.push(opt);
+          }
         }
       });
     }
@@ -150,7 +287,7 @@ export const buildSessionCards = (entries, surahNum, quranAr, surahs) => {
 
   const cards = Array.from(mergedMap.values()).map(c => ({
     ...c,
-    options: shuffle(c.options)
+    options: shuffle(c.options),
   }));
 
   return shuffle(cards);
