@@ -250,9 +250,43 @@ const App = () => {
     }
   }, [view, selectedSurah, partnerSubView, loading, error, canRenderView]);
 
+  // Tracks the scroll position of the homepage (surah list) so that returning
+  // from a surah detail view re-opens it where the user left off instead of
+  // at the top. Only the detail → list transition restores a position; every
+  // other navigation, view change, or mount/unmount still resets scroll to 0.
+  const listScrollPosition = useRef(null);
+  const prevViewRef = useRef(view);
+
+  // Track the homepage scroll position while the user is on it so that
+  // returning from a surah detail view re-opens it where they left off.
+  // The ref is only updated by the scroll listener — never on mount — so
+  // entering the list from a detail view does not clobber the saved value
+  // with the (top-of-detail) scroll position of 0.
+  useEffect(() => {
+    if (view !== 'list') return;
+    const onScroll = () => {
+      listScrollPosition.current = window.scrollY;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [view]);
+
   // Global Scroll Reset: Prevent scroll bleeding between different pages
   useEffect(() => {
-    window.scrollTo(0, 0);
+    const previous = prevViewRef.current;
+    prevViewRef.current = view;
+
+    // Restore the homepage scroll position only when coming back from a
+    // surah detail view. All other transitions scroll to the top as before.
+    if (view === 'list' && previous === 'detail') {
+      if (listScrollPosition.current != null) {
+        window.scrollTo(0, listScrollPosition.current);
+      } else {
+        window.scrollTo(0, 0);
+      }
+    } else {
+      window.scrollTo(0, 0);
+    }
   }, [view, partnerSubView]);
 
   const handleSelectSurah = (s) => {
