@@ -26,17 +26,15 @@ const HomeControls = ({ setView }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', marginTop: 'var(--space-5)', marginBottom: '0' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-        {/* Mistake Book — unchanged destination.
-            Shares the exact subdued `.field-label` treatment used by Audio
-            Manager so the two read as one secondary/utility group. Visual only:
-            the destination, text and position are untouched. */}
+        {/* Recitation Map — replaces the old Mistake Book.
+            Shows per-word Smart Mode results across all 114 surahs. */}
         <button
-          onClick={() => setView('weaknesses')}
+          onClick={() => setView('recitation-map')}
           style={pill}
-          title="Mistake Book (Weaknesses)"
+          title="Recitation Map"
         >
           <BookOpen size={15} color="var(--accent-gold)" strokeWidth={2} />
-          <span className="field-label">Mistake Book</span>
+          <span className="field-label">Recitation Map</span>
         </button>
 
         {/* Audio Manager — navigates to the Audio Manager view */}

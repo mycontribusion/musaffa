@@ -8,7 +8,7 @@ import SurahDetail from './components/SurahDetail';
 import PartnerSession from './components/PartnerSession';
 import MutashabihatSession from './components/MutashabihatSession';
 import MutashabihSelection from './components/MutashabihSelection';
-import WeaknessTracker from './components/WeaknessTracker';
+import RecitationMap from './components/RecitationMap';
 import { useQuranData } from './hooks/useQuranData';
 import { useMusaffa } from './hooks/useMusaffa';
 import { useQuiz } from './hooks/useQuiz';
@@ -24,7 +24,7 @@ import { useVoskModelDownload } from './hooks/useVoskModelDownload';
  * The global `<Header />` is not rendered for these, so the local bar is the
  * only header on screen and starts at the top of the viewport:
  *
- *  - `weaknesses`             — Mistake Book     (`WeaknessTracker`)
+ *  - `recitation-map`         — Recitation Map   (`RecitationMap`)
  *  - `audio-manager`          — Audio Manager    (`AudioManager`)
  *  - `detail`                 — Surah Detail     (`SurahDetail`)
  *  - `mutashabihat-selection` — Mutashabih Quiz (`MutashabihSelection`)
@@ -33,9 +33,12 @@ import { useVoskModelDownload } from './hooks/useVoskModelDownload';
  * Every other view keeps the global header exactly as it is today. The local
  * headers of those views no longer need to offset themselves past the global
  * header, so they pin to `top: 0` instead.
+ *
+ * The old `weaknesses` view (Mistake Book) is kept as an alias that renders the
+ * Recitation Map, so existing links and `localStorage` data keep working.
  */
 const VIEWS_WITHOUT_GLOBAL_HEADER = new Set([
-  'weaknesses',
+  'recitation-map',
   'audio-manager',
   'detail',
   'mutashabihat-selection',
@@ -73,9 +76,19 @@ const App = () => {
   
   const [musaffaParams, setMusaffaParams] = useLocalStorageState('quran_musaffa_params', DEFAULT_PARAMS);
   const [reciter, setReciter] = useLocalStorageState('quran_reciter', 'ar.saoodshuraym', true);
-  const [stumbles, setStumbles] = useLocalStorageState('quran_stumbles', []);
   const [recentSurahs, setRecentSurahs] = useLocalStorageState('quran_recent', []);
   const [lastRead, setLastRead] = useLocalStorageState('quran_last_read', null);
+  const [wordResults, setWordResults] = useLocalStorageState('quran_word_results', {});
+  const [stumbles, setStumbles] = useLocalStorageState('quran_stumbles', []);
+
+  // `logStumble` and the `stumbles`/`WeaknessTracker` Mistake Book state are
+  // intentionally retained (not removed). The Recitation Map now surfaces
+  // word-level Smart Mode results via `wordResults`, but the old Mistake Book
+  // storage key is left untouched so existing user data is not lost. The
+  // automatic per-ayat logging call in PartnerSession has been removed.
+  // `logStumble` is defined below (near `handleSelectSurah`) and is still
+  // passed to PartnerSession so the in-session "Log Stumble" buttons keep
+  // working for users who want to flag an ayah manually.
 
   const syncStateWithURL = useCallback((sList) => {
     const path = window.location.pathname;
@@ -102,10 +115,16 @@ const App = () => {
       } else if (parts[0] === 'mutashabihat') {
         if (parts[1] === 'custom') v = 'mutashabihat-selection';
         else if (parts[1] === 'session') v = 'mutashabihat-multi-session';
-      } else if (parts[0] === 'weaknesses') {
-        v = 'weaknesses';
+      } else if (parts[0] === 'recitation-map') {
+        v = 'recitation-map';
       } else if (parts[0] === 'audio-manager') {
         v = 'audio-manager';
+      }
+      if (v === 'recitation-map') {
+        pv = 'config';
+      }
+      if (v === 'weaknesses') {
+        v = 'recitation-map';
       }
     } else if (!p.get('view')) {
       v = 'list';
@@ -388,15 +407,22 @@ const App = () => {
               />
             )}
             
-            {view === 'weaknesses' && (
-              <WeaknessTracker
-                stumbles={stumbles}
-                setStumbles={setStumbles}
+            {view === 'recitation-map' && (
+              <RecitationMap
                 surahs={surahs}
+                quranAr={quranAr}
+                quranSimple={quranSimple}
+                wordResults={wordResults}
                 setView={setView}
-                setPartnerSubView={setPartnerSubView}
-                setMusaffaParams={setMusaffaParams}
-                handleSelectSurah={handleSelectSurah}
+              />
+            )}
+            {view === 'weaknesses' && (
+              <RecitationMap
+                surahs={surahs}
+                quranAr={quranAr}
+                quranSimple={quranSimple}
+                wordResults={wordResults}
+                setView={setView}
               />
             )}
 
@@ -470,8 +496,9 @@ const App = () => {
                 currentAyahNumber={currentAyahNumber}
                 turn={mudarasaTurn}
                 handleNextTurn={handleNextTurnManual}
-                logStumble={logStumble}
                 setView={setView}
+                wordResults={wordResults}
+                setWordResults={setWordResults}
                 questions={dynamicMutashabihat}
                 quizScore={quizScore}
                 quizFeedback={quizFeedback}

@@ -302,6 +302,88 @@ export const buildAyahWordCounts = (chunk, quranSimple) => {
 };
 
 /**
+ * Normalize a single ayah's text the same way `buildExpectedText` does, so the
+ * word boundaries line up exactly with the comparison engine's `expWords`.
+ *
+ * Returns the normalized word array for ONE ayah (Bismillah prepended when the
+ * ayah starts a surah that carries a Bismillah header).
+ *
+ * Used by the Recitation Map to turn the flat `results` array back into
+ * per-ayat, per-word positions.
+ */
+export const normalizeAyahWords = (ayah, quranSimple = null) => {
+  if (!ayah) return [];
+  let text = ayah.text || '';
+  if (quranSimple) {
+    const key = `${ayah.surahNumber}|${ayah.numberInSurah}`;
+    if (quranSimple[key]) text = quranSimple[key];
+  }
+  if (hasBismillahHeader(ayah.surahNumber, ayah.numberInSurah)) {
+    const bismillahNorm = normalizeArabic(BISMILLAH_SIMPLE);
+    const bodyText = text.startsWith(BISMILLAH_SIMPLE)
+      ? text.slice(BISMILLAH_SIMPLE.length).trim()
+      : text;
+    const clean = removeTashkeel(bodyText);
+    const bodyNorm = normalizeArabic(expandMuqattaat(clean));
+    return (bismillahNorm + ' ' + bodyNorm).trim().split(/\s+/).filter(Boolean);
+  }
+  const clean = removeTashkeel(text);
+  return normalizeArabic(expandMuqattaat(clean)).trim().split(/\s+/).filter(Boolean);
+};
+
+/**
+ * Canonical key for one assessed Quran word.
+ *
+ * `{surahNumber}|{numberInSurah}|{wordIndexWithinAyah}`
+ *
+ * Word index is 0-based within the ayah's normalized word list (as produced by
+ * `normalizeAyahWords`). This is stable across sessions and reloads, which is
+ * what lets the Recitation Map overwrite a single word's result without
+ * storing whole recitation attempts.
+ */
+export const buildWordKey = (surahNumber, numberInSurah, wordIndex) => {
+  return `${surahNumber}|${numberInSurah}|${wordIndex}`;
+};
+
+/**
+ * Map a flat `results` array (as produced by `compareRecitation`) onto
+ * canonical word keys.
+ *
+ * `results` is indexed against the chunk's full normalized expected text. We
+ * walk the chunk ayah-by-ayah, consuming each ayah's normalized word count, so
+ * every `results[i]` lands on exactly one `{surahNumber, numberInSurah,
+ * wordIndex}`.
+ *
+ * Returns an array of `{ key, surahNumber, numberInSurah, wordIndex, word,
+ * status, spokenWord }` in the same order as `results`. Words with a `status`
+ * of `pending` are excluded — they were never assessed.
+ */
+export const mapResultsToWordKeys = (results, chunk, quranSimple = null) => {
+  if (!Array.isArray(results) || !Array.isArray(chunk)) return [];
+  const mapped = [];
+  let globalIdx = 0;
+  for (const ayah of chunk) {
+    const words = normalizeAyahWords(ayah, quranSimple);
+    for (let w = 0; w < words.length; w++) {
+      const item = results[globalIdx];
+      if (item && item.status !== 'pending') {
+        mapped.push({
+          key: buildWordKey(ayah.surahNumber, ayah.numberInSurah, w),
+          surahNumber: ayah.surahNumber,
+          numberInSurah: ayah.numberInSurah,
+          wordIndex: w,
+          word: item.word || words[w],
+          status: item.status,
+          spokenWord: item.spokenWord || null,
+        });
+      }
+      globalIdx++;
+    }
+  }
+  return mapped;
+};
+
+/**
  * Build a Vosk grammar JSON string from the expected (normalized) text.
  *
  * Vosk grammar restricts the recognizer to only output words present in the

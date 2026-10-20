@@ -6,7 +6,7 @@ import { ResumeBanner } from './partnerConfig/ResumeBanner';
 import { useMic } from '../hooks/useMic';
 import { useRecitationCheck } from '../hooks/useRecitationCheck';
 import { useLocalStorageState } from '../hooks/useLocalStorageState';
-import { getAudioUrl, buildExpectedText, buildAyahWordCounts, getHintWords } from '../utils/quranUtils';
+import { getAudioUrl, buildExpectedText, buildAyahWordCounts, getHintWords, mapResultsToWordKeys } from '../utils/quranUtils';
 
 const PartnerSession = ({
   subView,
@@ -22,6 +22,8 @@ const PartnerSession = ({
   logStumble,
   setSubView,
   setView,
+  wordResults,
+  setWordResults,
   // Quiz Props
   questions,
   quizScore,
@@ -357,6 +359,45 @@ const PartnerSession = ({
     handleNextTurn();
   }, [clearResults, handleNextTurn]);
 
+  // Persist Smart Mode word-level results into the Recitation Map.
+  //
+  // Done inside `handleFinishedTurn` rather than in a `useEffect` on
+  // `completedResults`: that callback sets `completedResults` and calls
+  // `handleNextTurn()` (which advances `currentChunkIndex`) in the same batch,
+  // so an effect reading `chunks[currentChunkIndex]` would always map the
+  // just-finished results onto the *next* chunk — a one-chunk offset (e.g.
+  // reciting Surah 70:1-30 coloured 70:31 → 79:13). Here the correct chunk is
+  // still in scope before the turn hands over.
+  //
+  // `completedResults` is only ever set by this callback, and only when
+  // `enableErrorDetection && sttSupported` — i.e. Smart Mode. Hands-free and
+  // Manual modes never set it, so this is a no-op for them.
+  //
+  // Each word stores only its latest valid result: the new entry overwrites
+  // any existing entry for the same canonical key, so retakes replace rather
+  // than duplicate.
+  const persistWordResults = useCallback((results, chunk) => {
+    if (!enableErrorDetection) return;
+    if (!results || !results.results) return;
+    if (!chunk || chunk.length === 0) return;
+
+    const mapped = mapResultsToWordKeys(results.results, chunk, quranSimple);
+    if (mapped.length === 0) return;
+
+    setWordResults((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const m of mapped) {
+        const existing = next[m.key];
+        if (!existing || existing.status !== m.status || existing.spokenWord !== m.spokenWord) {
+          next[m.key] = { status: m.status, spokenWord: m.spokenWord };
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [enableErrorDetection, quranSimple, setWordResults]);
+
   // Called when 100% accuracy is confirmed OR user taps "Tap to finish early"
   const handleFinishedTurn = useCallback(() => {
     if (enableErrorDetection && sttSupported) {
@@ -365,14 +406,18 @@ const PartnerSession = ({
       // Advance immediately — if triggered by auto-finish, 100% is already confirmed.
       // If triggered manually, we give a brief moment for final comparison to log.
       autoAdvanceTimerRef.current = setTimeout(() => {
+        const finishedChunk = chunks[currentChunkIndex];
         setCompletedResults(liveResultsRef.current);
+        // Persist word-level results for the chunk that was just recited,
+        // using the chunk still in scope before the turn hands over.
+        persistWordResults(liveResultsRef.current, finishedChunk);
         clearResults();
         handleNextTurn();
       }, 200);
     } else {
       handleNextTurn();
     }
-  }, [enableErrorDetection, sttSupported, stopAndCheck, clearResults, handleNextTurn]);
+  }, [enableErrorDetection, sttSupported, stopAndCheck, clearResults, handleNextTurn, persistWordResults, chunks, currentChunkIndex]);
 
   // Keep the ref in sync so the onAutoFinish closure always calls the latest version
   handleFinishedTurnRef.current = handleFinishedTurn;
@@ -423,20 +468,12 @@ const PartnerSession = ({
      }
    }, [turn, clearTranscript]);
 
-  // Automatically log stumbles and store recitation history in localStorage when results are computed
+  // Store recitation attempt feedback in localStorage history when results are
+  // computed. The old per-ayat `logStumble` call was removed: word-level
+  // results are now persisted by the Smart-Mode-only effect above, and the
+  // Recitation Map replaces the Mistake Book as the review surface.
   useEffect(() => {
     if (recitationResults && recitationResults.results) {
-      const hasErrors = recitationResults.results.some(r => r.status === 'omission' || r.status === 'substitution');
-      if (hasErrors) {
-        const chunk = chunks[currentChunkIndex];
-        if (chunk) {
-          chunk.forEach(ayah => {
-            logStumble(ayah);
-          });
-        }
-      }
-
-      // Store the recitation attempt feedback in localStorage history
       try {
         const history = JSON.parse(localStorage.getItem('quran_recitation_history') || '[]');
         const newRecord = {
@@ -453,7 +490,7 @@ const PartnerSession = ({
         console.error('Failed to save recitation history:', e);
       }
     }
-  }, [recitationResults, currentChunkIndex, chunks, logStumble, transcript, quranSimple]);
+  }, [recitationResults, currentChunkIndex, chunks, transcript, quranSimple]);
 
   // Dispatcher
   if (subView === 'config') return (
