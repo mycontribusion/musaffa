@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, CheckCircle2, XCircle, RotateCcw, CircleHelp } from 'lucide-react';
+import { ChevronLeft, CheckCircle2, XCircle, RotateCcw, CircleHelp, Printer } from 'lucide-react';
 import { buildSessionCards, seededShuffle } from '../utils/mutashabihatParser';
 
 /**
@@ -202,6 +202,15 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}>
             <RotateCcw size={15} /> Try Again
+          </button>
+          <button onClick={() => window.print()} style={{
+            padding: '0.9rem', borderRadius: '0.9rem',
+            background: 'var(--glass-bg)', border: 'var(--border-hairline)',
+            color: 'var(--text-primary)', fontWeight: 800, fontSize: 'var(--fs-meta)',
+            textTransform: 'uppercase', letterSpacing: '0.15em', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}>
+            <Printer size={15} /> Print Results
           </button>
           <button onClick={onClose} style={{
             padding: '0.9rem', borderRadius: '0.9rem',

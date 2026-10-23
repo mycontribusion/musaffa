@@ -200,6 +200,9 @@ export const buildSessionCards = (entries, surahNum, quranAr, surahs) => {
     const split = splitMutashabih(anchorText, primaryOtherText);
     if (!split) return null;
 
+    // Temporarily skip same-surah identical cards (cross-surah identical cards are preserved)
+    if (split.type === 'identical' && anchorRef.surah === primaryOtherRef.surah) return null;
+
     // Correct option from current surah
     const correctOpt = {
       surah: anchorRef.surah,
@@ -245,11 +248,38 @@ export const buildSessionCards = (entries, surahNum, quranAr, surahs) => {
 
     const options = [correctOpt, ...distractorOpts];
 
+    // Detect LCP same-surah continuation cards (both verses share a prefix)
+    let isLcpSameSurah = false;
+    if (split.type === 'continuation' && anchorRef.surah === primaryOtherRef.surah) {
+      const nA = anchorText.trim().split(/\s+/).map(normalizeForMatch);
+      const nO = primaryOtherText.trim().split(/\s+/).map(normalizeForMatch);
+      let lcp = 0;
+      while (lcp < nA.length && lcp < nO.length && nA[lcp] === nO[lcp]) lcp++;
+      if (lcp >= 1) isLcpSameSurah = true;
+    }
+
     let question = `Which continuation follows in ${nam(surahNum)}?`;
-    if (split.type === 'beginning') {
+    if (isLcpSameSurah) {
+      question = `Which continuation comes first in ${nam(surahNum)}?`;
+    } else if (split.type === 'beginning') {
       question = `How does this verse begin in ${nam(surahNum)}?`;
     } else if (split.type === 'phrase' || split.type === 'identical') {
       question = `Which verse phrasing belongs to ${nam(surahNum)}?`;
+    }
+
+    // For LCP same-surah cards, set isCorrect based on verse number ordering
+    if (isLcpSameSurah) {
+      // Find the option with the smallest surah:ayah
+      let minIdx = 0;
+      for (let i = 1; i < options.length; i++) {
+        if (options[i].surah < options[minIdx].surah ||
+            (options[i].surah === options[minIdx].surah && options[i].ayah < options[minIdx].ayah)) {
+          minIdx = i;
+        }
+      }
+      // Reset all isCorrect, then set the min one
+      options.forEach(o => { o.isCorrect = false; });
+      options[minIdx].isCorrect = true;
     }
 
     return {
