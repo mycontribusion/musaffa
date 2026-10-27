@@ -25,8 +25,19 @@ const SurahList = ({
   editPreset,
   createPreset,
   exitPresetEditing,
+  initialScrollPos,
 }) => {
   const [searchQuery, setSearchQuery] = React.useState('');
+
+  React.useLayoutEffect(() => {
+    if (initialScrollPos != null && initialScrollPos > 0) {
+      window.scrollTo(0, initialScrollPos);
+      const raf = requestAnimationFrame(() => {
+        window.scrollTo(0, initialScrollPos);
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+  }, []);
 
   const { isSearching, surahResults, ayahResults, totalAyahMatches, isTruncated } =
     useQuranSearch(searchQuery, { quranAr, quranEn, surahs });

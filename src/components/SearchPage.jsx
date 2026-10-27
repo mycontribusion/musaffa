@@ -3,9 +3,19 @@ import { motion } from 'framer-motion';
 import { Search, ScrollText } from 'lucide-react';
 import { useQuranSearch } from '../hooks/useQuranSearch';
 
-const SearchPage = ({ surahs, quranAr, quranEn, searchQuery, openAyah }) => {
+const SearchPage = ({ surahs, quranAr, quranEn, searchQuery, openAyah, initialScrollPos }) => {
   const { isSearching, surahResults, ayahResults, totalAyahMatches, isTruncated } =
     useQuranSearch(searchQuery, { quranAr, quranEn, surahs });
+
+  React.useLayoutEffect(() => {
+    if (initialScrollPos != null && initialScrollPos > 0) {
+      window.scrollTo(0, initialScrollPos);
+      const raf = requestAnimationFrame(() => {
+        window.scrollTo(0, initialScrollPos);
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+  }, []);
 
   const filteredSurahs = isSearching ? surahResults : surahs;
   const hasAyahResults = ayahResults.length > 0;

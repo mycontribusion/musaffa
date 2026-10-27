@@ -259,55 +259,74 @@ const App = () => {
 
   // Tracks the scroll position of the homepage (surah list) and search page
   // so that returning from a surah detail view re-opens where the user left off.
-  const listScrollPosition = useRef(null);
-  const searchScrollPosition = useRef(null);
+  const listScrollPosition = useRef(0);
+  const searchScrollPosition = useRef(0);
+  const isRestoringScroll = useRef(false);
   const prevViewRef = useRef(view);
 
-  // Track the homepage scroll position while the user is on it so that
-  // returning from a surah detail view re-opens it where they left off.
+  // Track the homepage scroll position while the user is on it
   useEffect(() => {
     if (view !== 'list') return;
+    const t = setTimeout(() => {
+      isRestoringScroll.current = false;
+    }, 400);
+
     const onScroll = () => {
-      listScrollPosition.current = window.scrollY;
+      if (!isRestoringScroll.current) {
+        listScrollPosition.current = window.scrollY;
+      }
     };
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('scroll', onScroll);
+    };
   }, [view]);
 
   // Track search scroll position while active
   useEffect(() => {
     if (view !== 'search') return;
+    const t = setTimeout(() => {
+      isRestoringScroll.current = false;
+    }, 400);
+
     const onScroll = () => {
-      searchScrollPosition.current = window.scrollY;
+      if (!isRestoringScroll.current) {
+        searchScrollPosition.current = window.scrollY;
+      }
     };
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('scroll', onScroll);
+    };
   }, [view]);
 
-  // Global Scroll Reset: Prevent scroll bleeding between different pages
+  // Global Scroll Reset: Only runs when route view actually changes
   useEffect(() => {
     const previous = prevViewRef.current;
+    if (previous === view) return;
     prevViewRef.current = view;
 
-    // Restore scroll positions when coming back from a surah detail view.
     if (view === 'list' && previous === 'detail') {
-      if (listScrollPosition.current != null) {
-        window.scrollTo(0, listScrollPosition.current);
-      } else {
-        window.scrollTo(0, 0);
-      }
+      isRestoringScroll.current = true;
+      // Restoration is executed directly by SurahList on mount
     } else if (view === 'search' && previous === 'detail') {
-      if (searchScrollPosition.current != null) {
-        window.scrollTo(0, searchScrollPosition.current);
-      } else {
+      isRestoringScroll.current = true;
+      // Restoration is executed directly by SearchPage on mount
+    } else if (view === 'detail') {
+      if (!targetAyah) {
         window.scrollTo(0, 0);
       }
-    } else if (view !== 'detail' || !targetAyah) {
+    } else {
       window.scrollTo(0, 0);
     }
-  }, [view, partnerSubView, targetAyah]);
+  }, [view]);
 
   const handleSelectSurah = (s, returnView = 'list') => {
+    if (view === 'list') {
+      listScrollPosition.current = window.scrollY;
+    }
     setSelectedSurah(s);
     setRecentSurahs(p => {
       const updated = [s, ...p.filter(x => x.number !== s.number)].slice(0, 5);
@@ -328,6 +347,9 @@ const App = () => {
    * navigation system. A null targetAyah means "use last-read behaviour".
    */
   const handleOpenAyah = (surahNumber, ayahNumber) => {
+    if (view === 'search') {
+      searchScrollPosition.current = window.scrollY;
+    }
     const s = surahs.find(x => x.number === surahNumber);
     if (!s) return;
     setSelectedSurah(s);
@@ -456,6 +478,7 @@ const App = () => {
                 quranEn={quranEn}
                 searchQuery={searchQuery}
                 openAyah={handleOpenAyah}
+                initialScrollPos={searchScrollPosition.current}
               />
             )}
 
@@ -468,6 +491,7 @@ const App = () => {
                 handleSelectSurah={handleSelectSurah}
                 openAyah={handleOpenAyah}
                 setView={setView} 
+                initialScrollPos={listScrollPosition.current} 
                 audioDownloadControls={audioDownloadControls} 
                 savedMusaffaSession={savedMusaffaSession} 
                 resumeMusaffaSession={resumeMusaffaSession} 
