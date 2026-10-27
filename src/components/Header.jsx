@@ -2,11 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { Moon, Sun, X, MessageCircleQuestion, Search, ArrowLeft } from 'lucide-react';
 import FeedbackModal from './FeedbackModal';
 
-const Header = ({ theme, setTheme, setView, searchQuery, setSearchQuery, modelStatus, installProgress, installMessage, showInstallPrompt, confirmInstall, setShowInstallPrompt, isNative }) => {
+const Header = ({ view, theme, setTheme, setView, searchQuery, setSearchQuery, modelStatus, installProgress, installMessage, showInstallPrompt, confirmInstall, setShowInstallPrompt, isNative }) => {
   const isDark = theme === 'dark';
   const [settingsOpen, setSettingsOpen] = useState(() => typeof window !== 'undefined' && window.location.pathname === '/settings');
   const [feedbackOpen, setFeedbackOpen] = useState(() => typeof window !== 'undefined' && window.location.pathname === '/feedback');
-  const [searchOpen, setSearchOpen] = useState(() => typeof window !== 'undefined' && window.location.pathname === '/search');
+  const searchOpen = view === 'search';
   const [previousPath, setPreviousPath] = useState('');
   const inputRef = useRef(null);
 
@@ -14,7 +14,6 @@ const Header = ({ theme, setTheme, setView, searchQuery, setSearchQuery, modelSt
     const syncFromUrl = () => {
       setSettingsOpen(window.location.pathname === '/settings' || window.location.pathname === '/feedback');
       setFeedbackOpen(window.location.pathname === '/feedback');
-      setSearchOpen(window.location.pathname === '/search');
     };
     window.addEventListener('popstate', syncFromUrl);
     return () => window.removeEventListener('popstate', syncFromUrl);
@@ -27,25 +26,21 @@ const Header = ({ theme, setTheme, setView, searchQuery, setSearchQuery, modelSt
   }, [searchOpen]);
 
   useEffect(() => {
-    const nextPath = searchOpen ? '/search' : feedbackOpen ? '/feedback' : settingsOpen ? '/settings' : previousPath || '/';
-    if (window.location.pathname !== nextPath) {
-      window.history.pushState({}, '', nextPath);
+    if (feedbackOpen || settingsOpen) {
+      const nextPath = feedbackOpen ? '/feedback' : '/settings';
+      if (window.location.pathname !== nextPath) {
+        window.history.pushState({}, '', nextPath);
+      }
     }
-  }, [settingsOpen, feedbackOpen, searchOpen, previousPath]);
+  }, [settingsOpen, feedbackOpen]);
 
   const openSearch = () => {
-    if (window.location.pathname !== '/settings' && window.location.pathname !== '/feedback' && window.location.pathname !== '/search') {
-      setPreviousPath(window.location.pathname);
-    }
-    setSearchOpen(true);
     setView('search');
   };
 
   const closeSearch = () => {
-    setSearchOpen(false);
     setSearchQuery('');
     setView('list');
-    setPreviousPath('');
   };
 
   if (searchOpen) {

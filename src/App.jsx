@@ -72,6 +72,7 @@ const App = () => {
      so persisting is cheap. */
   const [multiSurahSession, setMultiSurahSession] = useLocalStorageState('quran_multi_surah_session', null);
   const [targetAyah, setTargetAyah] = useState(null);
+  const [detailReturnView, setDetailReturnView] = useState('list');
   const [searchQuery, setSearchQuery] = useState('');
 
   const DEFAULT_PARAMS = { startSurah: 1, startAyah: 1, endSurah: 2, endAyah: 286, portion: 'page', whoStarts: 'app', autoNext: true, micSensitivity: 15, errorDetection: false, errorThreshold: 50, stuckTimerDuration: 5 };
@@ -102,7 +103,9 @@ const App = () => {
     let pv = p.get('partnerView') || 'config';
 
     if (parts.length > 0) {
-      if (parts[0] === 'surah' && parts[1]) {
+      if (parts[0] === 'search') {
+        v = 'search';
+      } else if (parts[0] === 'surah' && parts[1]) {
         s = sList.find(x => x.number === Number(parts[1]));
         v = 'detail';
         if (parts[2] === 'partner' && parts[3]) {
@@ -240,6 +243,8 @@ const App = () => {
       newPath = `/weaknesses`;
     } else if (view === 'audio-manager') {
       newPath = `/audio-manager`;
+    } else if (view === 'search') {
+      newPath = `/search`;
     }
 
     const currentPath = window.location.pathname;
@@ -252,22 +257,28 @@ const App = () => {
     }
   }, [view, selectedSurah, partnerSubView, loading, error, canRenderView]);
 
-  // Tracks the scroll position of the homepage (surah list) so that returning
-  // from a surah detail view re-opens it where the user left off instead of
-  // at the top. Only the detail → list transition restores a position; every
-  // other navigation, view change, or mount/unmount still resets scroll to 0.
+  // Tracks the scroll position of the homepage (surah list) and search page
+  // so that returning from a surah detail view re-opens where the user left off.
   const listScrollPosition = useRef(null);
+  const searchScrollPosition = useRef(null);
   const prevViewRef = useRef(view);
 
   // Track the homepage scroll position while the user is on it so that
   // returning from a surah detail view re-opens it where they left off.
-  // The ref is only updated by the scroll listener — never on mount — so
-  // entering the list from a detail view does not clobber the saved value
-  // with the (top-of-detail) scroll position of 0.
   useEffect(() => {
     if (view !== 'list') return;
     const onScroll = () => {
       listScrollPosition.current = window.scrollY;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [view]);
+
+  // Track search scroll position while active
+  useEffect(() => {
+    if (view !== 'search') return;
+    const onScroll = () => {
+      searchScrollPosition.current = window.scrollY;
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
@@ -278,20 +289,25 @@ const App = () => {
     const previous = prevViewRef.current;
     prevViewRef.current = view;
 
-    // Restore the homepage scroll position only when coming back from a
-    // surah detail view. All other transitions scroll to the top as before.
+    // Restore scroll positions when coming back from a surah detail view.
     if (view === 'list' && previous === 'detail') {
       if (listScrollPosition.current != null) {
         window.scrollTo(0, listScrollPosition.current);
       } else {
         window.scrollTo(0, 0);
       }
-    } else {
+    } else if (view === 'search' && previous === 'detail') {
+      if (searchScrollPosition.current != null) {
+        window.scrollTo(0, searchScrollPosition.current);
+      } else {
+        window.scrollTo(0, 0);
+      }
+    } else if (view !== 'detail' || !targetAyah) {
       window.scrollTo(0, 0);
     }
-  }, [view, partnerSubView]);
+  }, [view, partnerSubView, targetAyah]);
 
-  const handleSelectSurah = (s) => {
+  const handleSelectSurah = (s, returnView = 'list') => {
     setSelectedSurah(s);
     setRecentSurahs(p => {
       const updated = [s, ...p.filter(x => x.number !== s.number)].slice(0, 5);
@@ -299,6 +315,9 @@ const App = () => {
     });
     // Clear any search-directed ayah jump; normal browsing resumes last-read behaviour.
     setTargetAyah(null);
+    if (returnView !== null) {
+      setDetailReturnView(returnView);
+    }
     setMusaffaParams(p => ({ ...p, startSurah: s.number, startAyah: 1, endSurah: s.number, endAyah: s.numberOfAyahs }));
   };
 
@@ -314,7 +333,20 @@ const App = () => {
     setSelectedSurah(s);
     setRecentSurahs(p => [s, ...p.filter(x => x.number !== s.number)].slice(0, 5));
     setTargetAyah(ayahNumber || null);
+    setDetailReturnView('search');
     setView('detail');
+  };
+
+  const handleDetailBack = () => {
+    if (detailReturnView === 'search') {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        setView('search');
+      }
+    } else {
+      setView('list');
+    }
   };
 
   const handleMusaffaParamChange = (key, value) => {
@@ -397,6 +429,7 @@ const App = () => {
     <>
       {showGlobalHeader && (
         <Header
+          view={view}
           theme={theme}
           setTheme={setTheme}
           setView={setView}
@@ -521,6 +554,7 @@ const App = () => {
                 quranAr={quranAr}
                 quranEn={quranEn}
                 setView={setView}
+                onBack={handleDetailBack}
                 openMusaffaConfig={(s) => { handleSelectSurah(s); setPartnerSubView('config'); setView('partner'); }}
                 startQuiz={startQuiz}
                 waqarData={waqarData}

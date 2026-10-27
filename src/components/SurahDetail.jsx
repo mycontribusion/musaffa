@@ -1,11 +1,145 @@
-import React, { useEffect, useRef, useCallback, useState } from 'react';
+import React, { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, Play, Pause, SkipBack, SkipForward, Volume2, X, Users, CircleHelp, Repeat } from 'lucide-react';
 import { getAudioUrl } from '../utils/quranUtils';
 
-const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranEn, setView, openMusaffaConfig, waqarData, lastRead, setLastRead, reciter, targetAyah = null, setTargetAyah }) => {
-  const scrollTrackerRef = useRef(null);
-  const scrollEffectRef = useRef({ surahNumber: null, ayahNumber: null, hasScrolled: false });
+// Memoized Ayah Card component for better performance
+const AyahCard = React.memo(({ 
+  ayah, 
+  idx, 
+  englishText, 
+  isActive, 
+  isPlaying, 
+  selectedSurahNumber,
+  onAyahTap,
+  isHighlighted,
+}) => {
+  const handleClick = useCallback((e) => {
+    e.stopPropagation();
+    onAyahTap(idx);
+  }, [onAyahTap, idx]);
+
+  const handleMouseEnter = useCallback((e) => {
+    e.currentTarget.style.background = 'var(--glass-bg)';
+    e.currentTarget.style.color = 'var(--accent-gold)';
+  }, []);
+
+  const handleMouseLeave = useCallback((e) => {
+    e.currentTarget.style.background = 'none';
+    e.currentTarget.style.color = isActive ? 'var(--accent-gold)' : 'var(--text-muted)';
+  }, [isActive]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2, delay: Math.min(idx * 0.005, 0.2) }}
+      id={`surah-ayah-${ayah.numberInSurah}`} 
+      data-ayah-num={ayah.numberInSurah}
+      style={{
+        position: 'relative',
+        display: 'flex', flexDirection: 'column', gap: 'var(--space-5)',
+        padding: '1.25rem 0.75rem var(--space-1)',
+        borderRadius: 'var(--radius-md)',
+        transition: 'background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease',
+        background: isActive 
+          ? 'var(--accent-gold-soft)' 
+          : isHighlighted 
+            ? 'var(--accent-gold-soft)' 
+            : 'transparent',
+        border: isActive 
+          ? '1px solid rgba(212,175,55,0.4)' 
+          : isHighlighted 
+            ? '1px solid var(--accent-gold)' 
+            : '1px solid transparent',
+        boxShadow: isHighlighted ? '0 0 16px rgba(212,175,55,0.25)' : 'none',
+        contentVisibility: 'auto',
+        containIntrinsicSize: '200px',
+      }}
+    >
+      {/* Ayah number indicator */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+        <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to right, transparent, var(--glass-border), transparent)' }} />
+        <div style={{
+          padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-full)',
+          border: `1px solid ${isActive || isHighlighted ? 'var(--accent-gold)' : 'var(--glass-border)'}`,
+          background: isActive || isHighlighted ? 'var(--gold-gradient)' : 'var(--glass-bg)',
+          fontSize: 'var(--fs-micro)', fontWeight: '800',
+          color: isActive || isHighlighted ? 'var(--text-on-gold)' : 'var(--text-muted)',
+          display: 'flex', alignItems: 'center', gap: '0.3rem',
+          transition: 'all 0.4s ease'
+        }}>
+          {isActive && isPlaying && <Volume2 size={9} />}
+          {selectedSurahNumber}:{ayah.numberInSurah}
+        </div>
+        <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to left, transparent, var(--glass-border), transparent)' }} />
+      </div>
+
+      {/* Arabic — flush right (RTL), opposite the translation below */}
+      <div className="arabic-text" style={{ fontSize: 'clamp(1.75rem, 5vw, 2.5rem)', lineHeight: '1.8', color: isActive ? 'var(--accent-gold)' : 'var(--text-primary)', textAlign: 'right', transition: 'color 0.3s' }}>
+        {ayah.text}
+      </div>
+
+      {/* Translation — flush left */}
+      <div style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-card)', fontWeight: '450', lineHeight: '1.5', padding: '0 1rem', textAlign: 'left', maxWidth: '600px', marginTop: '3.5rem' }}>
+        {englishText}
+      </div>
+
+      <button
+        onClick={handleClick}
+        aria-label={`Play ayah ${ayah.numberInSurah}`}
+        title="Play ayah"
+        style={{
+          position: 'absolute',
+          right: '0.5rem',
+          bottom: '-1rem',
+          background: 'none',
+          border: 'none',
+          color: isActive ? 'var(--accent-gold)' : 'var(--text-muted)',
+          cursor: 'pointer',
+          padding: '0.35rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: 'var(--radius-full)',
+          transition: 'color 0.2s, background 0.2s',
+        }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        <Play size={16} />
+      </button>
+    </motion.div>
+  );
+});
+
+AyahCard.displayName = 'AyahCard';
+
+const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranEn, setView, onBack, openMusaffaConfig, waqarData, lastRead, setLastRead, reciter, targetAyah = null, setTargetAyah }) => {
+  const surahIndex = useMemo(() => selectedSurah ? selectedSurah.number - 1 : 0, [selectedSurah?.number]);
+  const arabicAyahs = useMemo(() => (quranAr?.surahs && selectedSurah) ? quranAr.surahs[surahIndex]?.ayahs || [] : [], [quranAr, surahIndex, selectedSurah]);
+  const englishAyahs = useMemo(() => (quranEn?.surahs && selectedSurah) ? quranEn.surahs[surahIndex]?.ayahs || [] : [], [quranEn, surahIndex, selectedSurah]);
+  // Exact Bismillah string from the dataset (Surah 1:1)
+  const BISMILLAH = useMemo(() => quranAr?.surahs?.[0]?.ayahs?.[0]?.text || '', [quranAr]);
+
+  const scrollEffectRef = useRef({ surahNumber: null, destination: null, hasScrolled: false });
+  const [highlightedAyah, setHighlightedAyah] = useState(targetAyah);
+
+  useEffect(() => {
+    if (targetAyah) {
+      setHighlightedAyah(targetAyah);
+      const timer = setTimeout(() => {
+        setHighlightedAyah(null);
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [targetAyah, selectedSurah?.number]);
+
+  useEffect(() => {
+    return () => {
+      if (setTargetAyah) setTargetAyah(null);
+    };
+  }, [setTargetAyah]);
 
   /* The download status card that used to sit under the surah title has been
      removed: download progress and its cancel control now live solely in the
@@ -44,8 +178,7 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
   }, [selectedSurah?.number]);
 
   const playFromIndex = useCallback((idx) => {
-    if (!selectedSurah || !quranAr) return;
-    const arabicAyahs = quranAr.surahs[selectedSurah.number - 1].ayahs;
+    if (!selectedSurah || !arabicAyahs) return;
     if (idx >= arabicAyahs.length) {
       // Finished surah
       setIsPlaying(false);
@@ -84,15 +217,15 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
         playFromIndex(idx + 1);
       }
     };
-  }, [selectedSurah, quranAr, reciter]);
+  }, [selectedSurah, arabicAyahs, reciter]);
 
-  const handlePlaySurah = () => {
+  const handlePlaySurah = useCallback(() => {
     setPlayerStarted(true);
     setIsPlaying(true);
     playFromIndex(playingAyahIdx ?? 0);
-  };
+  }, [playFromIndex, playingAyahIdx]);
 
-  const handlePlayPause = () => {
+  const handlePlayPause = useCallback(() => {
     const audio = getPlayerAudio();
     if (isPlaying) {
       audio.pause();
@@ -103,15 +236,15 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
       setIsPlaying(true);
       playFromIndex(startIdx);
     }
-  };
+  }, [isPlaying, playFromIndex, playingAyahIdx]);
 
-  const handleAyahTap = (idx) => {
+  const handleAyahTap = useCallback((idx) => {
     setPlayerStarted(true);
     setIsPlaying(true);
     playFromIndex(idx);
-  };
+  }, [playFromIndex]);
 
-  const handleClosePlayer = () => {
+  const handleClosePlayer = useCallback(() => {
     const audio = getPlayerAudio();
     audio.pause();
     audio.src = '';
@@ -119,29 +252,29 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
     setIsPlaying(false);
     setPlayingAyahIdx(null);
     setPlayerStarted(false);
-  };
+  }, []);
 
-  const handlePrevAyah = () => {
+  const handlePrevAyah = useCallback(() => {
     const idx = Math.max(0, (playingAyahIdx ?? 0) - 1);
     setIsPlaying(true);
     playFromIndex(idx);
-  };
+  }, [playFromIndex, playingAyahIdx]);
 
-  const handleNextAyah = () => {
-    if (!selectedSurah || !quranAr) return;
-    const total = quranAr.surahs[selectedSurah.number - 1].ayahs.length;
+  const handleNextAyah = useCallback(() => {
+    if (!selectedSurah || !arabicAyahs) return;
+    const total = arabicAyahs.length;
     const idx = Math.min(total - 1, (playingAyahIdx ?? 0) + 1);
     setIsPlaying(true);
     playFromIndex(idx);
-  };
+  }, [selectedSurah, arabicAyahs, playFromIndex, playingAyahIdx]);
 
-  const handleToggleRepeat = () => {
+  const handleToggleRepeat = useCallback(() => {
     setIsRepeating((prev) => {
       const next = !prev;
       isRepeatingRef.current = next;
       return next;
     });
-  };
+  }, []);
 
   // Keep isPlaying in sync when audio finishes naturally
   useEffect(() => {
@@ -182,85 +315,93 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
   useEffect(() => {
     if (!selectedSurah || !quranAr || !quranEn) return;
 
+    const destination = targetAyah
+      || (lastRead && lastRead.surahNumber === selectedSurah.number ? lastRead.ayahNumber : null);
+
     // Check if we've already scrolled to this exact destination
     if (
       scrollEffectRef.current.surahNumber === selectedSurah.number &&
-      scrollEffectRef.current.ayahNumber === (targetAyah || null) &&
+      scrollEffectRef.current.destination === destination &&
       scrollEffectRef.current.hasScrolled
     ) {
       return;
     }
 
     // Update the ref to track this destination
-    scrollEffectRef.current.surahNumber = selectedSurah.number;
-    scrollEffectRef.current.ayahNumber = targetAyah || null;
-    scrollEffectRef.current.hasScrolled = true;
-
-    // Priority: explicit target ayah → last-read ayah → top
-    const destination = targetAyah
-      || (lastRead && lastRead.surahNumber === selectedSurah.number ? lastRead.ayahNumber : null);
+    scrollEffectRef.current = {
+      surahNumber: selectedSurah.number,
+      destination,
+      hasScrolled: true,
+    };
 
     if (destination) {
       // Wait for DOM to render before scrolling
       const attemptScroll = (attempts = 0) => {
         const el = document.getElementById(`surah-ayah-${destination}`);
         if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          if (targetAyah && setTargetAyah) {
-            setTimeout(() => setTargetAyah(null), 100);
-          }
-        } else if (attempts < 20) {
-          // Retry if element not found yet
-          setTimeout(() => attemptScroll(attempts + 1), 50);
+          // Instant positioning first to force layout computation for offscreen content-visibility
+          el.scrollIntoView({ behavior: 'auto', block: 'center' });
+          // Smooth centering refinement on next frame
+          requestAnimationFrame(() => {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          });
+        } else if (attempts < 25) {
+          setTimeout(() => attemptScroll(attempts + 1), 40);
         }
       };
-      attemptScroll();
+      const t = setTimeout(() => attemptScroll(), 60);
+      return () => clearTimeout(t);
     } else {
       window.scrollTo({ top: 0, behavior: 'instant' });
     }
   }, [selectedSurah ? selectedSurah.number : null, targetAyah]);
 
-  // Feature 3: Track scroll position and save last-read ayah
-  const trackScroll = useCallback(() => {
-    if (!selectedSurah || !quranAr || !quranEn) return;
-    if (scrollTrackerRef.current) return; // throttle
-    scrollTrackerRef.current = setTimeout(() => {
-      scrollTrackerRef.current = null;
-      // Find the ayah element closest to the top of the viewport
-      const ayahEls = document.querySelectorAll('[data-ayah-num]');
-      let closest = null;
-      let closestDist = Infinity;
-      ayahEls.forEach(el => {
-        const rect = el.getBoundingClientRect();
-        const dist = Math.abs(rect.top);
-        if (dist < closestDist) {
-          closestDist = dist;
-          closest = el;
-        }
-      });
-      if (closest) {
-        const ayahNum = Number(closest.getAttribute('data-ayah-num'));
-        setLastRead({ surahNumber: selectedSurah.number, ayahNumber: ayahNum });
-      }
-    }, 500);
-  }, [selectedSurah ? selectedSurah.number : null, setLastRead]);
-
+  // Feature 3: Track scroll position and save last-read ayah (optimized with IntersectionObserver)
   useEffect(() => {
     if (!selectedSurah || !quranAr || !quranEn) return;
-    window.addEventListener('scroll', trackScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', trackScroll);
-      if (scrollTrackerRef.current) clearTimeout(scrollTrackerRef.current);
+    
+    const observerOptions = {
+      rootMargin: '-50% 0px -50% 0px',
+      threshold: 0
     };
-  }, [trackScroll]);
+    
+    let timeoutId = null;
+    const observer = new IntersectionObserver((entries) => {
+      // Find the entry closest to the top
+      let bestEntry = null;
+      let bestScore = Infinity;
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          const rect = entry.boundingClientRect;
+          const score = Math.abs(rect.top);
+          if (score < bestScore) {
+            bestScore = score;
+            bestEntry = entry;
+          }
+        }
+      }
+      if (bestEntry && bestEntry.target) {
+        if (timeoutId) clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          const ayahNum = Number(bestEntry.target.getAttribute('data-ayah-num'));
+          if (!isNaN(ayahNum)) {
+            setLastRead({ surahNumber: selectedSurah.number, ayahNumber: ayahNum });
+          }
+        }, 300);
+      }
+    }, observerOptions);
+    
+    // Observe all ayah elements
+    const ayahEls = document.querySelectorAll('[data-ayah-num]');
+    ayahEls.forEach(el => observer.observe(el));
+    
+    return () => {
+      observer.disconnect();
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [selectedSurah.number, setLastRead, quranAr, quranEn, arabicAyahs.length]); // re-observe when surah changes or ayahs change
 
   if (!selectedSurah || !quranAr || !quranEn) return null;
-
-  const surahIndex = selectedSurah.number - 1;
-  const arabicAyahs = quranAr.surahs[surahIndex].ayahs;
-  const englishAyahs = quranEn.surahs[surahIndex].ayahs;
-  // Exact Bismillah string from the dataset (Surah 1:1)
-  const BISMILLAH = quranAr.surahs[0].ayahs[0].text;
 
   const handleDragEnd = (event, info) => {
     const threshold = 100;
@@ -309,7 +450,7 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
       >
         <div className="app-container">
           <div className="flex items-center justify-between py-2" style={{ paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>
-            <button onClick={() => setView('list')} className="icon-btn">
+            <button onClick={onBack || (() => setView('list'))} className="icon-btn" aria-label="Back" title="Back">
               <ChevronLeft size={18} />
             </button>
             <div style={{ textAlign: 'center' }}>
@@ -403,94 +544,21 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
         )}
 
         {arabicAyahs.map((ayah, idx) => {
-          let displayText = ayah.text;
           const isActive = playingAyahIdx === idx;
+          const isHighlighted = highlightedAyah === ayah.numberInSurah;
 
           return (
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-100px' }}
+            <AyahCard
               key={ayah.number}
-              id={`surah-ayah-${ayah.numberInSurah}`} data-ayah-num={ayah.numberInSurah}
-              /* `gap: var(--space-5)` spaces the divider row off the Arabic. The
-                 Arabic→translation gap is doubled separately below (via the
-                 translation's `marginTop`), and the bottom padding is cut to
-                 `var(--space-1)` so a translation no longer trails a large empty
-                 gap before the next ayah. */
-              style={{
-                position: 'relative',
-                display: 'flex', flexDirection: 'column', gap: 'var(--space-5)',
-                padding: '1.25rem 0.75rem var(--space-1)',
-                borderRadius: 'var(--radius-md)', transition: 'background 0.3s',
-                background: isActive ? 'var(--accent-gold-soft)' : 'transparent',
-                border: isActive ? '1px solid rgba(212,175,55,0.3)' : '1px solid transparent',
-              }}
-            >
-              {/* Ayah number indicator */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to right, transparent, var(--glass-border), transparent)' }} />
-                <div style={{
-                  padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-full)',
-                  border: `1px solid ${isActive ? 'var(--accent-gold)' : 'var(--glass-border)'}`,
-                  background: isActive ? 'var(--gold-gradient)' : 'var(--glass-bg)',
-                  fontSize: 'var(--fs-micro)', fontWeight: '800',
-                  color: isActive ? 'var(--text-on-gold)' : 'var(--text-muted)',
-                  display: 'flex', alignItems: 'center', gap: '0.3rem'
-                }}>
-                  {isActive && isPlaying && <Volume2 size={9} />}
-                  {selectedSurah.number}:{ayah.numberInSurah}
-                </div>
-                <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to left, transparent, var(--glass-border), transparent)' }} />
-              </div>
-
-              {/* Arabic — flush right (RTL), opposite the translation below */}
-              <div className="arabic-text" style={{ fontSize: 'clamp(1.75rem, 5vw, 2.5rem)', lineHeight: '1.8', color: isActive ? 'var(--accent-gold)' : 'var(--text-primary)', textAlign: 'right', transition: 'color 0.3s' }}>
-                {displayText}
-              </div>
-
-              {/* Translation — flush left, opposite the Arabic above. `marginTop`
-                  stacks on the container's `gap: var(--space-5)` (1.5rem), taking
-                  the Arabic→translation distance to 5rem — double the 2.5rem it
-                  measured before this change. */}
-              <div style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-card)', fontWeight: '450', lineHeight: '1.5', padding: '0 1rem', textAlign: 'left', maxWidth: '600px', marginTop: '3.5rem' }}>
-                {englishAyahs[idx]?.text}
-              </div>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleAyahTap(idx);
-                }}
-                aria-label={`Play ayah ${ayah.numberInSurah}`}
-                title="Play ayah"
-                style={{
-                  position: 'absolute',
-                  right: '0.5rem',
-                  bottom: '-1rem',
-                  background: 'none',
-                  border: 'none',
-                  color: isActive ? 'var(--accent-gold)' : 'var(--text-muted)',
-                  cursor: 'pointer',
-                  padding: '0.35rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: 'var(--radius-full)',
-                  transition: 'color 0.2s, background 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--glass-bg)';
-                  e.currentTarget.style.color = 'var(--accent-gold)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'none';
-                  e.currentTarget.style.color = isActive ? 'var(--accent-gold)' : 'var(--text-muted)';
-                }}
-              >
-                <Play size={16} />
-              </button>
-            </motion.div>
+              ayah={ayah}
+              idx={idx}
+              englishText={englishAyahs[idx]?.text}
+              isActive={isActive}
+              isHighlighted={isHighlighted}
+              isPlaying={isPlaying}
+              selectedSurahNumber={selectedSurah.number}
+              onAyahTap={handleAyahTap}
+            />
           );
         })}
       </div>
