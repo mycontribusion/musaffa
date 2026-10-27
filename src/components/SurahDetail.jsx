@@ -20,14 +20,18 @@ const AyahCard = React.memo(({
   }, [onAyahTap, idx]);
 
   const handleMouseEnter = useCallback((e) => {
-    e.currentTarget.style.background = 'var(--glass-bg)';
+    e.currentTarget.style.background = 'var(--glass-hover)';
     e.currentTarget.style.color = 'var(--accent-gold)';
+    e.currentTarget.style.borderColor = 'var(--accent-gold)';
+    e.currentTarget.style.transform = 'scale(1.08)';
   }, []);
 
   const handleMouseLeave = useCallback((e) => {
-    e.currentTarget.style.background = 'none';
-    e.currentTarget.style.color = isActive ? 'var(--accent-gold)' : 'var(--text-muted)';
-  }, [isActive]);
+    e.currentTarget.style.background = isActive ? (isPlaying ? 'var(--gold-gradient)' : 'var(--glass-bg)') : 'var(--glass-bg)';
+    e.currentTarget.style.color = isActive ? (isPlaying ? 'var(--text-on-gold)' : 'var(--accent-gold)') : 'var(--text-muted)';
+    e.currentTarget.style.borderColor = isActive ? 'var(--accent-gold)' : 'var(--glass-border)';
+    e.currentTarget.style.transform = 'scale(1)';
+  }, [isActive, isPlaying]);
 
   return (
     <motion.div
@@ -57,20 +61,50 @@ const AyahCard = React.memo(({
         containIntrinsicSize: '200px',
       }}
     >
-      {/* Ayah number indicator */}
+      {/* Ayah number indicator & play control */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
         <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to right, transparent, var(--glass-border), transparent)' }} />
-        <div style={{
-          padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-full)',
-          border: `1px solid ${isActive || isHighlighted ? 'var(--accent-gold)' : 'var(--glass-border)'}`,
-          background: isActive || isHighlighted ? 'var(--gold-gradient)' : 'var(--glass-bg)',
-          fontSize: 'var(--fs-micro)', fontWeight: '800',
-          color: isActive || isHighlighted ? 'var(--text-on-gold)' : 'var(--text-muted)',
-          display: 'flex', alignItems: 'center', gap: '0.3rem',
-          transition: 'all 0.4s ease'
-        }}>
-          {isActive && isPlaying && <Volume2 size={9} />}
-          {selectedSurahNumber}:{ayah.numberInSurah}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <div style={{
+            padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-full)',
+            border: `1px solid ${isActive || isHighlighted ? 'var(--accent-gold)' : 'var(--glass-border)'}`,
+            background: isActive || isHighlighted ? 'var(--gold-gradient)' : 'var(--glass-bg)',
+            fontSize: 'var(--fs-micro)', fontWeight: '800',
+            color: isActive || isHighlighted ? 'var(--text-on-gold)' : 'var(--text-muted)',
+            display: 'flex', alignItems: 'center', gap: '0.3rem',
+            transition: 'all 0.4s ease'
+          }}>
+            {isActive && isPlaying && <Volume2 size={9} />}
+            {selectedSurahNumber}:{ayah.numberInSurah}
+          </div>
+
+          <button
+            onClick={handleClick}
+            aria-label={isActive && isPlaying ? `Pause ayah ${ayah.numberInSurah}` : `Play ayah ${ayah.numberInSurah}`}
+            title={isActive && isPlaying ? "Pause ayah" : "Play ayah"}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '24px',
+              height: '24px',
+              borderRadius: 'var(--radius-full)',
+              border: `1px solid ${isActive ? 'var(--accent-gold)' : 'var(--glass-border)'}`,
+              background: isActive ? (isPlaying ? 'var(--gold-gradient)' : 'var(--glass-bg)') : 'var(--glass-bg)',
+              color: isActive ? (isPlaying ? 'var(--text-on-gold)' : 'var(--accent-gold)') : 'var(--text-muted)',
+              cursor: 'pointer',
+              padding: 0,
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          >
+            {isActive && isPlaying ? (
+              <Pause size={10} fill="currentColor" />
+            ) : (
+              <Play size={10} fill={isActive ? 'currentColor' : 'none'} style={{ marginLeft: '1px' }} />
+            )}
+          </button>
         </div>
         <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to left, transparent, var(--glass-border), transparent)' }} />
       </div>
@@ -84,31 +118,6 @@ const AyahCard = React.memo(({
       <div style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-card)', fontWeight: '450', lineHeight: '1.5', padding: '0 1rem', textAlign: 'left', maxWidth: '600px', marginTop: '3.5rem' }}>
         {englishText}
       </div>
-
-      <button
-        onClick={handleClick}
-        aria-label={`Play ayah ${ayah.numberInSurah}`}
-        title="Play ayah"
-        style={{
-          position: 'absolute',
-          right: '0.5rem',
-          bottom: '-1rem',
-          background: 'none',
-          border: 'none',
-          color: isActive ? 'var(--accent-gold)' : 'var(--text-muted)',
-          cursor: 'pointer',
-          padding: '0.35rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: 'var(--radius-full)',
-          transition: 'color 0.2s, background 0.2s',
-        }}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-      >
-        <Play size={16} />
-      </button>
     </motion.div>
   );
 });
@@ -239,10 +248,14 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
   }, [isPlaying, playFromIndex, playingAyahIdx]);
 
   const handleAyahTap = useCallback((idx) => {
-    setPlayerStarted(true);
-    setIsPlaying(true);
-    playFromIndex(idx);
-  }, [playFromIndex]);
+    if (playingAyahIdx === idx && isPlaying) {
+      handlePlayPause();
+    } else {
+      setPlayerStarted(true);
+      setIsPlaying(true);
+      playFromIndex(idx);
+    }
+  }, [playingAyahIdx, isPlaying, handlePlayPause, playFromIndex]);
 
   const handleClosePlayer = useCallback(() => {
     const audio = getPlayerAudio();
