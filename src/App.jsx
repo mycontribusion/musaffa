@@ -249,10 +249,10 @@ const App = () => {
 
     const currentPath = window.location.pathname;
     if (currentPath !== newPath) {
-      if (window.location.search || currentPath === '/') {
-        window.history.replaceState({}, '', newPath);
+      if (window.location.search) {
+        window.history.replaceState({ view }, '', newPath);
       } else {
-        window.history.pushState({}, '', newPath);
+        window.history.pushState({ view }, '', newPath);
       }
     }
   }, [view, selectedSurah, partnerSubView, loading, error, canRenderView]);
@@ -338,14 +338,10 @@ const App = () => {
   };
 
   const handleDetailBack = () => {
-    if (detailReturnView === 'search') {
-      if (window.history.length > 1) {
-        window.history.back();
-      } else {
-        setView('search');
-      }
+    if (window.history.length > 1) {
+      window.history.back();
     } else {
-      setView('list');
+      setView(detailReturnView || 'list');
     }
   };
 

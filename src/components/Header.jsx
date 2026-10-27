@@ -40,7 +40,11 @@ const Header = ({ view, theme, setTheme, setView, searchQuery, setSearchQuery, m
 
   const closeSearch = () => {
     setSearchQuery('');
-    setView('list');
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      setView('list');
+    }
   };
 
   if (searchOpen) {
