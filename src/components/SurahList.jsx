@@ -243,19 +243,7 @@ const SurahList = ({
       )}
 
 
-      {/* Search Section */}
-      <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', width: '100%', padding: '0 0.5rem' }}>
-        <div className="search-input-wrapper" style={{ width: '100%' }}>
-          <Search className="search-icon" size={18} strokeWidth={2} />
-          <input
-            type="text"
-            placeholder="Search surah, ayah or word..."
-            className="search-input"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-      </div>
+      {/* Search moved to dedicated search page */}
 
       {/* Ayah / Content Results */}
       {hasAyahResults && (

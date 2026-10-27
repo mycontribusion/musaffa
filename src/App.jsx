@@ -4,6 +4,7 @@ import Header from './components/Header';
 import HomeControls from './components/HomeControls';
 import AudioManager from './components/AudioManager';
 import SurahList from './components/SurahList';
+import SearchPage from './components/SearchPage';
 import SurahDetail from './components/SurahDetail';
 import PartnerSession from './components/PartnerSession';
 import MutashabihatSession from './components/MutashabihatSession';
@@ -71,6 +72,7 @@ const App = () => {
      so persisting is cheap. */
   const [multiSurahSession, setMultiSurahSession] = useLocalStorageState('quran_multi_surah_session', null);
   const [targetAyah, setTargetAyah] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const DEFAULT_PARAMS = { startSurah: 1, startAyah: 1, endSurah: 2, endAyah: 286, portion: 'page', whoStarts: 'app', autoNext: true, micSensitivity: 15, errorDetection: false, errorThreshold: 50, stuckTimerDuration: 5 };
   
@@ -398,6 +400,8 @@ const App = () => {
           theme={theme}
           setTheme={setTheme}
           setView={setView}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
           // Vosk model install props
           modelStatus={modelStatus}
           installProgress={installProgress}
@@ -416,6 +420,16 @@ const App = () => {
           )}
 
           <AnimatePresence mode="wait">
+            {view === 'search' && (
+              <SearchPage
+                surahs={surahs}
+                quranAr={quranAr}
+                quranEn={quranEn}
+                searchQuery={searchQuery}
+                openAyah={handleOpenAyah}
+              />
+            )}
+
             {view === 'list' && (
               <SurahList
                 surahs={surahs}
@@ -502,6 +516,7 @@ const App = () => {
                 selectedSurah={selectedSurah}
                 surahs={surahs}
                 targetAyah={targetAyah}
+                setTargetAyah={setTargetAyah}
                 handleSelectSurah={handleSelectSurah}
                 quranAr={quranAr}
                 quranEn={quranEn}

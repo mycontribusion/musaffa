@@ -152,9 +152,15 @@ export const splitMutashabih = (textAnchor, textOther) => {
   }
 
   // Fallback: subtle single-word swap or general mutashabih
+  const truncatedStem = textAnchor.length > 80
+    ? (() => {
+        const cut = textAnchor.lastIndexOf(' ', 80);
+        return (cut > 0 ? textAnchor.slice(0, cut) : textAnchor.slice(0, 80)) + ' ...';
+      })()
+    : textAnchor;
   return {
     type: 'phrase',
-    stem: textAnchor.length > 80 ? textAnchor.slice(0, 80) + ' ...' : textAnchor,
+    stem: truncatedStem,
     optAnchor: textAnchor,
     optOther: textOther,
   };
