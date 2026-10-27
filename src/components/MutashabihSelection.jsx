@@ -83,7 +83,8 @@ const MutashabihSelection = ({ surahs, waqarData, quranAr, setView, setMultiSura
       <header style={{
         position: 'sticky', top: 0, zIndex: 'var(--z-header)',
         width: '100vw', marginLeft: 'calc(50% - 50vw)', flexShrink: 0,
-        backgroundColor: 'var(--bg-primary)', borderBottom: 'var(--border-hairline)',
+        backgroundColor: 'var(--header-bg)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+        borderBottom: 'var(--border-hairline)',
       }}>
         <div className="app-container">
           <div className="flex items-center justify-between py-2" style={{ paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>

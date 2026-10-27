@@ -406,7 +406,7 @@ import { useActiveVerseIndex } from './mudarasa/hooks/useActiveVerseIndex';
                     >
                       <span>{enableErrorDetection ? 'Finished Reciting' : 'Finished Portion'}</span>
                     </button>
-                    <button onClick={() => onLogStumble(chunks[currentChunkIndex][0])} style={{ background: 'none', border: 'none', color: 'var(--accent-red)', opacity: 0.5, fontWeight: '700', fontSize: 'var(--fs-label)', textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer' }}>Log Stumble</button>
+
                   </>
                 )}
                 {isListening && !enableErrorDetection && (

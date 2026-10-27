@@ -49,13 +49,14 @@ const Header = ({ view, theme, setTheme, setView, searchQuery, setSearchQuery, m
 
   if (searchOpen) {
     return (
-      <header className="sticky top-0 z-100 mb-6" style={{ backgroundColor: 'var(--bg-primary)', borderBottom: 'var(--border-hairline)' }}>
+      <header className="sticky top-0 z-100 mb-6" style={{ backgroundColor: 'var(--header-bg)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderBottom: 'var(--border-hairline)' }}>
         <div className="app-container">
           <div className="flex items-center gap-2 py-2" style={{ paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>
-            <div className="search-input-wrapper" style={{ flex: 1, position: 'relative' }}>
-              <button onClick={closeSearch} className="icon-btn" title="Back" aria-label="Back" style={{ position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)', zIndex: 2 }}>
-                <ArrowLeft size={16} strokeWidth={2} />
-              </button>
+            <button onClick={closeSearch} className="icon-btn" title="Back" aria-label="Back">
+              <ArrowLeft size={18} strokeWidth={2} />
+            </button>
+            <div className="search-input-wrapper" style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <Search size={16} style={{ position: 'absolute', left: '0.85rem', color: 'var(--text-muted)', pointerEvents: 'none' }} />
               <input
                 ref={inputRef}
                 type="text"
@@ -64,8 +65,36 @@ const Header = ({ view, theme, setTheme, setView, searchQuery, setSearchQuery, m
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 autoFocus
-                style={{ paddingLeft: '4rem' }}
+                style={{ paddingLeft: '2.5rem', paddingRight: searchQuery ? '2.5rem' : '1rem' }}
               />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    if (inputRef.current) inputRef.current.focus();
+                  }}
+                  aria-label="Clear search"
+                  title="Clear search"
+                  style={{
+                    position: 'absolute',
+                    right: '0.5rem',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    padding: '0.35rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 'var(--radius-full)',
+                    transition: 'color 0.2s',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+                >
+                  <X size={15} />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -74,7 +103,7 @@ const Header = ({ view, theme, setTheme, setView, searchQuery, setSearchQuery, m
   }
 
   return (
-    <header className="sticky top-0 z-100 mb-6" style={{ backgroundColor: 'var(--bg-primary)', borderBottom: 'var(--border-hairline)' }}>
+    <header className="sticky top-0 z-100 mb-6" style={{ backgroundColor: 'var(--header-bg)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderBottom: 'var(--border-hairline)' }}>
       <div className="app-container">
         <div className="flex items-center justify-between py-2" style={{ paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>
           <div className="brand-lockup" onClick={() => { setView('list'); }}>

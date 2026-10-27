@@ -48,7 +48,7 @@ export default function RecitationMap({ surahs, quranAr, quranSimple, wordResult
   if (!selectedSurah) {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-24">
-        <div style={{ position: 'sticky', top: 0, zIndex: 'var(--z-header)', width: '100vw', marginLeft: 'calc(50% - 50vw)', flexShrink: 0, backgroundColor: 'var(--bg-primary)', borderBottom: 'var(--border-hairline)' }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 'var(--z-header)', width: '100vw', marginLeft: 'calc(50% - 50vw)', flexShrink: 0, backgroundColor: 'var(--header-bg)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderBottom: 'var(--border-hairline)' }}>
           <div className="app-container">
             <div className="flex items-center justify-between py-2" style={{ paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
@@ -128,7 +128,7 @@ export default function RecitationMap({ surahs, quranAr, quranSimple, wordResult
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={0.2} onDragEnd={handleDragEnd} className="pb-24">
-      <div style={{ position: 'sticky', top: 0, zIndex: 'var(--z-header)', width: '100vw', marginLeft: 'calc(50% - 50vw)', flexShrink: 0, backgroundColor: 'var(--bg-primary)', borderBottom: 'var(--border-hairline)' }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 'var(--z-header)', width: '100vw', marginLeft: 'calc(50% - 50vw)', flexShrink: 0, backgroundColor: 'var(--header-bg)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderBottom: 'var(--border-hairline)' }}>
         <div className="app-container">
           <div className="flex items-center justify-between py-2" style={{ paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>

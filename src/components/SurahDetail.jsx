@@ -458,7 +458,8 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
         style={{
           position: 'sticky', top: 0, zIndex: 'var(--z-header)',
           width: '100vw', marginLeft: 'calc(50% - 50vw)', flexShrink: 0,
-          backgroundColor: 'var(--bg-primary)', borderBottom: 'var(--border-hairline)',
+          backgroundColor: 'var(--header-bg)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+          borderBottom: 'var(--border-hairline)',
         }}
       >
         <div className="app-container">
@@ -519,9 +520,9 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
               {/* Play Surah button */}
               <button
                 onClick={handlePlaySurah}
-                className="icon-btn"
-                title="Play Surah"
-                style={{ color: isPlaying ? 'var(--accent-gold)' : 'var(--text-secondary)' }}
+                className={`icon-btn ${isPlaying ? 'active' : ''}`}
+                title={isPlaying ? "Pause Surah" : "Play Surah"}
+                aria-label={isPlaying ? "Pause Surah recitation" : "Play Surah recitation"}
               >
                 {isPlaying ? <Pause size={18} /> : <Play size={18} />}
               </button>

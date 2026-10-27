@@ -19,6 +19,7 @@
   --glass-hover: rgba(30, 41, 59, 0.95);
   --glass-border: rgba(255, 255, 255, 0.1);
   --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  --header-bg: rgba(15, 23, 42, 0.82);
   --radius-sm: 0.5rem;
   --radius-md: 1rem;
   --radius-lg: 1.5rem;
@@ -123,6 +124,7 @@
   --glass-hover: #f8fafc;
   --glass-border: rgba(15, 23, 42, 0.08);
   --glass-shadow: 0 4px 16px 0 rgba(15, 23, 42, 0.05);
+  --header-bg: rgba(248, 250, 252, 0.88);
 }
 
 * {
@@ -360,19 +362,35 @@ body {
   width: var(--control-md-h);
   height: var(--control-md-h);
   border-radius: var(--radius-full);
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
+  background: transparent;
+  border: 1px solid transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: var(--transition-fast);
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), transform 0.15s ease;
 }
 
 .icon-btn:hover {
-  background: var(--bg-accent);
+  background: var(--glass-bg);
+  border-color: var(--glass-border);
   color: var(--accent-gold);
+}
+
+.icon-btn:active {
+  transform: scale(0.92);
+}
+
+.icon-btn.active {
+  background: var(--accent-gold-soft);
+  border-color: rgba(251, 191, 36, 0.35);
+  color: var(--accent-gold);
+}
+
+.icon-btn:focus-visible {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 2px;
 }
 
 /*
@@ -717,25 +735,27 @@ body {
 
 .search-input {
   width: 100%;
-  padding: 1rem 1rem 1rem 3rem;
+  height: 40px;
+  padding: 0 1rem 0 2.5rem;
   background: var(--glass-bg);
   border: var(--border-hairline);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   color: var(--text-primary);
-  font-size: var(--fs-view);
-  transition: var(--transition-smooth);
+  font-size: var(--fs-body);
+  transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 @media (min-width: 640px) {
   .search-input {
-    padding: 1.25rem 1.25rem 1.25rem 3.5rem;
-    border-radius: var(--radius-xl);
+    height: 42px;
+    font-size: var(--fs-body);
   }
 }
 
 .search-input:focus {
   outline: none;
   border-color: var(--accent-gold);
+  box-shadow: 0 0 0 2px var(--accent-gold-soft);
 }
 
 .search-icon {

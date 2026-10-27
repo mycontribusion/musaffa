@@ -228,21 +228,7 @@ const RecitationFeedbackCard = ({ results, insertions = [], breakdown, chunk, tr
 
             {/* ── Actions ── */}
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              {hasMissedWords && chunk && chunk.length > 0 && (
-                <button
-                  onClick={() => chunk.forEach(ayah => onLogStumble && onLogStumble(ayah))}
-                  style={{
-                    flex: 1, padding: '0.75rem', borderRadius: 'var(--radius-lg)',
-                    border: '1px solid var(--accent-red)',
-                    background: 'var(--accent-red-soft)',
-                    color: 'var(--accent-red)',
-                    fontSize: 'var(--fs-secondary)', fontWeight: '800', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
-                  }}
-                >
-                  <XCircle size={14} /> Log Stumble
-                </button>
-              )}
+
               <button
                 onClick={onContinue}
                 style={{

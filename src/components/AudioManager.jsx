@@ -145,7 +145,8 @@ const AudioManager = ({ surahs, audioDownloadControls, reciter, setReciter, setV
       <div style={{
         position: 'sticky', top: 0, zIndex: 'var(--z-header)',
         width: '100vw', marginLeft: 'calc(50% - 50vw)', flexShrink: 0,
-        backgroundColor: 'var(--bg-primary)', borderBottom: 'var(--border-hairline)',
+        backgroundColor: 'var(--header-bg)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+        borderBottom: 'var(--border-hairline)',
       }}>
         <div style={{ maxWidth: '32rem', margin: '0 auto' }}>
           <div className="flex items-center justify-between py-2" style={{ paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>
@@ -154,17 +155,9 @@ const AudioManager = ({ surahs, audioDownloadControls, reciter, setReciter, setV
                 onClick={() => setView('list')}
                 aria-label="Back"
                 title="Back to home"
-                style={{
-                  width: 'var(--control-md-h)', height: 'var(--control-md-h)', flexShrink: 0,
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  borderRadius: 'var(--radius-full)',
-                  border: 'var(--border-hairline)',
-                  background: 'var(--glass-bg)',
-                  color: 'var(--text-muted)',
-                  cursor: 'pointer',
-                }}
+                className="icon-btn"
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={18} />
               </button>
               <Volume2 size={18} color="var(--accent-gold)" strokeWidth={2} />
               <h2 style={{
