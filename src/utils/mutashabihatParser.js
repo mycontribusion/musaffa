@@ -11,7 +11,10 @@ export const parseWaqarLine = (line) => {
   };
 
   const sources = clean.slice(0, pipe).split(',').map(parseRef).filter(Boolean);
-  const mutGroups = clean.slice(pipe + 1).split('/').filter(g => g.trim())
+  // Support both '/' and '|' as group separators on the right-hand side
+  // e.g. "4:95|9:20|61:11" treats each |-segment as a separate distractor group
+  const rightSide = clean.slice(pipe + 1);
+  const mutGroups = rightSide.split(/[/|]/).filter(g => g.trim())
     .map(g => g.split(',').map(parseRef).filter(Boolean)).filter(g => g.length > 0);
 
   if (!sources.length || !mutGroups.length) return null;
@@ -56,13 +59,12 @@ export const groupMutashabihatBySurah = (lines) => {
   lines.forEach((line, idx) => {
     const rawEntry = parseWaqarLine(line);
     if (!rawEntry) return;
-    const expandedEntries = expandBlockEntry(rawEntry);
-    expandedEntries.forEach((e, subIdx) => {
-      const entryKey = `${e.sources.map(r => `${r.surah}:${r.ayah}`).join(',')}|${e.mutGroups.flat().map(r => `${r.surah}:${r.ayah}`).join(',')}-${idx}-${subIdx}`;
-      add(e.sources[0].surah, e, entryKey);
-      [...new Set(e.mutGroups.flat().map(v => v.surah))].forEach(s => {
-        if (s !== e.sources[0].surah) add(s, e, entryKey);
-      });
+    // Store raw (unexpanded) entries. Route to source surah(s) only —
+    // card generation is source-only, so we only need to put the entry
+    // in each surah that appears as a source verse.
+    const entryKey = `${rawEntry.sources.map(r => `${r.surah}:${r.ayah}`).join(',')}|${rawEntry.mutGroups.flat().map(r => `${r.surah}:${r.ayah}`).join(',')}-${idx}`;
+    rawEntry.sources.forEach(r => {
+      add(r.surah, rawEntry, entryKey);
     });
   });
   return groups;
@@ -252,16 +254,25 @@ export const buildSessionCards = (entries, surahNum, quranAr, surahs) => {
   const txt = (s, a) => quranAr?.surahs[s - 1]?.ayahs[a - 1]?.text || '';
   const nam = (s) => surahs?.[s - 1]?.englishName || `Surah ${s}`;
 
-  const expandedEntries = entries.flatMap(expandBlockEntry);
+  // Do NOT expand block parallel entries here — each raw entry (after grouping)
+  // maps to exactly one waqar question, regardless of how many verses are in the block.
+  // expandBlockEntry is used only for groupMutashabihatBySurah routing; card generation
+  // uses the original entries and treats the first source verse as the anchor.
   const cards = [];
 
-  expandedEntries.forEach((entry, entryIdx) => {
+  entries.forEach((entry, entryIdx) => {
     const { sources, mutGroups, endOnly } = entry;
+
+    // Only generate a card when surahNum is the source (left-of-pipe) surah.
+    // This keeps the card count per surah aligned with the waqar book's
+    // per-surah question count (each line is counted under its source surah).
+    if (!sources.some(r => r.surah === surahNum)) return;
+
     // Each reference is an individual verse (no block concatenation)
     const allRefs = [...sources, ...mutGroups.flat()];
 
-    // Find anchor ref for this surah
-    const anchorRef = allRefs.find(r => r.surah === surahNum) || sources[0];
+    // Anchor is the source verse for this surah
+    const anchorRef = sources.find(r => r.surah === surahNum) || sources[0];
     const anchorText = txt(anchorRef.surah, anchorRef.ayah);
     if (!anchorText) return;
 
@@ -269,12 +280,47 @@ export const buildSessionCards = (entries, surahNum, quranAr, surahs) => {
     const otherRefs = allRefs.filter(r => !(r.surah === anchorRef.surah && r.ayah === anchorRef.ayah));
     if (!otherRefs.length) return;
 
-    const primaryOther = otherRefs[0];
+    const wA = anchorText.trim().split(/\s+/);
+    const nA = wA.map(normalizeForMatch);
+
+    // Find the best-matching distractor to use for paradigm gating.
+    // Priority (in order):
+    //   1. Highest LCP (common prefix) — produces the cleanest split at the divergence point
+    //   2. Among equal LCP: shortest match-start position in anchor (earliest divergence)
+    //   3. Longest common substring (fallback when no prefix match)
+    let bestPrimaryOther = otherRefs[0];
+    let bestLcp = -1, bestStartA = Infinity, bestSubstrScore = -1;
+    otherRefs.forEach(r => {
+      const dText = txt(r.surah, r.ayah);
+      if (!dText) return;
+      const nD = dText.trim().split(/\s+/).map(normalizeForMatch);
+      let lcp = 0;
+      while (lcp < nA.length && lcp < nD.length && nA[lcp] === nD[lcp]) lcp++;
+      // Also find best substring (position + length)
+      let bestLen = lcp, bestA = 0;
+      for (let i = 0; i < nA.length; i++) {
+        for (let j = 0; j < nD.length; j++) {
+          let len = 0;
+          while (i + len < nA.length && j + len < nD.length && nA[i + len] === nD[j + len]) len++;
+          if (len > bestLen || (len === bestLen && i < bestA)) {
+            bestLen = len; bestA = i;
+          }
+        }
+      }
+      // Choose this distractor if it has better LCP, earlier start, or longer substr
+      const beats = lcp > bestLcp
+        || (lcp === bestLcp && bestA < bestStartA)
+        || (lcp === bestLcp && bestA === bestStartA && bestLen > bestSubstrScore);
+      if (beats) {
+        bestLcp = lcp; bestStartA = bestA; bestSubstrScore = bestLen;
+        bestPrimaryOther = r;
+      }
+    });
+
+    const primaryOther = bestPrimaryOther;
     const primaryOtherText = txt(primaryOther.surah, primaryOther.ayah);
     if (!primaryOtherText) return;
 
-    const wA = anchorText.trim().split(/\s+/);
-    const nA = wA.map(normalizeForMatch);
     const wO = primaryOtherText.trim().split(/\s+/);
     const nO = wO.map(normalizeForMatch);
 
@@ -683,15 +729,70 @@ export const buildSessionCards = (entries, surahNum, quranAr, surahs) => {
         }
       }
     }
+
+    // Paradigm 4: Phrase Fallback
+    // When no other paradigm fires (verses share too few words to split meaningfully,
+    // or the shared block is at the very end of a surah with no next ayah),
+    // generate a "Which surah does this verse belong to?" style card using the full anchor text.
+    // This ensures every waqar entry produces exactly one card.
+    {
+      const distractorOpts = [];
+      const seen = new Set([anchorText.trim()]);
+
+      otherRefs.forEach(ref => {
+        const dText = txt(ref.surah, ref.ayah);
+        if (!dText || seen.has(dText.trim()) || distractorOpts.length >= 3) return;
+        seen.add(dText.trim());
+        distractorOpts.push({
+          surah: ref.surah,
+          ayah: ref.ayah,
+          surahName: nam(ref.surah),
+          text: dText,
+          fullText: dText,
+          isCorrect: false,
+        });
+      });
+
+      if (distractorOpts.length > 0) {
+        const isSameSurah = otherRefs.some(r => r.surah === anchorRef.surah);
+        const question = isSameSurah
+          ? `Which verse appears in ${nam(surahNum)}?`
+          : `Which verse appears in ${nam(surahNum)}?`;
+
+        const options = [{
+          surah: anchorRef.surah,
+          ayah: anchorRef.ayah,
+          surahName: nam(anchorRef.surah),
+          text: anchorText,
+          fullText: anchorText,
+          isCorrect: true,
+        }, ...distractorOpts];
+
+        cards.push({
+          id: `phrase-${anchorRef.surah}:${anchorRef.ayah}-${entryIdx}`,
+          stem: anchorText,
+          contextVerse: {
+            surah: anchorRef.surah,
+            ayah: anchorRef.ayah,
+            text: anchorText,
+            surahName: nam(surahNum),
+          },
+          question,
+          options,
+          splitType: 'phrase',
+        });
+      }
+    }
   });
 
-  // Deduplicate cards by surah, stem, question, and options set
-  // This prevents short-stem collisions (different mutashabihat sharing a short prefix like "وَإِذْ ..."),
-  // while safely consolidating identical-stem same-surah duplicates (like 2:47 and 2:122).
+  // Deduplicate cards by surah, ayah, entry-id, stem, question, and options set.
+  // - contextVerse.ayah: distinguishes same verse text at two positions (e.g. 2:47 vs 2:122)
+  // - card.id (which encodes entryIdx): distinguishes two waqar lines for the same anchor ayah
+  //   that happen to produce identical option sets (e.g. 40:85|33:62,48:23 vs 40:85|48:23)
   const mergedMap = new Map();
   cards.forEach(card => {
     const optKey = card.options.map(o => `${o.surah}:${o.ayah}`).sort().join(',');
-    const key = `${card.contextVerse.surah}:${card.stem}-${optKey}-${card.question}`;
+    const key = `${card.id}:${card.contextVerse.surah}:${card.contextVerse.ayah}:${card.stem}-${optKey}-${card.question}`;
     if (!mergedMap.has(key)) {
       mergedMap.set(key, card);
     }
