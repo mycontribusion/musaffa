@@ -353,10 +353,10 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
         const el = document.getElementById(`surah-ayah-${destination}`);
         if (el) {
           // Instant positioning first to force layout computation for offscreen content-visibility
-          el.scrollIntoView({ behavior: 'auto', block: 'center' });
-          // Smooth centering refinement on next frame
+          el.scrollIntoView({ behavior: 'auto', block: 'start' });
+          // Smooth refinement on next frame
           requestAnimationFrame(() => {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
           });
         } else if (attempts < 25) {
           setTimeout(() => attemptScroll(attempts + 1), 40);

@@ -12,6 +12,8 @@ const SurahList = ({
   recentSurahs,
   handleSelectSurah,
   openAyah,
+  setTargetAyah,
+  setDetailReturnView,
   setView,
   audioDownloadControls,
   savedMusaffaSession,
@@ -29,7 +31,8 @@ const SurahList = ({
   initialScrollPos,
 }) => {
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [activeTab, setActiveTab] = React.useState('surah');
+  const [activeTab, setActiveTab] = React.useState(() => sessionStorage.getItem('surahListTab') || 'surah');
+  React.useEffect(() => { sessionStorage.setItem('surahListTab', activeTab); }, [activeTab]);
   const quranSurahs = quranAr?.data?.surahs || quranAr?.surahs || [];
   const juzList = React.useMemo(() => (quranSurahs.length ? buildJuzList(quranSurahs) : []), [quranSurahs]);
   const hizbList = React.useMemo(() => (quranSurahs.length ? buildHizbList(quranSurahs) : []), [quranSurahs]);
@@ -447,10 +450,10 @@ const SurahList = ({
         {activeTab !== 'surah' && (
           <div className="grid md:grid-cols-2" style={{ gap: 'var(--space-4)' }}>
             {(activeTab === 'hizb' ? hizbList : juzList).map((d) => (
-              <div key={d.hizb || d.juz} className="glass-card" style={{ padding: '1.25rem', cursor: 'pointer' }} onClick={() => { const s = surahs.find(x => x.number === d.start.surah); if (s) { handleSelectSurah(s); setView('detail'); } setTimeout(() => { if (openAyah) openAyah(d.start.surah, d.start.ayah); }, 0); }}>
+              <div key={d.hizb || d.juz} className="glass-card" style={{ padding: '1.25rem', cursor: 'pointer' }} onClick={() => { const s = surahs.find(x => x.number === d.start.surah); if (s) { handleSelectSurah(s); setView('detail'); setTimeout(() => { if (openAyah) openAyah(d.start.surah, d.start.ayah); setDetailReturnView?.('list'); }, 0); } }}>
                 <strong>{activeTab === 'hizb' ? `Hizb ${d.hizb}` : `Juz' ${d.juz}`}</strong>
                 <div style={{ fontSize: 'var(--fs-meta)', color: 'var(--text-muted)' }}>
-                  {surahs.find(s => s.number === d.start.surah)?.englishName || `Surah ${d.start.surah}`} {d.start.ayah} – {surahs.find(s => s.number === d.end.surah)?.englishName || `Surah ${d.end.surah}`} {d.end.ayah}
+                  {surahs.find(s => s.number === d.start.surah)?.englishName || `Surah ${d.start.surah}`} {d.start.surah}:{d.start.ayah} – {surahs.find(s => s.number === d.end.surah)?.englishName || `Surah ${d.end.surah}`} {d.end.surah}:{d.end.ayah}
                 </div>
               </div>
             ))}

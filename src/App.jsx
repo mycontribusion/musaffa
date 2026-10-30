@@ -490,7 +490,9 @@ const App = () => {
                 recentSurahs={recentSurahs}
                 handleSelectSurah={handleSelectSurah}
                 openAyah={handleOpenAyah}
-                setView={setView} 
+                setTargetAyah={setTargetAyah}
+                setDetailReturnView={setDetailReturnView}
+                setView={setView}
                 initialScrollPos={listScrollPosition.current} 
                 audioDownloadControls={audioDownloadControls} 
                 savedMusaffaSession={savedMusaffaSession} 
