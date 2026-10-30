@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Search, CheckCircle, BrainCircuit, Pencil, Plus, Play, Mic, Hand, BookOpen, ScrollText } from 'lucide-react';
 import { useQuranSearch } from '../hooks/useQuranSearch';
+import { buildJuzList, buildHizbList } from '../utils/quranDivisions';
 import { ResumeBanner } from './partnerConfig/ResumeBanner';
 
 const SurahList = ({
@@ -28,6 +29,10 @@ const SurahList = ({
   initialScrollPos,
 }) => {
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [activeTab, setActiveTab] = React.useState('surah');
+  const quranSurahs = quranAr?.data?.surahs || quranAr?.surahs || [];
+  const juzList = React.useMemo(() => (quranSurahs.length ? buildJuzList(quranSurahs) : []), [quranSurahs]);
+  const hizbList = React.useMemo(() => (quranSurahs.length ? buildHizbList(quranSurahs) : []), [quranSurahs]);
 
   React.useLayoutEffect(() => {
     if (initialScrollPos != null && initialScrollPos > 0) {
@@ -377,18 +382,28 @@ const SurahList = ({
         </div>
       )}
 
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', padding: '0 0.5rem' }}>
+        {['surah', 'hizb', 'juz'].map(t => (
+          <button key={t} onClick={() => setActiveTab(t)} className="glass-card" style={{ padding: '0.5rem 1rem', fontWeight: 700, textTransform: 'capitalize', background: activeTab === t ? 'var(--accent-gold)' : undefined, color: activeTab === t ? '#000' : undefined }}>
+            {t === 'juz' ? "Juz'" : t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+
       {/* Main Grid */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.5rem' }}>
           <div className="section-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             {isSearching && filteredSurahs.length > 0 && <BookOpen size={13} color="var(--accent-gold)" />}
-            {isSearching ? 'Surahs' : 'Surah Library'}
+            {activeTab === 'hizb' ? 'Hizb Library' : activeTab === 'juz' ? "Juz' Library" : (isSearching ? 'Surahs' : 'Surah Library')}
           </div>
           <span style={{ fontSize: 'var(--fs-meta)', fontWeight: '700', color: 'var(--text-muted)' }}>
-            {filteredSurahs.length} {isSearching ? (filteredSurahs.length === 1 ? 'Match' : 'Matches') : 'Chapters'}
+            {activeTab === 'hizb' ? hizbList.length : activeTab === 'juz' ? juzList.length : filteredSurahs.length} {activeTab === 'hizb' ? 'Hizbs' : activeTab === 'juz' ? "Juz'" : (isSearching ? (filteredSurahs.length === 1 ? 'Match' : 'Matches') : 'Chapters')}
           </span>
         </div>
 
+        {activeTab === 'surah' && (
         <div className="grid md:grid-cols-2" style={{ gap: 'var(--space-4)' }}>
           {filteredSurahs.map((surah) => (
             <motion.div
@@ -428,6 +443,19 @@ const SurahList = ({
             </motion.div>
           ))}
         </div>
+        )}
+        {activeTab !== 'surah' && (
+          <div className="grid md:grid-cols-2" style={{ gap: 'var(--space-4)' }}>
+            {(activeTab === 'hizb' ? hizbList : juzList).map((d) => (
+              <div key={d.hizb || d.juz} className="glass-card" style={{ padding: '1.25rem', cursor: 'pointer' }} onClick={() => { const s = surahs.find(x => x.number === d.start.surah); if (s) { handleSelectSurah(s); setView('detail'); } setTimeout(() => { if (openAyah) openAyah(d.start.surah, d.start.ayah); }, 0); }}>
+                <strong>{activeTab === 'hizb' ? `Hizb ${d.hizb}` : `Juz' ${d.juz}`}</strong>
+                <div style={{ fontSize: 'var(--fs-meta)', color: 'var(--text-muted)' }}>
+                  {surahs.find(s => s.number === d.start.surah)?.englishName || `Surah ${d.start.surah}`} {d.start.ayah} – {surahs.find(s => s.number === d.end.surah)?.englishName || `Surah ${d.end.surah}`} {d.end.ayah}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </motion.div>
   );
