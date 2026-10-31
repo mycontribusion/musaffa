@@ -37,7 +37,7 @@ const Header = ({ view, theme, setTheme, setView, searchQuery, setSearchQuery, m
               </button>
               <input
                 ref={inputRef}
-                type="text"
+                type="search"
                 placeholder="Search surah, ayah or word..."
                 className="search-input"
                 value={searchQuery}

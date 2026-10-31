@@ -40,7 +40,7 @@ export const getAyahTextByGlobal = (globalIndex, quranAr) => {
   }).join(" ");
 };
 
-export const removeTashkeel = (text) => text.replace(/[\u064B-\u065F]/g, "");
+export const removeTashkeel = (text) => text.replace(/[\u064B-\u065F]/g, "").replace(/\u0670/g, "\u0627");
 
 /** Plain Bismillah as it appears in quran-simple-clean.txt (no tashkeel) */
 export const BISMILLAH_SIMPLE = 'بسم الله الرحمن الرحيم';
@@ -92,6 +92,8 @@ export const normalizeArabic = (text) => {
   return text
     // 1. Strip all Tashkeel (vowel marks, shadda, sukoon, etc.)
     .replace(/[\u064B-\u065F]/g, '')
+    // 1b. Convert dagger alif (superscript alef) to a normal alef
+    .replace(/\u0670/g, '\u0627')
     // 2. Normalize all Alef variants to a bare Alef
     .replace(/[\u0622\u0623\u0625\u0671]/g, '\u0627')
     // 3. Normalize Alef Maksura to Yaa

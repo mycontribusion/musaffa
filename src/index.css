@@ -758,6 +758,14 @@ body {
   box-shadow: 0 0 0 2px var(--accent-gold-soft);
 }
 
+/* Hide the native browser clear (×) affordance that type="search" renders,
+   since the app provides its own custom clear button on the right. */
+.search-input::-webkit-search-cancel-button,
+.search-input::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 .search-icon {
   position: absolute;
   left: 1rem;
