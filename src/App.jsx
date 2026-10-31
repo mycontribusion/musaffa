@@ -80,6 +80,7 @@ const App = () => {
   const [targetAyah, setTargetAyah] = useState(null);
   const [detailReturnView, setDetailReturnView] = useState('list');
   const [searchQuery, setSearchQuery] = useState('');
+  const isSwipeTransition = useRef(false);
 
   const DEFAULT_PARAMS = { startSurah: 1, startAyah: 1, endSurah: 2, endAyah: 286, portion: 'page', whoStarts: 'app', autoNext: true, micSensitivity: 15, errorDetection: false, errorThreshold: 50, stuckTimerDuration: 5 };
   
@@ -272,7 +273,14 @@ const App = () => {
       if (window.location.search) {
         window.history.replaceState({ view }, '', newPath);
       } else {
-        window.history.pushState({ view }, '', newPath);
+        // During swipe transitions use replaceState so duplicate history
+        // entries do not accumulate when swiping between consecutive details.
+        if (isSwipeTransition.current) {
+          window.history.replaceState({ view }, '', newPath);
+          isSwipeTransition.current = false;
+        } else {
+          window.history.pushState({ view }, '', newPath);
+        }
       }
     }
   }, [view, selectedSurah, partnerSubView, loading, error, canRenderView]);
@@ -380,12 +388,20 @@ const App = () => {
   };
 
   const handleDetailBack = () => {
-    if (window.history.length > 1) {
-      window.history.back();
-    } else {
-      setView(detailReturnView || 'list');
-    }
+    // Explicit state reset: exit the detail view entirely and return to the
+    // previous main/list view. Do NOT use window.history.back() — that would
+    // step through intermediate detail pages accumulated during swipe
+    // navigation. Clear all selected detail state and set the view directly.
+    setSelectedSurah(null);
+    setSelectedJuz(null);
+    setSelectedHizb(null);
+    setView(detailReturnView || 'list');
+    window.history.replaceState({}, '', '/');
   };
+
+  const setIsSwipeTransition = useCallback((val) => {
+    isSwipeTransition.current = val;
+  }, []);
 
   const handleMusaffaParamChange = (key, value) => {
     setMusaffaParams(p => {
@@ -598,6 +614,7 @@ const App = () => {
                 quranAr={quranAr}
                 quranEn={quranEn}
                 setView={setView}
+                setIsSwipeTransition={setIsSwipeTransition}
                 onBack={handleDetailBack}
                 openMusaffaConfig={(s) => { handleSelectSurah(s); setPartnerSubView('config'); setView('partner'); }}
                 startQuiz={startQuiz}
@@ -617,6 +634,7 @@ const App = () => {
                 quranEn={quranEn}
                 setView={setView}
                 setSelectedJuz={setSelectedJuz}
+                setIsSwipeTransition={setIsSwipeTransition}
                 onBack={handleDetailBack}
                 openMusaffaConfig={(s) => { handleSelectSurah(s); setPartnerSubView('config'); setView('partner'); }}
                 waqarData={waqarData}
@@ -637,6 +655,7 @@ const App = () => {
                 quranEn={quranEn}
                 setView={setView}
                 setSelectedHizb={setSelectedHizb}
+                setIsSwipeTransition={setIsSwipeTransition}
                 onBack={handleDetailBack}
                 openMusaffaConfig={(s) => { handleSelectSurah(s); setPartnerSubView('config'); setView('partner'); }}
                 waqarData={waqarData}

@@ -124,7 +124,7 @@ const AyahCard = React.memo(({
 
 AyahCard.displayName = 'AyahCard';
 
-const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranEn, setView, onBack, openMusaffaConfig, waqarData, lastRead, setLastRead, reciter, targetAyah = null, setTargetAyah }) => {
+const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranEn, setView, setIsSwipeTransition, onBack, openMusaffaConfig, waqarData, lastRead, setLastRead, reciter, targetAyah = null, setTargetAyah }) => {
   const surahIndex = useMemo(() => selectedSurah ? selectedSurah.number - 1 : 0, [selectedSurah?.number]);
   const arabicAyahs = useMemo(() => (quranAr?.surahs && selectedSurah) ? quranAr.surahs[surahIndex]?.ayahs || [] : [], [quranAr, surahIndex, selectedSurah]);
   const englishAyahs = useMemo(() => (quranEn?.surahs && selectedSurah) ? quranEn.surahs[surahIndex]?.ayahs || [] : [], [quranEn, surahIndex, selectedSurah]);
@@ -421,10 +421,12 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
     const velocity = 500;
     if (info.offset.x > threshold || info.velocity.x > velocity) {
       if (selectedSurah.number < 114) {
+        setIsSwipeTransition?.(true);
         handleSelectSurah(surahs[selectedSurah.number]);
       }
     } else if (info.offset.x < -threshold || info.velocity.x < -velocity) {
       if (selectedSurah.number > 1) {
+        setIsSwipeTransition?.(true);
         handleSelectSurah(surahs[selectedSurah.number - 2]);
       }
     }

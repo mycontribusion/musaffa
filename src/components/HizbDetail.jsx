@@ -126,7 +126,7 @@ const AyahCard = React.memo(({
 
 AyahCard.displayName = 'AyahCard';
 
-const HizbDetail = ({ hizbNumber, surahs, handleSelectSurah, quranAr, quranEn, setView, setSelectedHizb, onBack, openMusaffaConfig, waqarData, lastRead, setLastRead, reciter, targetAyah = null, setTargetAyah }) => {
+const HizbDetail = ({ hizbNumber, surahs, handleSelectSurah, quranAr, quranEn, setView, setSelectedHizb, setIsSwipeTransition, onBack, openMusaffaConfig, waqarData, lastRead, setLastRead, reciter, targetAyah = null, setTargetAyah }) => {
   // Build grouped ayahs for this hizb
   const hizbGroups = useMemo(() => {
     if (!quranAr || !quranEn || !surahs) return [];
@@ -428,11 +428,13 @@ const HizbDetail = ({ hizbNumber, surahs, handleSelectSurah, quranAr, quranEn, s
     if (info.offset.x > threshold || info.velocity.x > velocity) {
       // Swiped left → go to next hizb
       if (setSelectedHizb && hizbNumber < 60) {
+        setIsSwipeTransition?.(true);
         setSelectedHizb(hizbNumber + 1);
       }
     } else if (info.offset.x < -threshold || info.velocity.x < -velocity) {
       // Swiped right → go to previous hizb
       if (setSelectedHizb && hizbNumber > 1) {
+        setIsSwipeTransition?.(true);
         setSelectedHizb(hizbNumber - 1);
       }
     }

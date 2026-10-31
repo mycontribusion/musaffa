@@ -126,7 +126,7 @@ const AyahCard = React.memo(({
 
 AyahCard.displayName = 'AyahCard';
 
-const JuzDetail = ({ juzNumber, surahs, handleSelectSurah, quranAr, quranEn, setView, setSelectedJuz, onBack, openMusaffaConfig, waqarData, lastRead, setLastRead, reciter, targetAyah = null, setTargetAyah }) => {
+const JuzDetail = ({ juzNumber, surahs, handleSelectSurah, quranAr, quranEn, setView, setSelectedJuz, setIsSwipeTransition, onBack, openMusaffaConfig, waqarData, lastRead, setLastRead, reciter, targetAyah = null, setTargetAyah }) => {
   // Build grouped ayahs for this juz
   const juzGroups = useMemo(() => {
     if (!quranAr || !quranEn || !surahs) return [];
@@ -442,11 +442,13 @@ const JuzDetail = ({ juzNumber, surahs, handleSelectSurah, quranAr, quranEn, set
     if (info.offset.x > threshold || info.velocity.x > velocity) {
       // Swiped left → go to next juz
       if (setSelectedJuz && juzNumber < 30) {
+        setIsSwipeTransition?.(true);
         setSelectedJuz(juzNumber + 1);
       }
     } else if (info.offset.x < -threshold || info.velocity.x < -velocity) {
       // Swiped right → go to previous juz
       if (setSelectedJuz && juzNumber > 1) {
+        setIsSwipeTransition?.(true);
         setSelectedJuz(juzNumber - 1);
       }
     }
