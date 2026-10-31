@@ -146,6 +146,20 @@ const HizbDetail = ({ hizbNumber, surahs, handleSelectSurah, quranAr, quranEn, s
     return map;
   }, [flatAyahs]);
 
+  // Full range of this hizb (first ayah → last ayah), used to pre-fill musaffa
+  // so starting musaffa from a hizb covers the whole division, just like a surah.
+  const hizbRange = useMemo(() => {
+    if (!flatAyahs || flatAyahs.length === 0) return null;
+    const first = flatAyahs[0];
+    const last = flatAyahs[flatAyahs.length - 1];
+    return {
+      startSurah: first.surahNumber,
+      startAyah: first.numberInSurah,
+      endSurah: last.surahNumber,
+      endAyah: last.numberInSurah,
+    };
+  }, [flatAyahs]);
+
   const scrollEffectRef = useRef({ hizbNumber: null, destination: null, hasScrolled: false });
   const [highlightedAyah, setHighlightedAyahState] = useState(targetAyah);
 
@@ -469,7 +483,7 @@ const HizbDetail = ({ hizbNumber, surahs, handleSelectSurah, quranAr, quranEn, s
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
               <button
-                onClick={() => openMusaffaConfig && openMusaffaConfig({ number: hizbGroups[0]?.surah?.number || 1 })}
+                onClick={() => openMusaffaConfig && openMusaffaConfig(hizbRange)}
                 className="icon-btn"
                 aria-label="Open Musaffa for this Hizb"
                 title="Musaffa"

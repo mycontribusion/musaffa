@@ -156,6 +156,20 @@ const JuzDetail = ({ juzNumber, surahs, handleSelectSurah, quranAr, quranEn, set
     };
   }, [juzNumber, juzGroups, flatAyahs.length, surahs]);
 
+  // Full range of this juz (first ayah → last ayah), used to pre-fill musaffa
+  // so starting musaffa from a juz covers the whole division, just like a surah.
+  const juzRange = useMemo(() => {
+    if (!flatAyahs || flatAyahs.length === 0) return null;
+    const first = flatAyahs[0];
+    const last = flatAyahs[flatAyahs.length - 1];
+    return {
+      startSurah: first.surahNumber,
+      startAyah: first.numberInSurah,
+      endSurah: last.surahNumber,
+      endAyah: last.numberInSurah,
+    };
+  }, [flatAyahs]);
+
   const scrollEffectRef = useRef({ juzNumber: null, destination: null, hasScrolled: false });
   const [highlightedAyah, setHighlightedAyahState] = useState(targetAyah);
 
@@ -479,7 +493,7 @@ const JuzDetail = ({ juzNumber, surahs, handleSelectSurah, quranAr, quranEn, set
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
               <button
-                onClick={() => openMusaffaConfig && openMusaffaConfig({ number: juzGroups[0]?.surah?.number || 1 })}
+                onClick={() => openMusaffaConfig && openMusaffaConfig(juzRange)}
                 className="icon-btn"
                 aria-label="Open Musaffa for this Juz'"
                 title="Musaffa"

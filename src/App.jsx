@@ -387,6 +387,31 @@ const App = () => {
   };
 
   /**
+   * Open the musaffa config view with the right range pre-filled.
+   *
+   * A surah selection (full surah object) has no `startSurah`, so it delegates
+   * to `handleSelectSurah`, which sets musaffaParams to the whole surah.
+   * A juz/hizb selection carries an explicit `{ startSurah, startAyah, endSurah, endAyah }`
+   * range, which is applied directly so musaffa covers the entire division —
+   * start from the beginning, end at the end — just like starting from a surah.
+   */
+  const openMusaffaConfig = useCallback((selection) => {
+    if (selection && selection.startSurah != null && selection.endSurah != null) {
+      setMusaffaParams(p => ({
+        ...p,
+        startSurah: selection.startSurah,
+        startAyah: selection.startAyah,
+        endSurah: selection.endSurah,
+        endAyah: selection.endAyah,
+      }));
+    } else {
+      handleSelectSurah(selection);
+    }
+    setPartnerSubView('config');
+    setView('partner');
+  }, [handleSelectSurah, setMusaffaParams, setPartnerSubView, setView]);
+
+  /**
    * Open a surah and scroll straight to a specific ayah.
    * Used by Quran search results. Reuses the existing detail view and the
    * existing `targetAyah` scroll mechanism in SurahDetail — no parallel
@@ -634,7 +659,7 @@ const App = () => {
                 setView={setView}
                 setIsSwipeTransition={setIsSwipeTransition}
                 onBack={handleDetailBack}
-                openMusaffaConfig={(s) => { handleSelectSurah(s); setPartnerSubView('config'); setView('partner'); }}
+                openMusaffaConfig={openMusaffaConfig}
                 startQuiz={startQuiz}
                 waqarData={waqarData}
                 lastRead={lastRead}
@@ -654,7 +679,7 @@ const App = () => {
                 setSelectedJuz={setSelectedJuz}
                 setIsSwipeTransition={setIsSwipeTransition}
                 onBack={handleDetailBack}
-                openMusaffaConfig={(s) => { handleSelectSurah(s); setPartnerSubView('config'); setView('partner'); }}
+                openMusaffaConfig={openMusaffaConfig}
                 waqarData={waqarData}
                 lastRead={lastRead}
                 updateLastRead={updateLastRead}
@@ -675,7 +700,7 @@ const App = () => {
                 setSelectedHizb={setSelectedHizb}
                 setIsSwipeTransition={setIsSwipeTransition}
                 onBack={handleDetailBack}
-                openMusaffaConfig={(s) => { handleSelectSurah(s); setPartnerSubView('config'); setView('partner'); }}
+                openMusaffaConfig={openMusaffaConfig}
                 waqarData={waqarData}
                 lastRead={lastRead}
                 updateLastRead={updateLastRead}
