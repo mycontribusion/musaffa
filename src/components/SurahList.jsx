@@ -123,40 +123,161 @@ const SurahList = ({
       style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', paddingBottom: 'var(--space-8)', paddingTop: 'var(--space-5)' }}
     >
       {/* Quick Actions */}
-      <div style={{ maxWidth: '600px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)', width: '100%', padding: '0 0.5rem' }}>
-        <button
-          onClick={() => {
-            // Smart Musaffa opens the NORMAL config screen. Clear any leftover
-            // preset-editing index first — otherwise a preset editor abandoned
-            // earlier would make this screen render as the preset editor
-            // (Preset Name / Save / Delete) and hide Start Musaffa.
-            exitPresetEditing?.();
-            setMusaffaParams(prev => ({ ...prev, autoNext: true, errorDetection: true }));
-            setView('partner');
-            setPartnerSubView('config');
-          }}
-          className="glass-card hover-scale"
-          style={{ padding: '1.25rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer', border: 'var(--border-hairline)' }}
-        >
-          <div style={{ textAlign: 'center' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-primary)', display: 'block' }}>Smart Musaffa</span>
-            <span style={{ fontSize: 'var(--fs-label)', color: 'var(--text-secondary)' }}>AI Recitation Partner</span>
+      <div style={{ maxWidth: '700px', margin: '0 auto', width: '100%', padding: '0 0.75rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+        <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'stretch', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+          <button
+            onClick={() => {
+              exitPresetEditing?.();
+              setMusaffaParams(prev => ({ ...prev, autoNext: true, errorDetection: true }));
+              setView('partner');
+              setPartnerSubView('config');
+            }}
+            style={{
+              flexShrink: 0, minWidth: '200px', maxWidth: '220px',
+              background: 'var(--gold-gradient)', border: 'none',
+              boxShadow: 'var(--glass-shadow)',
+              borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              gap: 'var(--space-2)', cursor: 'pointer',
+            }}
+            className="hover-scale"
+          >
+            <span style={{ fontSize: '1.2rem', fontWeight: '900', color: 'var(--text-on-gold)' }}>Start Musaffa</span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-on-gold)', opacity: 0.9 }}>Recitation patner</span>
+          </button>
+
+          {musaffaPresets && musaffaPresets.length > 0 && musaffaPresets.map((preset, idx) => {
+            const mode = getModeLabel(preset);
+            const ModeIcon = mode.Icon;
+            const startName = getSurahName(preset.startSurah);
+            const endName = getSurahName(preset.endSurah);
+            const rangeLabel = preset.startSurah === preset.endSurah ? startName : `${startName} → ${endName}`;
+            return (
+              <div key={idx} style={{
+                flexShrink: 0, minWidth: '200px', maxWidth: '220px',
+                background: 'var(--glass-bg)', border: '1px solid var(--glass-border)',
+                boxShadow: 'var(--glass-shadow)',
+                borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)',
+                display: 'flex', flexDirection: 'column', gap: 'var(--space-3)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--space-2)' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontWeight: 'var(--fw-strong)', fontSize: 'var(--fs-body)', color: 'var(--text-primary)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {preset.label}
+                    </p>
+                    <p style={{ fontSize: 'var(--fs-meta)', color: 'var(--text-muted)', margin: '0.2rem 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {rangeLabel}
+                    </p>
+                  </div>
+                  <button onClick={(e) => { e.stopPropagation(); editPreset(idx); }} style={{
+                    background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)',
+                    padding: '2px', flexShrink: 0, borderRadius: '6px',
+                  }} title="Edit preset">
+                    <Pencil size={14} />
+                  </button>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    width: '28px', height: '28px', borderRadius: 'var(--radius-full)',
+                    background: `${mode.color}18`, border: `1px solid ${mode.color}40`,
+                    flexShrink: 0,
+                  }}>
+                    <ModeIcon size={14} style={{ color: mode.color }} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      minWidth: '22px', height: '20px', padding: '0 0.35rem',
+                      borderRadius: 'var(--radius-sm)', fontSize: '0.6rem', fontWeight: '800',
+                      background: 'var(--bg-accent)', border: '1px solid var(--glass-border)',
+                      color: 'var(--text-secondary)', textTransform: 'uppercase',
+                    }}>
+                      {preset.portion === 'verse' ? 'V' :
+                       preset.portion === 'third' ? 'T' :
+                       preset.portion === 'half' ? 'H' :
+                       preset.portion === 'page' ? 'P' :
+                       preset.portion === 'rubu' ? 'R' : 'Z'}
+                    </span>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      minWidth: '22px', height: '20px', padding: '0 0.35rem',
+                      borderRadius: 'var(--radius-sm)', fontSize: '0.6rem', fontWeight: '800',
+                      background: 'var(--bg-accent)', border: '1px solid var(--glass-border)',
+                      color: 'var(--text-secondary)', textTransform: 'uppercase',
+                    }}>
+                      {preset.whoStarts === 'app' ? 'A' : 'U'}
+                    </span>
+                    {preset.autoNext && !preset.errorDetection && (
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        minWidth: '22px', height: '20px', padding: '0 0.35rem',
+                        borderRadius: 'var(--radius-sm)', fontSize: '0.6rem', fontWeight: '800',
+                        background: 'var(--bg-accent)', border: '1px solid var(--glass-border)',
+                        color: 'var(--text-secondary)',
+                      }}>
+                        {Math.round(((40 - (preset.micSensitivity ?? 15)) / 35) * 90 + 10)}%
+                      </span>
+                    )}
+                    {preset.errorDetection && (
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        minWidth: '22px', height: '20px', padding: '0 0.35rem',
+                        borderRadius: 'var(--radius-sm)', fontSize: '0.6rem', fontWeight: '800',
+                        background: 'var(--bg-accent)', border: '1px solid var(--glass-border)',
+                        color: 'var(--text-secondary)',
+                      }}>
+                        {preset.errorThreshold ?? 50}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => startMusaffaFromPreset(preset)}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+                    background: 'var(--gold-gradient)', color: 'var(--text-on-gold)',
+                    border: 'none', borderRadius: 'var(--radius-md)', padding: '0.6rem',
+                    fontWeight: 'var(--fw-strong)', fontSize: 'var(--fs-secondary)', cursor: 'pointer', width: '100%',
+                  }}
+                >
+                  <Play size={13} fill="currentColor" /> Start
+                </button>
+              </div>
+            );
+          })}
+          <button
+            onClick={createPreset}
+            className="preset-add-btn"
+            aria-label="Create new Musaffa preset"
+            title="Create new preset"
+            style={{ flexShrink: 0, alignSelf: 'center' }}
+          >
+            <Plus size={14} />
+          </button>
+        </div>
+
+        {savedMusaffaSession && searchQuery === '' && (
+          <div style={{ width: '100%' }}>
+            <ResumeBanner
+              savedSession={savedMusaffaSession}
+              onResume={resumeMusaffaSession}
+              onDismiss={clearMusaffaSession}
+            />
           </div>
-        </button>
+        )}
+
         <button
           onClick={() => setView('mutashabihat-selection')}
-          className="glass-card hover-scale"
-          style={{ padding: '1.25rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer', border: 'var(--border-hairline)' }}
+          className="hover-scale"
+          style={{ padding: '1.75rem 1.25rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer', border: '1px solid #334155', background: '#334155', boxShadow: 'var(--glass-shadow)', borderRadius: 'var(--radius-lg)', width: '100%' }}
         >
-          <div style={{ textAlign: 'center' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-primary)', display: 'block' }}>Mutashabih Quiz</span>
-            <span style={{ fontSize: 'var(--fs-label)', color: 'var(--text-secondary)' }}>Global Challenge</span>
-          </div>
+          <span style={{ fontSize: '1.05rem', fontWeight: '900', color: '#ffffff' }}>Mutashabih Quiz</span>
+          <span style={{ fontSize: '0.85rem', color: '#e5e7eb' }}>Global Challenge</span>
         </button>
       </div>
 
       {/* Quick Start Presets */}
-      {musaffaPresets && musaffaPresets.length > 0 && (
+      {false && musaffaPresets && musaffaPresets.length > 0 && (
         <div style={{ maxWidth: '600px', margin: '0 auto', width: '100%', padding: '0 0.5rem' }}>
           {/* Header row: title group pinned left, create button pushed to the far
               right of the same row and vertically centred against the title. */}
@@ -377,19 +498,6 @@ const SurahList = ({
           <p style={{ fontSize: 'var(--fs-secondary)', color: 'var(--text-muted)', margin: 0 }}>
             Try a surah name, or a word from the Arabic text or the translation.
           </p>
-        </div>
-      )}
-
-      {/* Resume Session Banner — the shared component, so the `X` dismiss icon
-          and copy match the Partner config page instead of drifting again.
-          Suppressed while a search is active so it doesn't crowd the results. */}
-      {savedMusaffaSession && searchQuery === '' && (
-        <div style={{ margin: '0 0.5rem' }}>
-          <ResumeBanner
-            savedSession={savedMusaffaSession}
-            onResume={resumeMusaffaSession}
-            onDismiss={clearMusaffaSession}
-          />
         </div>
       )}
 
