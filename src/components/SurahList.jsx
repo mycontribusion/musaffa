@@ -10,6 +10,8 @@ const SurahList = ({
   quranAr,
   quranEn,
   recentSurahs,
+  lastRead,
+  updateLastRead,
   handleSelectSurah,
   openAyah,
   setTargetAyah,
@@ -51,6 +53,36 @@ const SurahList = ({
 
   const { isSearching, surahResults, ayahResults, totalAyahMatches, isTruncated } =
     useQuranSearch(searchQuery, { quranAr, quranEn, surahs });
+
+  // Look up the surah for the lastRead entry
+  const surah = lastRead ? surahs.find(s => s.number === lastRead.surahNumber) : null;
+  const surahName = surah ? surah.name : '';
+  const surahEnglishName = surah ? surah.englishName : '';
+
+  const handleEntryClick = (entry) => {
+    if (!entry) return;
+    const mode = entry.mode || 'surah';
+    const divisionNumber = entry.divisionNumber;
+    const ayahNumber = entry.ayahNumber;
+
+    if (mode === 'juz' && divisionNumber) {
+      setSelectedJuz(divisionNumber);
+      setView('juz');
+      setTargetAyah(ayahNumber);
+    } else if (mode === 'hizb' && divisionNumber) {
+      setSelectedHizb(divisionNumber);
+      setView('hizb');
+      setTargetAyah(ayahNumber);
+    } else {
+      // Default to surah mode
+      const s = surahs.find(x => x.number === entry.surahNumber);
+      if (s) {
+        handleSelectSurah(s);
+        setView('detail');
+        setTargetAyah(ayahNumber);
+      }
+    }
+  };
 
   // Guard against empty surahs array
   if (!surahs || surahs.length === 0) {
@@ -361,28 +393,46 @@ const SurahList = ({
         </div>
       )}
 
-      {/* Recent Reads */}
-      {recentSurahs.length > 0 && searchQuery === '' && (
+      {/* Continue Reading */}
+      {lastRead.length > 0 && searchQuery === '' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
           <div className="section-label" style={{ paddingLeft: '0.25rem' }}>Continue Reading</div>
           <div className="no-scrollbar" style={{ display: 'flex', gap: 'var(--space-3)', overflowX: 'auto', paddingBottom: 'var(--space-2)', paddingLeft: '0.25rem' }}>
-            {recentSurahs.map((s) => (
-              <motion.button
-                key={s.number}
-                whileHover={{ y: -2 }}
-                onClick={() => { handleSelectSurah(s); setView('detail'); }}
-                className="glass-card"
-                style={{ flexShrink: 0, width: '150px', padding: 'var(--space-4)', textAlign: 'left', cursor: 'pointer', border: 'var(--border-hairline)' }}
-              >
-                <div style={{ marginBottom: 'var(--space-3)' }}>
-                  <span style={{ fontSize: 'var(--fs-meta)', fontWeight: '800', color: 'var(--accent-gold)' }}>{s.number}</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
-                  <p className="arabic" style={{ fontSize: '1.1rem', color: 'var(--text-primary)' }}>{s.name}</p>
-                  <p style={{ fontSize: 'var(--fs-secondary)', fontWeight: '600', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.englishName}</p>
-                </div>
-              </motion.button>
-            ))}
+            {lastRead.map((entry) => {
+              const s = surahs.find(x => x.number === entry.surahNumber);
+              const surahName = s ? s.name : '';
+              const surahEnglishName = s ? s.englishName : '';
+              return (
+                <motion.button
+                  key={`${entry.surahNumber}:${entry.mode}:${entry.divisionNumber || 0}`}
+                  whileHover={{ y: -2 }}
+                  onClick={() => handleEntryClick(entry)}
+                  className="glass-card"
+                  style={{ flexShrink: 0, width: '170px', padding: 'var(--space-4)', textAlign: 'left', cursor: 'pointer', border: 'var(--border-hairline)' }}
+                >
+                  <div style={{ marginBottom: 'var(--space-3)' }}>
+                    <span style={{ fontSize: 'var(--fs-meta)', fontWeight: '800', color: 'var(--accent-gold)' }}>
+                      {entry.surahNumber}:{entry.ayahNumber}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+                    {entry.mode === 'surah' ? (
+                      <>
+                        <p className="arabic" style={{ fontSize: '1.1rem', color: 'var(--text-primary)' }}>{surahName}</p>
+                        <p style={{ fontSize: 'var(--fs-meta)', fontWeight: '800', color: 'var(--accent-gold)' }}>Surah</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="arabic" style={{ fontSize: '1.1rem', color: 'var(--text-primary)' }}>{surahName}</p>
+                        <p style={{ fontSize: 'var(--fs-meta)', fontWeight: '800', color: 'var(--accent-gold)', textTransform: 'capitalize' }}>
+                          {entry.mode === 'juz' ? "Juz'" : 'Hizb'} {entry.divisionNumber}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </motion.button>
+              );
+            })}
           </div>
         </div>
       )}

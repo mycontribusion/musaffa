@@ -57,8 +57,6 @@ const AyahCard = React.memo(({
             ? '1px solid var(--accent-gold)' 
             : '1px solid transparent',
         boxShadow: isHighlighted ? '0 0 16px rgba(212,175,55,0.25)' : 'none',
-        contentVisibility: 'auto',
-        containIntrinsicSize: '200px',
       }}
     >
       {/* Ayah number indicator & play control */}
@@ -124,7 +122,7 @@ const AyahCard = React.memo(({
 
 AyahCard.displayName = 'AyahCard';
 
-const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranEn, setView, setIsSwipeTransition, onBack, openMusaffaConfig, waqarData, lastRead, setLastRead, reciter, targetAyah = null, setTargetAyah }) => {
+const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranEn, setView, setIsSwipeTransition, onBack, openMusaffaConfig, waqarData, lastRead, updateLastRead, reciter, targetAyah = null, setTargetAyah }) => {
   const surahIndex = useMemo(() => selectedSurah ? selectedSurah.number - 1 : 0, [selectedSurah?.number]);
   const arabicAyahs = useMemo(() => (quranAr?.surahs && selectedSurah) ? quranAr.surahs[surahIndex]?.ayahs || [] : [], [quranAr, surahIndex, selectedSurah]);
   const englishAyahs = useMemo(() => (quranEn?.surahs && selectedSurah) ? quranEn.surahs[surahIndex]?.ayahs || [] : [], [quranEn, surahIndex, selectedSurah]);
@@ -132,6 +130,7 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
   const BISMILLAH = useMemo(() => quranAr?.surahs?.[0]?.ayahs?.[0]?.text || '', [quranAr]);
 
   const scrollEffectRef = useRef({ surahNumber: null, destination: null, hasScrolled: false });
+  const scrolledTargetRef = useRef(null);
   const [highlightedAyah, setHighlightedAyah] = useState(targetAyah);
 
   useEffect(() => {
@@ -146,9 +145,10 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
 
   useEffect(() => {
     return () => {
-      if (setTargetAyah) setTargetAyah(null);
+      // Don't clear targetAyah on unmount - it may be needed for navigation
+      // and clearing it causes jumps back to lastRead position
     };
-  }, [setTargetAyah]);
+  }, []);
 
   /* The download status card that used to sit under the surah title has been
      removed: download progress and its cancel control now live solely in the
@@ -329,44 +329,32 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
     if (!selectedSurah || !quranAr || !quranEn) return;
 
     const destination = targetAyah
-      || (lastRead && lastRead.surahNumber === selectedSurah.number ? lastRead.ayahNumber : null);
+      || (Array.isArray(lastRead) ? lastRead.find(e => (e.mode || 'surah') === 'surah' && e.surahNumber === selectedSurah.number)?.ayahNumber : null);
 
-    // Check if we've already scrolled to this exact destination
-    if (
-      scrollEffectRef.current.surahNumber === selectedSurah.number &&
-      scrollEffectRef.current.destination === destination &&
-      scrollEffectRef.current.hasScrolled
-    ) {
+    if (!destination) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
       return;
     }
 
-    // Update the ref to track this destination
-    scrollEffectRef.current = {
-      surahNumber: selectedSurah.number,
-      destination,
-      hasScrolled: true,
-    };
+    if (targetAyah && scrolledTargetRef.current === targetAyah) return;
+    if (targetAyah) scrolledTargetRef.current = targetAyah;
 
-    if (destination) {
-      // Wait for DOM to render before scrolling
-      const attemptScroll = (attempts = 0) => {
-        const el = document.getElementById(`surah-ayah-${destination}`);
-        if (el) {
-          // Instant positioning first to force layout computation for offscreen content-visibility
+    // Scroll to the target ayah with aggressive retries for reliability
+    const attemptScroll = (attempts = 0) => {
+      const el = document.getElementById(`surah-ayah-${destination}`);
+      if (el) {
+        requestAnimationFrame(() => {
           el.scrollIntoView({ behavior: 'auto', block: 'start' });
-          // Smooth refinement on next frame
-          requestAnimationFrame(() => {
-            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          });
-        } else if (attempts < 25) {
-          setTimeout(() => attemptScroll(attempts + 1), 40);
-        }
-      };
-      const t = setTimeout(() => attemptScroll(), 60);
-      return () => clearTimeout(t);
-    } else {
-      window.scrollTo({ top: 0, behavior: 'instant' });
-    }
+        });
+      } else if (attempts < 50) {
+        setTimeout(() => attemptScroll(attempts + 1), 20);
+      }
+    };
+    // First attempt on next frame for faster response
+    requestAnimationFrame(() => attemptScroll());
+    // Fallback timeout in case rAF doesn't fire
+    const t = setTimeout(() => attemptScroll(), 30);
+    return () => clearTimeout(t);
   }, [selectedSurah ? selectedSurah.number : null, targetAyah]);
 
   // Feature 3: Track scroll position and save last-read ayah (optimized with IntersectionObserver)
@@ -398,7 +386,7 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
         timeoutId = setTimeout(() => {
           const ayahNum = Number(bestEntry.target.getAttribute('data-ayah-num'));
           if (!isNaN(ayahNum)) {
-            setLastRead({ surahNumber: selectedSurah.number, ayahNumber: ayahNum });
+            updateLastRead({ surahNumber: selectedSurah.number, ayahNumber: ayahNum, mode: 'surah' });
           }
         }, 300);
       }
@@ -412,7 +400,7 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
       observer.disconnect();
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [selectedSurah.number, setLastRead, quranAr, quranEn, arabicAyahs.length]); // re-observe when surah changes or ayahs change
+  }, [selectedSurah.number, updateLastRead, quranAr, quranEn, arabicAyahs.length]); // re-observe when surah changes or ayahs change
 
   if (!selectedSurah || !quranAr || !quranEn) return null;
 

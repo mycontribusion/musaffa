@@ -51,12 +51,11 @@ const Header = ({ view, theme, setTheme, setView, searchQuery, setSearchQuery, m
     return (
       <header className="sticky top-0 z-100 mb-6" style={{ backgroundColor: 'var(--header-bg)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderBottom: 'var(--border-hairline)' }}>
         <div className="app-container">
-          <div className="flex items-center gap-2 py-2" style={{ paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>
-            <button onClick={closeSearch} className="icon-btn" title="Back" aria-label="Back">
-              <ArrowLeft size={18} strokeWidth={2} />
-            </button>
-            <div className="search-input-wrapper" style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <Search size={16} style={{ position: 'absolute', left: '0.85rem', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+          <div className="flex items-center py-2" style={{ paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>
+            <div className="search-input-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%' }}>
+              <button onClick={closeSearch} className="icon-btn" title="Back" aria-label="Back" style={{ position: 'absolute', left: '0.25rem', zIndex: 2 }}>
+                <ArrowLeft size={18} strokeWidth={2} />
+              </button>
               <input
                 ref={inputRef}
                 type="text"
@@ -65,7 +64,7 @@ const Header = ({ view, theme, setTheme, setView, searchQuery, setSearchQuery, m
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 autoFocus
-                style={{ paddingLeft: '2.5rem', paddingRight: searchQuery ? '2.5rem' : '1rem' }}
+                style={{ paddingLeft: '3rem', paddingRight: searchQuery ? '2.5rem' : '1rem' }}
               />
               {searchQuery && (
                 <button

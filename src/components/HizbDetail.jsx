@@ -126,7 +126,7 @@ const AyahCard = React.memo(({
 
 AyahCard.displayName = 'AyahCard';
 
-const HizbDetail = ({ hizbNumber, surahs, handleSelectSurah, quranAr, quranEn, setView, setSelectedHizb, setIsSwipeTransition, onBack, openMusaffaConfig, waqarData, lastRead, setLastRead, reciter, targetAyah = null, setTargetAyah }) => {
+const HizbDetail = ({ hizbNumber, surahs, handleSelectSurah, quranAr, quranEn, setView, setSelectedHizb, setIsSwipeTransition, onBack, openMusaffaConfig, waqarData, lastRead, updateLastRead, reciter, targetAyah = null, setTargetAyah }) => {
   // Build grouped ayahs for this hizb
   const hizbGroups = useMemo(() => {
     if (!quranAr || !quranEn || !surahs) return [];
@@ -335,45 +335,33 @@ const HizbDetail = ({ hizbNumber, surahs, handleSelectSurah, quranAr, quranEn, s
     if (!quranAr || !quranEn) return;
 
     const destination = targetAyah
-      || (lastRead && lastRead.hizbNumber === hizbNumber ? lastRead.ayahNumber : null);
+      || (Array.isArray(lastRead) ? lastRead.find(e => e.mode === 'hizb' && e.divisionNumber === hizbNumber)?.ayahNumber : null);
 
-    if (
-      scrollEffectRef.current.hizbNumber === hizbNumber &&
-      scrollEffectRef.current.destination === destination &&
-      scrollEffectRef.current.hasScrolled
-    ) {
+    if (!destination) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
       return;
     }
 
-    scrollEffectRef.current = {
-      hizbNumber,
-      destination,
-      hasScrolled: true,
+    const attemptScroll = (attempts = 0) => {
+      const els = document.querySelectorAll(`[data-ayah-num="${destination}"]`);
+      let targetEl = null;
+      if (els.length === 1) {
+        targetEl = els[0];
+      } else if (els.length > 1) {
+        targetEl = els[0];
+      }
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'auto', block: 'start' });
+        requestAnimationFrame(() => {
+          targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      } else if (attempts < 50) {
+        setTimeout(() => attemptScroll(attempts + 1), 20);
+      }
     };
-
-    if (destination) {
-      const attemptScroll = (attempts = 0) => {
-        const els = document.querySelectorAll(`[data-ayah-num="${destination}"]`);
-        let targetEl = null;
-        if (els.length === 1) {
-          targetEl = els[0];
-        } else if (els.length > 1) {
-          targetEl = els[0];
-        }
-        if (targetEl) {
-          targetEl.scrollIntoView({ behavior: 'auto', block: 'start' });
-          requestAnimationFrame(() => {
-            targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          });
-        } else if (attempts < 25) {
-          setTimeout(() => attemptScroll(attempts + 1), 40);
-        }
-      };
-      const t = setTimeout(() => attemptScroll(), 60);
-      return () => clearTimeout(t);
-    } else {
-      window.scrollTo({ top: 0, behavior: 'instant' });
-    }
+    requestAnimationFrame(() => attemptScroll());
+    const t = setTimeout(() => attemptScroll(), 30);
+    return () => clearTimeout(t);
   }, [hizbNumber, targetAyah, quranAr, quranEn]);
 
   // Track scroll position and save last-read ayah
@@ -405,7 +393,7 @@ const HizbDetail = ({ hizbNumber, surahs, handleSelectSurah, quranAr, quranEn, s
           const ayahNum = Number(bestEntry.target.getAttribute('data-ayah-num'));
           const surahNum = Number(bestEntry.target.getAttribute('data-surah-num'));
           if (!isNaN(ayahNum) && !isNaN(surahNum)) {
-            setLastRead({ hizbNumber, surahNumber: surahNum, ayahNumber: ayahNum });
+            updateLastRead({ surahNumber: surahNum, ayahNumber: ayahNum, mode: 'hizb', divisionNumber: hizbNumber });
           }
         }, 300);
       }
@@ -418,7 +406,7 @@ const HizbDetail = ({ hizbNumber, surahs, handleSelectSurah, quranAr, quranEn, s
       observer.disconnect();
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [hizbNumber, setLastRead, quranAr, quranEn, flatAyahs.length]);
+  }, [hizbNumber, updateLastRead, quranAr, quranEn, flatAyahs.length]);
 
   if (!quranAr || !quranEn) return null;
 

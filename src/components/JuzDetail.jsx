@@ -126,7 +126,7 @@ const AyahCard = React.memo(({
 
 AyahCard.displayName = 'AyahCard';
 
-const JuzDetail = ({ juzNumber, surahs, handleSelectSurah, quranAr, quranEn, setView, setSelectedJuz, setIsSwipeTransition, onBack, openMusaffaConfig, waqarData, lastRead, setLastRead, reciter, targetAyah = null, setTargetAyah }) => {
+const JuzDetail = ({ juzNumber, surahs, handleSelectSurah, quranAr, quranEn, setView, setSelectedJuz, setIsSwipeTransition, onBack, openMusaffaConfig, waqarData, lastRead, updateLastRead, reciter, targetAyah = null, setTargetAyah }) => {
   // Build grouped ayahs for this juz
   const juzGroups = useMemo(() => {
     if (!quranAr || !quranEn || !surahs) return [];
@@ -345,49 +345,33 @@ const JuzDetail = ({ juzNumber, surahs, handleSelectSurah, quranAr, quranEn, set
     if (!quranAr || !quranEn) return;
 
     const destination = targetAyah
-      || (lastRead && lastRead.juzNumber === juzNumber ? lastRead.ayahNumber : null);
+      || (Array.isArray(lastRead) ? lastRead.find(e => e.mode === 'juz' && e.divisionNumber === juzNumber)?.ayahNumber : null);
 
-    if (
-      scrollEffectRef.current.juzNumber === juzNumber &&
-      scrollEffectRef.current.destination === destination &&
-      scrollEffectRef.current.hasScrolled
-    ) {
+    if (!destination) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
       return;
     }
 
-    scrollEffectRef.current = {
-      juzNumber,
-      destination,
-      hasScrolled: true,
+    const attemptScroll = (attempts = 0) => {
+      const els = document.querySelectorAll(`[data-ayah-num="${destination}"]`);
+      let targetEl = null;
+      if (els.length === 1) {
+        targetEl = els[0];
+      } else if (els.length > 1) {
+        targetEl = els[0];
+      }
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'auto', block: 'start' });
+        requestAnimationFrame(() => {
+          targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      } else if (attempts < 50) {
+        setTimeout(() => attemptScroll(attempts + 1), 20);
+      }
     };
-
-    if (destination) {
-      const attemptScroll = (attempts = 0) => {
-        // Find the ayah element by surah:ayah
-        const el = document.querySelector(`[data-surah-num][data-ayah-num="${destination}"]`);
-        // More specific: find within the right surah context
-        const els = document.querySelectorAll(`[data-ayah-num="${destination}"]`);
-        let targetEl = null;
-        if (els.length === 1) {
-          targetEl = els[0];
-        } else if (els.length > 1) {
-          // If multiple, we need to know which surah. For now, take the first match
-          targetEl = els[0];
-        }
-        if (targetEl) {
-          targetEl.scrollIntoView({ behavior: 'auto', block: 'start' });
-          requestAnimationFrame(() => {
-            targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          });
-        } else if (attempts < 25) {
-          setTimeout(() => attemptScroll(attempts + 1), 40);
-        }
-      };
-      const t = setTimeout(() => attemptScroll(), 60);
-      return () => clearTimeout(t);
-    } else {
-      window.scrollTo({ top: 0, behavior: 'instant' });
-    }
+    requestAnimationFrame(() => attemptScroll());
+    const t = setTimeout(() => attemptScroll(), 30);
+    return () => clearTimeout(t);
   }, [juzNumber, targetAyah, quranAr, quranEn]);
 
   // Track scroll position and save last-read ayah
@@ -419,7 +403,7 @@ const JuzDetail = ({ juzNumber, surahs, handleSelectSurah, quranAr, quranEn, set
           const ayahNum = Number(bestEntry.target.getAttribute('data-ayah-num'));
           const surahNum = Number(bestEntry.target.getAttribute('data-surah-num'));
           if (!isNaN(ayahNum) && !isNaN(surahNum)) {
-            setLastRead({ juzNumber, surahNumber: surahNum, ayahNumber: ayahNum });
+            updateLastRead({ surahNumber: surahNum, ayahNumber: ayahNum, mode: 'juz', divisionNumber: juzNumber });
           }
         }, 300);
       }
@@ -432,7 +416,7 @@ const JuzDetail = ({ juzNumber, surahs, handleSelectSurah, quranAr, quranEn, set
       observer.disconnect();
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [juzNumber, setLastRead, quranAr, quranEn, flatAyahs.length]);
+  }, [juzNumber, updateLastRead, quranAr, quranEn, flatAyahs.length]);
 
   if (!quranAr || !quranEn) return null;
 

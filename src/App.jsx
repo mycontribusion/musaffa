@@ -87,7 +87,29 @@ const App = () => {
   const [musaffaParams, setMusaffaParams] = useLocalStorageState('quran_musaffa_params', DEFAULT_PARAMS);
   const [reciter, setReciter] = useLocalStorageState('quran_reciter', 'ar.saoodshuraym', true);
   const [recentSurahs, setRecentSurahs] = useLocalStorageState('quran_recent', []);
-  const [lastRead, setLastRead] = useLocalStorageState('quran_last_read', null);
+  const [lastRead, setLastRead] = useLocalStorageState('quran_last_read', []);
+
+  /**
+   * Add or update a last-read entry, keeping at most 5 entries sorted by recency.
+   * Backward compatible: if stored value is a single object (old format), wraps it in an array.
+   */
+  const updateLastRead = useCallback((entry) => {
+    setLastRead(prev => {
+      // Backward compatibility: if prev is not an array, wrap it
+      const arr = Array.isArray(prev) ? prev : (prev ? [prev] : []);
+      const { surahNumber, ayahNumber, mode = 'surah', divisionNumber } = entry;
+      const key = `${surahNumber}:${mode}:${divisionNumber || 0}`;
+
+      // Remove existing entry with same key if present
+      const filtered = arr.filter(e => `${e.surahNumber}:${e.mode || 'surah'}:${e.divisionNumber || 0}` !== key);
+
+      // Add new entry at front
+      const next = [{ surahNumber, ayahNumber, mode, divisionNumber, updatedAt: Date.now() }, ...filtered];
+
+      // Keep max 5
+      return next.slice(0, 5);
+    });
+  }, [setLastRead]);
   const [wordResults, setWordResults] = useLocalStorageState('quran_word_results', {});
   const [stumbles, setStumbles] = useLocalStorageState('quran_stumbles', []);
 
@@ -524,6 +546,8 @@ const App = () => {
                 quranAr={quranAr}
                 quranEn={quranEn}
                 recentSurahs={recentSurahs}
+                lastRead={lastRead}
+                updateLastRead={updateLastRead}
                 handleSelectSurah={handleSelectSurah}
                 openAyah={handleOpenAyah}
                 setTargetAyah={setTargetAyah}
@@ -620,7 +644,7 @@ const App = () => {
                 startQuiz={startQuiz}
                 waqarData={waqarData}
                 lastRead={lastRead}
-                setLastRead={setLastRead}
+                updateLastRead={updateLastRead}
                 reciter={reciter}
               />
             )}
@@ -639,7 +663,7 @@ const App = () => {
                 openMusaffaConfig={(s) => { handleSelectSurah(s); setPartnerSubView('config'); setView('partner'); }}
                 waqarData={waqarData}
                 lastRead={lastRead}
-                setLastRead={setLastRead}
+                updateLastRead={updateLastRead}
                 reciter={reciter}
                 targetAyah={targetAyah}
                 setTargetAyah={setTargetAyah}
@@ -660,7 +684,7 @@ const App = () => {
                 openMusaffaConfig={(s) => { handleSelectSurah(s); setPartnerSubView('config'); setView('partner'); }}
                 waqarData={waqarData}
                 lastRead={lastRead}
-                setLastRead={setLastRead}
+                updateLastRead={updateLastRead}
                 reciter={reciter}
                 targetAyah={targetAyah}
                 setTargetAyah={setTargetAyah}
