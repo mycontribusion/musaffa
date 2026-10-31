@@ -1,24 +1,29 @@
 import { motion } from 'framer-motion';
-import { BookOpen, Volume2, Mail, Link, ChevronLeft, ChevronRight, Database } from 'lucide-react';
+import { useState } from 'react';
+import { BookOpen, Volume2, Mail, Link, ChevronLeft, ChevronRight, Database, ChevronDown } from 'lucide-react';
 
 const pill = {
-  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem',
-  padding: '0.85rem 1.25rem', borderRadius: 'var(--radius-lg)',
-  background: 'var(--bg-accent)', border: '1px solid var(--glass-border)',
-  color: 'var(--text-primary)', cursor: 'pointer', transition: 'all 0.2s',
-  minHeight: '52px', fontSize: 'var(--fs-secondary)', fontWeight: '600',
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem',
+  padding: '1rem 1.25rem', borderRadius: 'var(--radius-xl)',
+  background: 'var(--glass-bg)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+  border: '1px solid var(--glass-border)', boxShadow: 'var(--glass-shadow)',
+  color: 'var(--text-primary)', cursor: 'pointer', transition: 'all 0.2s ease',
+  minHeight: '56px', fontSize: 'var(--fs-body)', fontWeight: '700',
 };
 
 const linkPill = {
-  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-  padding: '0.85rem 1.25rem', borderRadius: 'var(--radius-lg)',
-  background: 'var(--bg-accent)', border: '1px solid var(--glass-border)',
-  color: 'var(--text-primary)', cursor: 'pointer', transition: 'all 0.2s',
-  minHeight: '52px', fontSize: 'var(--fs-secondary)', fontWeight: '600',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem',
+  padding: '1rem 1.25rem', borderRadius: 'var(--radius-xl)',
+  background: 'var(--glass-bg)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+  border: '1px solid var(--glass-border)', boxShadow: 'var(--glass-shadow)',
+  color: 'var(--text-primary)', cursor: 'pointer', transition: 'all 0.2s ease',
+  minHeight: '56px', fontSize: 'var(--fs-body)', fontWeight: '700',
   textDecoration: 'none',
 };
 
 export default function SettingsPage({ setView }) {
+  const [dataSourcesOpen, setDataSourcesOpen] = useState(false);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -59,36 +64,40 @@ export default function SettingsPage({ setView }) {
 
       <div style={{ padding: 'var(--space-5) var(--space-4) 0' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-          {/* Recitation Map — opens its original full page, returns to Settings */}
+          {/* Recitation Map */}
           <button
             onClick={() => setView('recitation-map')}
             style={pill}
+            className="hover-scale"
             title="Recitation Map"
           >
-            <BookOpen size={15} color="var(--accent-gold)" strokeWidth={2} />
+            <BookOpen size={18} color="var(--accent-gold)" strokeWidth={2} />
             <span style={{ flex: 1, textAlign: 'center' }}>Recitation Map</span>
-            <ChevronRight size={14} color="var(--text-muted)" />
+            <ChevronRight size={16} color="var(--text-muted)" />
           </button>
 
-          {/* Audio Manager — opens its original full page, returns to Settings */}
+          {/* Audio Manager */}
           <button
             onClick={() => setView('audio-manager')}
             style={pill}
+            className="hover-scale"
             title="Audio Manager"
           >
-            <Volume2 size={15} color="var(--accent-gold)" strokeWidth={2} />
+            <Volume2 size={18} color="var(--accent-gold)" strokeWidth={2} />
             <span style={{ flex: 1, textAlign: 'center' }}>Audio Manager</span>
-            <ChevronRight size={14} color="var(--text-muted)" />
+            <ChevronRight size={16} color="var(--text-muted)" />
           </button>
 
           {/* Email */}
           <a
             href="mailto:ahmadmusamuhd@gmail.com"
             style={linkPill}
+            className="hover-scale"
             title="Send an Email"
           >
-            <Mail size={15} color="var(--accent-gold)" strokeWidth={2} />
+            <Mail size={18} color="var(--accent-gold)" strokeWidth={2} />
             <span style={{ flex: 1, textAlign: 'center' }}>Email</span>
+            <div style={{ width: '16px' }} />
           </a>
 
           {/* LinkedIn */}
@@ -97,55 +106,64 @@ export default function SettingsPage({ setView }) {
             target="_blank"
             rel="noopener noreferrer"
             style={linkPill}
+            className="hover-scale"
             title="Send a DM"
           >
-            <Link size={15} color="var(--accent-gold)" strokeWidth={2} />
+            <Link size={18} color="var(--accent-gold)" strokeWidth={2} />
             <span style={{ flex: 1, textAlign: 'center' }}>LinkedIn</span>
+            <div style={{ width: '16px' }} />
           </a>
-        </div>
-      </div>
 
-      {/* Data Sources */}
-      <div style={{
-        padding: 'var(--space-5) 1.25rem 0',
-        display: 'flex', flexDirection: 'column', gap: 'var(--space-2)',
-      }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: 'var(--space-2)',
-        }}>
-          <Database size={12} color="var(--accent-gold)" />
-          <span style={{
-            fontSize: 'var(--fs-micro)', fontWeight: 'var(--fw-strong)',
-            textTransform: 'uppercase', letterSpacing: 'var(--tracking-label)',
-            color: 'var(--text-muted)',
-          }}>
-            Data Sources
-          </span>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-          {[
-            { href: 'https://api.alquran.cloud/v1/quran/quran-uthmani-quran-academy', label: 'quran-ar.json', desc: 'Al Quran Cloud (Uthmani)' },
-            { href: 'https://api.alquran.cloud/v1/quran/en.sahih', label: 'quran-en.json', desc: 'Saheeh International' },
-            { href: 'https://tanzil.net', label: 'quran-simple.txt', desc: 'Tanzil Project' },
-            { href: 'https://github.com/Waqar144/Quran_Mutashabihat_Data', label: 'waqar114', desc: 'Mutashabihat Dataset' },
-          ].map((src) => (
-            <a
-              key={src.label}
-              href={src.href}
-              target="_blank"
-              rel="noopener noreferrer"
+          {/* Data Sources */}
+          <button
+            onClick={() => setDataSourcesOpen(!dataSourcesOpen)}
+            style={pill}
+            className="hover-scale"
+          >
+            <Database size={18} color="var(--accent-gold)" strokeWidth={2} />
+            <span style={{ flex: 1, textAlign: 'center' }}>Data Sources</span>
+            <ChevronDown
+              size={16}
+              color="var(--text-muted)"
               style={{
-                display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
-                fontSize: 'var(--fs-meta)', textDecoration: 'none',
-                color: 'var(--text-secondary)',
-                transition: 'color 0.2s',
+                transform: dataSourcesOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s ease'
               }}
-            >
-              <span style={{ color: 'var(--accent-gold)', fontWeight: '700' }}>{src.label}</span>
-              <span style={{ color: 'var(--text-muted)' }}>—</span>
-              <span>{src.desc}</span>
-            </a>
-          ))}
+            />
+          </button>
+          {dataSourcesOpen && (
+            <div style={{ 
+              display: 'flex', flexDirection: 'column', gap: 'var(--space-1)',
+              background: 'var(--glass-bg)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+              border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-xl)',
+              padding: 'var(--space-3)', boxShadow: 'var(--glass-shadow)'
+            }}>
+              {[
+                { href: 'https://api.alquran.cloud/v1/quran/quran-uthmani-quran-academy', label: 'quran-ar.json', desc: 'Al Quran Cloud (Uthmani)' },
+                { href: 'https://api.alquran.cloud/v1/quran/en.sahih', label: 'quran-en.json', desc: 'Saheeh International' },
+                { href: 'https://tanzil.net', label: 'quran-simple.txt', desc: 'Tanzil Project' },
+                { href: 'https://github.com/Waqar144/Quran_Mutashabihat_Data', label: 'waqar114', desc: 'Mutashabihat Dataset' },
+              ].map((src) => (
+                <a
+                  key={src.label}
+                  href={src.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover-scale"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
+                    fontSize: 'var(--fs-secondary)', textDecoration: 'none',
+                    color: 'var(--text-secondary)', padding: '0.7rem 0.6rem',
+                    borderRadius: 'var(--radius-md)', transition: 'all 0.2s',
+                  }}
+                >
+                  <span style={{ color: 'var(--accent-gold)', fontWeight: '800' }}>{src.label}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>—</span>
+                  <span style={{ flex: 1 }}>{src.desc}</span>
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </motion.div>
