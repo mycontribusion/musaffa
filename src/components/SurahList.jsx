@@ -15,6 +15,8 @@ const SurahList = ({
   setTargetAyah,
   setDetailReturnView,
   setView,
+  setSelectedJuz,
+  setSelectedHizb,
   audioDownloadControls,
   savedMusaffaSession,
   resumeMusaffaSession,
@@ -450,7 +452,15 @@ const SurahList = ({
         {activeTab !== 'surah' && (
           <div className="grid md:grid-cols-2" style={{ gap: 'var(--space-4)' }}>
             {(activeTab === 'hizb' ? hizbList : juzList).map((d) => (
-              <div key={d.hizb || d.juz} className="glass-card" style={{ padding: '1.25rem', cursor: 'pointer' }} onClick={() => { const s = surahs.find(x => x.number === d.start.surah); if (s) { handleSelectSurah(s); setView('detail'); setTimeout(() => { if (openAyah) openAyah(d.start.surah, d.start.ayah); setDetailReturnView?.('list'); }, 0); } }}>
+              <div key={d.hizb || d.juz} className="glass-card" style={{ padding: '1.25rem', cursor: 'pointer' }} onClick={() => {
+                if (activeTab === 'juz') {
+                  setSelectedJuz(d.juz);
+                  setView('juz');
+                } else if (activeTab === 'hizb') {
+                  setSelectedHizb(d.hizb);
+                  setView('hizb');
+                }
+              }}>
                 <strong>{activeTab === 'hizb' ? `Hizb ${d.hizb}` : `Juz' ${d.juz}`}</strong>
                 <div style={{ fontSize: 'var(--fs-meta)', color: 'var(--text-muted)' }}>
                   {surahs.find(s => s.number === d.start.surah)?.englishName || `Surah ${d.start.surah}`} {d.start.surah}:{d.start.ayah} – {surahs.find(s => s.number === d.end.surah)?.englishName || `Surah ${d.end.surah}`} {d.end.surah}:{d.end.ayah}

@@ -6,6 +6,8 @@ import AudioManager from './components/AudioManager';
 import SurahList from './components/SurahList';
 import SearchPage from './components/SearchPage';
 import SurahDetail from './components/SurahDetail';
+import JuzDetail from './components/JuzDetail';
+import HizbDetail from './components/HizbDetail';
 import PartnerSession from './components/PartnerSession';
 import MutashabihatSession from './components/MutashabihatSession';
 import MutashabihSelection from './components/MutashabihSelection';
@@ -42,6 +44,8 @@ const VIEWS_WITHOUT_GLOBAL_HEADER = new Set([
   'recitation-map',
   'audio-manager',
   'detail',
+  'juz',
+  'hizb',
   'mutashabihat-selection',
   'mutashabihat-multi-session',
 ]);
@@ -62,6 +66,8 @@ const App = () => {
   const [view, setView] = useState('list');
   const [theme, setTheme] = useState(() => window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   const [selectedSurah, setSelectedSurah] = useState(null);
+  const [selectedJuz, setSelectedJuz] = useState(null);
+  const [selectedHizb, setSelectedHizb] = useState(null);
   const [partnerSubView, setPartnerSubView] = useState('config');
   const [activeQuizType, setActiveQuizType] = useState('all');
   /* Persisted, not in-memory: this is the only backing state for the
@@ -124,6 +130,12 @@ const App = () => {
         v = 'recitation-map';
       } else if (parts[0] === 'audio-manager') {
         v = 'audio-manager';
+      } else if (parts[0] === 'juz' && parts[1]) {
+        v = 'juz';
+        setSelectedJuz(Number(parts[1]));
+      } else if (parts[0] === 'hizb' && parts[1]) {
+        v = 'hizb';
+        setSelectedHizb(Number(parts[1]));
       }
       if (v === 'recitation-map') {
         pv = 'config';
@@ -188,6 +200,10 @@ const App = () => {
     switch (view) {
       case 'detail':
         return !!selectedSurah;
+      case 'juz':
+        return !!selectedJuz && selectedJuz >= 1 && selectedJuz <= 30;
+      case 'hizb':
+        return !!selectedHizb && selectedHizb >= 1 && selectedHizb <= 60;
       case 'mutashabihat-multi-session':
         return Array.isArray(multiSurahSession) && multiSurahSession.length > 0;
       case 'mutashabihat-session':
@@ -204,7 +220,7 @@ const App = () => {
       default:
         return true;
     }
-  }, [view, selectedSurah, multiSurahSession, waqarPending, waqarData, partnerSubView, chunks.length, savedMusaffaSession]);
+  }, [view, selectedSurah, selectedJuz, selectedHizb, multiSurahSession, waqarPending, waqarData, partnerSubView, chunks.length, savedMusaffaSession]);
 
   // Sync state to URL paths
   useEffect(() => {
@@ -231,6 +247,10 @@ const App = () => {
     let newPath = '/';
     if (view === 'detail' && selectedSurah) {
       newPath = `/surah/${selectedSurah.number}`;
+    } else if (view === 'juz' && selectedJuz) {
+      newPath = `/juz/${selectedJuz}`;
+    } else if (view === 'hizb' && selectedHizb) {
+      newPath = `/hizb/${selectedHizb}`;
     } else if (view === 'partner') {
       newPath = selectedSurah ? `/surah/${selectedSurah.number}/partner/${partnerSubView}` : `/partner/${partnerSubView}`;
     } else if (view === 'mutashabihat-session' && selectedSurah) {
@@ -314,14 +334,14 @@ const App = () => {
     } else if (view === 'search' && previous === 'detail') {
       isRestoringScroll.current = true;
       // Restoration is executed directly by SearchPage on mount
-    } else if (view === 'detail') {
+    } else if (view === 'detail' || view === 'juz' || view === 'hizb') {
       if (!targetAyah) {
         window.scrollTo(0, 0);
       }
     } else {
       window.scrollTo(0, 0);
     }
-  }, [view]);
+  }, [view, targetAyah]);
 
   const handleSelectSurah = (s, returnView = 'list') => {
     if (view === 'list') {
@@ -493,6 +513,8 @@ const App = () => {
                 setTargetAyah={setTargetAyah}
                 setDetailReturnView={setDetailReturnView}
                 setView={setView}
+                setSelectedJuz={setSelectedJuz}
+                setSelectedHizb={setSelectedHizb}
                 initialScrollPos={listScrollPosition.current} 
                 audioDownloadControls={audioDownloadControls} 
                 savedMusaffaSession={savedMusaffaSession} 
@@ -583,6 +605,46 @@ const App = () => {
                 lastRead={lastRead}
                 setLastRead={setLastRead}
                 reciter={reciter}
+              />
+            )}
+
+            {view === 'juz' && selectedJuz && (
+              <JuzDetail
+                juzNumber={selectedJuz}
+                surahs={surahs}
+                handleSelectSurah={handleSelectSurah}
+                quranAr={quranAr}
+                quranEn={quranEn}
+                setView={setView}
+                setSelectedJuz={setSelectedJuz}
+                onBack={handleDetailBack}
+                openMusaffaConfig={(s) => { handleSelectSurah(s); setPartnerSubView('config'); setView('partner'); }}
+                waqarData={waqarData}
+                lastRead={lastRead}
+                setLastRead={setLastRead}
+                reciter={reciter}
+                targetAyah={targetAyah}
+                setTargetAyah={setTargetAyah}
+              />
+            )}
+
+            {view === 'hizb' && selectedHizb && (
+              <HizbDetail
+                hizbNumber={selectedHizb}
+                surahs={surahs}
+                handleSelectSurah={handleSelectSurah}
+                quranAr={quranAr}
+                quranEn={quranEn}
+                setView={setView}
+                setSelectedHizb={setSelectedHizb}
+                onBack={handleDetailBack}
+                openMusaffaConfig={(s) => { handleSelectSurah(s); setPartnerSubView('config'); setView('partner'); }}
+                waqarData={waqarData}
+                lastRead={lastRead}
+                setLastRead={setLastRead}
+                reciter={reciter}
+                targetAyah={targetAyah}
+                setTargetAyah={setTargetAyah}
               />
             )}
             
