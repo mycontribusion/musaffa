@@ -126,7 +126,7 @@ const AyahCard = React.memo(({
 
 AyahCard.displayName = 'AyahCard';
 
-const JuzDetail = ({ juzNumber, surahs, handleSelectSurah, quranAr, quranEn, setView, setSelectedJuz, setIsSwipeTransition, onBack, openMusaffaConfig, waqarData, lastRead, updateLastRead, reciter, targetAyah = null, setTargetAyah }) => {
+const JuzDetail = ({ juzNumber, surahs, handleSelectSurah, quranAr, quranEn, setView, setSelectedJuz, setIsSwipeTransition, onBack, openMusaffaConfig, waqarData, lastRead, updateLastRead, reciter, targetAyah = null, setTargetAyah, forceStart = false, setForceStart }) => {
   // Build grouped ayahs for this juz
   const juzGroups = useMemo(() => {
     if (!quranAr || !quranEn || !surahs) return [];
@@ -358,8 +358,11 @@ const JuzDetail = ({ juzNumber, surahs, handleSelectSurah, quranAr, quranEn, set
   useEffect(() => {
     if (!quranAr || !quranEn) return;
 
-    const destination = targetAyah
-      || (Array.isArray(lastRead) ? lastRead.find(e => e.mode === 'juz' && e.divisionNumber === juzNumber)?.ayahNumber : null);
+    const destination = forceStart
+      ? null
+      : (targetAyah
+        || (Array.isArray(lastRead) ? lastRead.find(e => e.mode === 'juz' && e.divisionNumber === juzNumber)?.ayahNumber : null));
+    if (forceStart && setForceStart) setForceStart(false);
 
     if (!destination) {
       window.scrollTo({ top: 0, behavior: 'instant' });

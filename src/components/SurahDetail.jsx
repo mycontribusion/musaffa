@@ -122,7 +122,7 @@ const AyahCard = React.memo(({
 
 AyahCard.displayName = 'AyahCard';
 
-const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranEn, setView, setIsSwipeTransition, onBack, openMusaffaConfig, waqarData, lastRead, updateLastRead, reciter, targetAyah = null, setTargetAyah }) => {
+const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranEn, setView, setIsSwipeTransition, onBack, openMusaffaConfig, waqarData, lastRead, updateLastRead, reciter, targetAyah = null, setTargetAyah, forceStart = false, setForceStart }) => {
   const surahIndex = useMemo(() => selectedSurah ? selectedSurah.number - 1 : 0, [selectedSurah?.number]);
   const arabicAyahs = useMemo(() => (quranAr?.surahs && selectedSurah) ? quranAr.surahs[surahIndex]?.ayahs || [] : [], [quranAr, surahIndex, selectedSurah]);
   const englishAyahs = useMemo(() => (quranEn?.surahs && selectedSurah) ? quranEn.surahs[surahIndex]?.ayahs || [] : [], [quranEn, surahIndex, selectedSurah]);
@@ -328,8 +328,11 @@ const SurahDetail = ({ selectedSurah, surahs, handleSelectSurah, quranAr, quranE
   useEffect(() => {
     if (!selectedSurah || !quranAr || !quranEn) return;
 
-    const destination = targetAyah
-      || (Array.isArray(lastRead) ? lastRead.find(e => (e.mode || 'surah') === 'surah' && e.surahNumber === selectedSurah.number)?.ayahNumber : null);
+    const destination = forceStart
+      ? null
+      : (targetAyah
+        || (Array.isArray(lastRead) ? lastRead.find(e => (e.mode || 'surah') === 'surah' && e.surahNumber === selectedSurah.number)?.ayahNumber : null));
+    if (forceStart && setForceStart) setForceStart(false);
 
     if (!destination) {
       window.scrollTo({ top: 0, behavior: 'instant' });

@@ -126,7 +126,7 @@ const AyahCard = React.memo(({
 
 AyahCard.displayName = 'AyahCard';
 
-const HizbDetail = ({ hizbNumber, surahs, handleSelectSurah, quranAr, quranEn, setView, setSelectedHizb, setIsSwipeTransition, onBack, openMusaffaConfig, waqarData, lastRead, updateLastRead, reciter, targetAyah = null, setTargetAyah }) => {
+const HizbDetail = ({ hizbNumber, surahs, handleSelectSurah, quranAr, quranEn, setView, setSelectedHizb, setIsSwipeTransition, onBack, openMusaffaConfig, waqarData, lastRead, updateLastRead, reciter, targetAyah = null, setTargetAyah, forceStart = false, setForceStart }) => {
   // Build grouped ayahs for this hizb
   const hizbGroups = useMemo(() => {
     if (!quranAr || !quranEn || !surahs) return [];
@@ -348,8 +348,11 @@ const HizbDetail = ({ hizbNumber, surahs, handleSelectSurah, quranAr, quranEn, s
   useEffect(() => {
     if (!quranAr || !quranEn) return;
 
-    const destination = targetAyah
-      || (Array.isArray(lastRead) ? lastRead.find(e => e.mode === 'hizb' && e.divisionNumber === hizbNumber)?.ayahNumber : null);
+    const destination = forceStart
+      ? null
+      : (targetAyah
+        || (Array.isArray(lastRead) ? lastRead.find(e => e.mode === 'hizb' && e.divisionNumber === hizbNumber)?.ayahNumber : null));
+    if (forceStart && setForceStart) setForceStart(false);
 
     if (!destination) {
       window.scrollTo({ top: 0, behavior: 'instant' });

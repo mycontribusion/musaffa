@@ -86,6 +86,7 @@ const App = () => {
   const [reciter, setReciter] = useLocalStorageState('quran_reciter', 'ar.saoodshuraym', true);
   const [recentSurahs, setRecentSurahs] = useLocalStorageState('quran_recent', []);
   const [lastRead, setLastRead] = useLocalStorageState('quran_last_read', []);
+  const [detailForceStart, setDetailForceStart] = useState(false);
 
   /**
    * Add or update a last-read entry, keeping at most 5 entries sorted by recency.
@@ -598,6 +599,7 @@ const App = () => {
                 handleSelectSurah={handleSelectSurah}
                 openAyah={handleOpenAyah}
                 setTargetAyah={setTargetAyah}
+                setDetailForceStart={setDetailForceStart}
                 setDetailReturnView={setDetailReturnView}
                 setView={setView}
                 setSelectedJuz={setSelectedJuz}
@@ -665,6 +667,8 @@ const App = () => {
                 lastRead={lastRead}
                 updateLastRead={updateLastRead}
                 reciter={reciter}
+                forceStart={detailForceStart}
+                setForceStart={setDetailForceStart}
               />
             )}
 
@@ -686,6 +690,8 @@ const App = () => {
                 reciter={reciter}
                 targetAyah={targetAyah}
                 setTargetAyah={setTargetAyah}
+                forceStart={detailForceStart}
+                setForceStart={setDetailForceStart}
               />
             )}
 
@@ -707,6 +713,8 @@ const App = () => {
                 reciter={reciter}
                 targetAyah={targetAyah}
                 setTargetAyah={setTargetAyah}
+                forceStart={detailForceStart}
+                setForceStart={setDetailForceStart}
               />
             )}
             

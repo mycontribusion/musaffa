@@ -15,6 +15,7 @@ const SurahList = ({
   handleSelectSurah,
   openAyah,
   setTargetAyah,
+  setDetailForceStart,
   setDetailReturnView,
   setView,
   setSelectedJuz,
@@ -575,6 +576,7 @@ const SurahList = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               onClick={() => {
+                setDetailForceStart(true);
                 handleSelectSurah(surah);
                 setView('detail');
               }}
@@ -611,6 +613,7 @@ const SurahList = ({
           <div className="grid md:grid-cols-2" style={{ gap: 'var(--space-4)' }}>
             {(activeTab === 'hizb' ? hizbList : juzList).map((d) => (
               <div key={d.hizb || d.juz} className="glass-card" style={{ padding: '1.25rem', cursor: 'pointer' }} onClick={() => {
+                setDetailForceStart(true);
                 if (activeTab === 'juz') {
                   setSelectedJuz(d.juz);
                   setView('juz');
