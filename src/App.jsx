@@ -3,6 +3,7 @@ import { AnimatePresence } from 'framer-motion';
 import Header from './components/Header';
 import HomeControls from './components/HomeControls';
 import AudioManager from './components/AudioManager';
+import RecitationMap from './components/RecitationMap';
 import SurahList from './components/SurahList';
 import SearchPage from './components/SearchPage';
 import SurahDetail from './components/SurahDetail';
@@ -11,7 +12,7 @@ import HizbDetail from './components/HizbDetail';
 import PartnerSession from './components/PartnerSession';
 import MutashabihatSession from './components/MutashabihatSession';
 import MutashabihSelection from './components/MutashabihSelection';
-import RecitationMap from './components/RecitationMap';
+import SettingsPage from './components/SettingsPage';
 import { useQuranData } from './hooks/useQuranData';
 import { useMusaffa } from './hooks/useMusaffa';
 import { useQuiz } from './hooks/useQuiz';
@@ -27,27 +28,24 @@ import { useVoskModelDownload } from './hooks/useVoskModelDownload';
  * The global `<Header />` is not rendered for these, so the local bar is the
  * only header on screen and starts at the top of the viewport:
  *
- *  - `recitation-map`         — Recitation Map   (`RecitationMap`)
- *  - `audio-manager`          — Audio Manager    (`AudioManager`)
  *  - `detail`                 — Surah Detail     (`SurahDetail`)
  *  - `mutashabihat-selection` — Mutashabih Quiz (`MutashabihSelection`)
  *  - `mutashabihat-multi-session` — Mutashabih Quiz session (`MutashabihatSession`)
+ *  - `settings`               — Settings           (`SettingsPage`)
  *
  * Every other view keeps the global header exactly as it is today. The local
  * headers of those views no longer need to offset themselves past the global
  * header, so they pin to `top: 0` instead.
- *
- * The old `weaknesses` view (Mistake Book) is kept as an alias that renders the
- * Recitation Map, so existing links and `localStorage` data keep working.
  */
 const VIEWS_WITHOUT_GLOBAL_HEADER = new Set([
-  'recitation-map',
-  'audio-manager',
   'detail',
   'juz',
   'hizb',
   'mutashabihat-selection',
   'mutashabihat-multi-session',
+  'settings',
+  'recitation-map',
+  'audio-manager',
 ]);
 
 /**
@@ -149,22 +147,18 @@ const App = () => {
       } else if (parts[0] === 'mutashabihat') {
         if (parts[1] === 'custom') v = 'mutashabihat-selection';
         else if (parts[1] === 'session') v = 'mutashabihat-multi-session';
-      } else if (parts[0] === 'recitation-map') {
-        v = 'recitation-map';
-      } else if (parts[0] === 'audio-manager') {
-        v = 'audio-manager';
       } else if (parts[0] === 'juz' && parts[1]) {
         v = 'juz';
         setSelectedJuz(Number(parts[1]));
       } else if (parts[0] === 'hizb' && parts[1]) {
         v = 'hizb';
         setSelectedHizb(Number(parts[1]));
-      }
-      if (v === 'recitation-map') {
-        pv = 'config';
-      }
-      if (v === 'weaknesses') {
+      } else if (parts[0] === 'settings') {
+        v = 'settings';
+      } else if (parts[0] === 'recitation-map') {
         v = 'recitation-map';
+      } else if (parts[0] === 'audio-manager') {
+        v = 'audio-manager';
       }
     } else if (!p.get('view')) {
       v = 'list';
@@ -282,12 +276,14 @@ const App = () => {
       newPath = `/mutashabihat/custom`;
     } else if (view === 'mutashabihat-multi-session') {
       newPath = `/mutashabihat/session`;
-    } else if (view === 'weaknesses') {
-      newPath = `/weaknesses`;
-    } else if (view === 'audio-manager') {
-      newPath = `/audio-manager`;
     } else if (view === 'search') {
       newPath = `/search`;
+    } else if (view === 'settings') {
+      newPath = `/settings`;
+    } else if (view === 'recitation-map') {
+      newPath = `/recitation-map`;
+    } else if (view === 'audio-manager') {
+      newPath = `/audio-manager`;
     }
 
     const currentPath = window.location.pathname;
@@ -540,6 +536,32 @@ const App = () => {
               />
             )}
 
+            {view === 'settings' && (
+              <SettingsPage setView={setView} />
+            )}
+
+            {view === 'recitation-map' && (
+              <RecitationMap
+                surahs={surahs}
+                quranAr={quranAr}
+                quranSimple={quranSimple}
+                wordResults={wordResults}
+                setView={setView}
+                returnView="settings"
+              />
+            )}
+
+            {view === 'audio-manager' && (
+              <AudioManager
+                surahs={surahs}
+                audioDownloadControls={audioDownloadControls}
+                reciter={reciter}
+                setReciter={setReciter}
+                setView={setView}
+                returnView="settings"
+              />
+            )}
+
             {view === 'list' && (
               <SurahList
                 surahs={surahs}
@@ -572,35 +594,7 @@ const App = () => {
               />
             )}
             
-            {view === 'recitation-map' && (
-              <RecitationMap
-                surahs={surahs}
-                quranAr={quranAr}
-                quranSimple={quranSimple}
-                wordResults={wordResults}
-                setView={setView}
-              />
-            )}
-            {view === 'weaknesses' && (
-              <RecitationMap
-                surahs={surahs}
-                quranAr={quranAr}
-                quranSimple={quranSimple}
-                wordResults={wordResults}
-                setView={setView}
-              />
-            )}
 
-            {view === 'audio-manager' && (
-              <AudioManager
-                surahs={surahs}
-                audioDownloadControls={audioDownloadControls}
-                reciter={reciter}
-                setReciter={setReciter}
-                setView={setView}
-              />
-            )}
-            
             {/* Waqar data drives this whole view. Rendering it with
                 `waqarData === null` showed an empty "no surahs" list on a
                 direct-URL refresh, so wait for the fetch to settle first. */}

@@ -10,7 +10,7 @@ const STATUS_COLORS = {
   insertion: { color: 'var(--text-muted)', bg: 'var(--bg-accent)' },
 };
 
-export default function RecitationMap({ surahs, quranAr, quranSimple, wordResults, setView }) {
+export default function RecitationMap({ surahs, quranAr, quranSimple, wordResults, setView, returnView = 'list' }) {
   const [selectedSurah, setSelectedSurah] = useState(null);
 
   const eligibleSurahs = useMemo(() => {
@@ -52,7 +52,7 @@ export default function RecitationMap({ surahs, quranAr, quranSimple, wordResult
           <div className="app-container">
             <div className="flex items-center justify-between py-2" style={{ paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-                <button onClick={() => setView('list')} className="icon-btn"><ChevronLeft size={18} /></button>
+                <button onClick={() => setView(returnView)} className="icon-btn"><ChevronLeft size={18} /></button>
                 <h1 style={{ fontSize: 'var(--fs-page)', fontWeight: 'var(--fw-strong)', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}><BookOpen size={18} color="var(--accent-gold)" /> Recitation Map</h1>
               </div>
             </div>

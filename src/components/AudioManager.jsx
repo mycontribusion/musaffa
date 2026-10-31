@@ -18,7 +18,7 @@ import { RECITERS } from '../utils/quranUtils';
  * re-renders the whole list (and the summary count) for the selected reciter
  * using the same `reciter` / `setReciter` state the rest of the app uses.
  */
-const AudioManager = ({ surahs, audioDownloadControls, reciter, setReciter, setView }) => {
+const AudioManager = ({ surahs, audioDownloadControls, reciter, setReciter, setView, returnView = 'list' }) => {
   const [deletingSurah, setDeletingSurah] = useState(null);
   // Sort direction for the list: ascending (1 → 114) is the natural order, so
   // it's the default and the toggle only flips to descending. Toggling back
@@ -152,7 +152,7 @@ const AudioManager = ({ surahs, audioDownloadControls, reciter, setReciter, setV
           <div className="flex items-center justify-between py-2" style={{ paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <button
-                onClick={() => setView('list')}
+                onClick={() => setView(returnView)}
                 aria-label="Back"
                 title="Back to home"
                 className="icon-btn"
