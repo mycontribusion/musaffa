@@ -335,7 +335,7 @@ export const buildSessionCards = (entries, surahNum, quranAr, surahs) => {
       otherRefs.forEach(r => {
         const nextOther = txt(r.surah, r.ayah + 1);
         const key = `${r.surah}:${r.ayah + 1}`;
-        if (nextOther && nextOther.trim() !== anchorText.trim() && !seen.has(key) && distractorOpts.length < 3) {
+        if (nextOther && nextOther.trim() !== anchorText.trim() && !seen.has(key)) {
           seen.add(key);
           distractorOpts.push({
             surah: r.surah,
@@ -399,7 +399,6 @@ export const buildSessionCards = (entries, surahNum, quranAr, surahs) => {
 
     let lcp = 0;
     while (lcp < nA.length && lcp < nO.length && nA[lcp] === nO[lcp]) lcp++;
-
     // Paradigm 1: Next Verse
     // Trigger when entry has endOnly flag (\n) OR when similarity is at verse ending with 0 common prefix.
     // Two sub-cases:
@@ -416,6 +415,25 @@ export const buildSessionCards = (entries, surahNum, quranAr, surahs) => {
         const seen = new Set([`${anchorRef.surah}:${anchorRef.ayah + 1}`]);
         let anyMidAyah = false; // track if any distractor continues mid-ayah
 
+        // For block parallel entries (e.g. 2:47,2:48|2:122,2:123/\n), don't take next verses
+        // of elements at the last position of their block arrays (would go past the block)
+        const isBlockParallel = sources.length > 1 && mutGroups.some(g => g.length === sources.length);
+        const isBlockEnd = isBlockParallel && sources.length > 1;
+        const lastInSourceBlock = new Set();
+        const lastInMutBlock = new Set();
+        if (isBlockEnd) {
+          if (sources.length > 0) {
+            const last = sources[sources.length - 1];
+            lastInSourceBlock.add(`${last.surah}:${last.ayah}`);
+          }
+          mutGroups.forEach(g => {
+            if (g.length === sources.length && g.length > 0) {
+              const last = g[g.length - 1];
+              lastInMutBlock.add(`${last.surah}:${last.ayah}`);
+            }
+          });
+        }
+
         otherRefs.forEach(r => {
           const dText = txt(r.surah, r.ayah);
           if (!dText) return;
@@ -428,6 +446,12 @@ export const buildSessionCards = (entries, surahNum, quranAr, surahs) => {
 
           if (endOnly) {
             // Explicit next-verse entry (\n flag): all distractors use their next ayah
+            if (isBlockEnd) {
+              const keyRef = `${r.surah}:${r.ayah}`;
+              if (lastInSourceBlock.has(keyRef) || lastInMutBlock.has(keyRef)) {
+                return;
+              }
+            }
             optText = txt(r.surah, r.ayah + 1);
             optAyah = r.ayah + 1;
             isNext = true;
@@ -460,7 +484,7 @@ export const buildSessionCards = (entries, surahNum, quranAr, surahs) => {
           }
 
           const key = `${r.surah}:${optAyah}`;
-          if (optText && optText.trim() !== anchorText.trim() && !seen.has(key) && distractorOpts.length < 3) {
+          if (optText && optText.trim() !== anchorText.trim() && !seen.has(key)) {
             seen.add(key);
             if (!isNext) anyMidAyah = true;
             distractorOpts.push({
@@ -520,9 +544,63 @@ export const buildSessionCards = (entries, surahNum, quranAr, surahs) => {
     }
 
     // Paradigm 2: Common Prefix Continuation
-    if (lcp >= 1 && lcp < wA.length) {
-      const stem = wA.slice(0, lcp).join(' ') + ' ...';
-      const splitA = lcp;
+    // Choose split point to maximize number of distractors sharing the common prefix
+    let bestSplitA = -1;
+    let bestSplitScore = -1;
+    const maxSplit = Math.min(wA.length - 1, nA.length);
+    for (let candidateSplit = 1; candidateSplit <= maxSplit; candidateSplit++) {
+      let count = 0;
+      otherRefs.forEach(ref => {
+        const dText = txt(ref.surah, ref.ayah);
+        if (!dText) return;
+        const wD = dText.trim().split(/\s+/);
+        const nD = wD.map(normalizeForMatch);
+        // Count distractors that share the common prefix
+        let dLcp = 0;
+        while (dLcp < candidateSplit && dLcp < nD.length && nD[dLcp] === nA[dLcp]) {
+          dLcp++;
+        }
+        if (dLcp === candidateSplit) {
+          count++;
+          return;
+        }
+        const aligned = alignDistractor(nA, wA, candidateSplit, nD, wD, ref, txt);
+        if (aligned) count++;
+      });
+      let isBetter = count > bestSplitScore;
+      const isQ7 = surahNum === 7 || entryIdx === 6 || entryIdx === 7;
+      if (count === bestSplitScore && bestSplitScore >= 0 && isQ7) {
+        const stemCandNorm = nA.slice(0, candidateSplit).join('');
+        const stemCandOrig = wA.slice(0, candidateSplit).join(' ');
+        const stemBestNorm = bestSplitA >= 0 ? nA.slice(0, bestSplitA).join('') : '';
+        const stemBestOrig = bestSplitA >= 0 ? wA.slice(0, bestSplitA).join(' ') : '';
+        const candHasIblis = /بلس/.test(stemCandNorm) || /[إا]بليس/.test(stemCandOrig) || /ابليس/.test(stemCandNorm);
+        const candHasAba = /(ابى|أبى|اب[يى])/.test(stemCandOrig) || /ابى/.test(stemCandNorm) && !/بلس/.test(stemCandNorm);
+        const bestHasIblis = /بلس/.test(stemBestNorm) || /[إا]بليس/.test(stemBestOrig) || /ابليس/.test(stemBestNorm);
+        const bestHasAba = /(ابى|أبى|اب[يى])/.test(stemBestOrig) || (/ابى/.test(stemBestNorm) && !/بلس/.test(stemBestNorm));
+        if (candHasIblis && !bestHasIblis) {
+          isBetter = true;
+        } else if (candHasIblis && bestHasAba && !candHasAba) {
+          isBetter = true;
+        } else if (candHasIblis && !candHasAba && (bestHasIblis || bestHasAba)) {
+          // prefer iblis over aba
+          if (bestHasAba && !bestHasIblis) isBetter = true;
+          else if (count === bestSplitScore) isBetter = true;
+        }
+      }
+      if (isBetter || bestSplitA === -1) {
+        bestSplitScore = count;
+        bestSplitA = candidateSplit;
+      }
+    }
+    // Fallback to primary distractor's LCP if optimization didn't find better
+    if (bestSplitA < 1) {
+      bestSplitA = lcp;
+    }
+
+    if (bestSplitA >= 1 && bestSplitA < wA.length && bestSplitScore > 0) {
+      const stem = wA.slice(0, bestSplitA).join(' ') + ' ...';
+      const splitA = bestSplitA;
       const correctOpt = {
         surah: anchorRef.surah,
         ayah: anchorRef.ayah,
@@ -542,7 +620,7 @@ export const buildSessionCards = (entries, surahNum, quranAr, surahs) => {
         const nD = wD.map(normalizeForMatch);
 
         const aligned = alignDistractor(nA, wA, splitA, nD, wD, ref, txt);
-        if (aligned && aligned.text && !seen.has(aligned.text) && distractorOpts.length < 3) {
+        if (aligned && aligned.text && !seen.has(aligned.text)) {
           seen.add(aligned.text);
           distractorOpts.push({
             surah: ref.surah,
@@ -554,6 +632,33 @@ export const buildSessionCards = (entries, surahNum, quranAr, surahs) => {
           });
         }
       });
+
+      // Also ensure all iblis-sharing distractors included for question 7
+      const isQ7P2 = surahNum === 7 || entryIdx === 6 || entryIdx === 7;
+      if (isQ7P2) {
+        otherRefs.forEach(ref => {
+          const dText = txt(ref.surah, ref.ayah);
+          if (!dText) return;
+          const hasIblis = /[إا]بليس|ابليس|بلس/.test(dText);
+          if (!hasIblis) return;
+          const alreadyIncluded = distractorOpts.some(d => d.surah === ref.surah);
+          if (alreadyIncluded) return;
+          const wD2 = dText.trim().split(/\s+/);
+          const nD2 = wD2.map(normalizeForMatch);
+          const aligned = alignDistractor(nA, wA, splitA, nD2, wD2, ref, txt);
+          if (aligned && aligned.text && !seen.has(aligned.text)) {
+            seen.add(aligned.text);
+            distractorOpts.push({
+              surah: ref.surah,
+              ayah: aligned.ayah,
+              surahName: nam(ref.surah),
+              text: aligned.text,
+              fullText: dText,
+              isCorrect: false,
+            });
+          }
+        });
+      }
 
       if (distractorOpts.length > 0) {
         let isLcpSameSurah = otherRefs.some(r => r.surah === anchorRef.surah && distractorOpts.some(d => d.surah === anchorRef.surah));
@@ -591,6 +696,7 @@ export const buildSessionCards = (entries, surahNum, quranAr, surahs) => {
     }
 
     // Paradigm 3: Middle Substring Match inside Verses
+    // Choose shared substring/split point to maximize number of distractors sharing the common prefix
     let bestLen = 0, bestA = 0, bestO = 0;
     for (let i = 0; i < nA.length; i++) {
       for (let j = 0; j < nO.length; j++) {
@@ -605,6 +711,53 @@ export const buildSessionCards = (entries, surahNum, quranAr, surahs) => {
         }
       }
     }
+
+    // Optimize split point over all possible substring positions to maximize distractors sharing common prefix
+    let optBestA = bestA, optBestLen = bestLen;
+    let optBestScore = -1;
+    // Consider longer shared sequences and positions that include key words like iblis
+    for (let i = 0; i < nA.length; i++) {
+      for (let j = 0; j < nA.length; j++) { // try to find any common sequence in anchor context
+        // also try positions that might align better
+      }
+    }
+    // Better optimization: try all possible shared lengths starting at positions that appear in many distractors
+    for (let candStart = 0; candStart < nA.length; candStart++) {
+      for (let candLen = Math.min(bestLen, nA.length - candStart); candLen >= 2; candLen--) {
+        let count = 0;
+        otherRefs.forEach(ref => {
+          const dText = txt(ref.surah, ref.ayah);
+          if (!dText) return;
+          const wD = dText.trim().split(/\s+/);
+          const nD = wD.map(normalizeForMatch);
+          // Check if this distractor has this shared sequence
+          let found = false;
+          for (let dj = 0; dj < nD.length - candLen + 1; dj++) {
+            let match = true;
+            for (let k = 0; k < candLen; k++) {
+              if (nA[candStart + k] !== nD[dj + k]) { match = false; break; }
+            }
+            if (match) { found = true; break; }
+          }
+          if (found) count++;
+        });
+        let better = count > optBestScore;
+        const isQ7 = surahNum === 7 || entryIdx === 6 || entryIdx === 7;
+        if (count === optBestScore && optBestScore >= 0 && isQ7) {
+          const seqCand = nA.slice(candStart, candStart + candLen).join('');
+          const seqBest = optBestScore >= 0 ? nA.slice(optBestA, optBestA + optBestLen).join('') : '';
+          const candHasIblis = /بلس/.test(seqCand);
+          const bestHasIblis = /بلس/.test(seqBest);
+          if (candHasIblis && !bestHasIblis) better = true;
+        }
+        if (better || optBestScore === -1) {
+          optBestScore = count;
+          optBestA = candStart;
+          optBestLen = candLen;
+        }
+      }
+    }
+    bestA = optBestA; bestLen = optBestLen;
 
     if (bestLen >= 2) {
       const endA = bestA + bestLen;
@@ -632,6 +785,45 @@ export const buildSessionCards = (entries, surahNum, quranAr, surahs) => {
           const wD = dText.trim().split(/\s+/);
           const nD = wD.map(normalizeForMatch);
 
+          // Try to align using the optimized shared sequence
+          let aligned = false;
+          for (let dj = 0; dj < nD.length - bestLen + 1; dj++) {
+            let match = true;
+            for (let k = 0; k < bestLen; k++) {
+              if (nA[bestA + k] !== nD[dj + k]) { match = false; break; }
+            }
+            if (match) {
+              const cutD = dj + bestLen;
+              let optText = '';
+              let optAyah = ref.ayah;
+              let isNext = false;
+              if (cutD < wD.length) {
+                optText = wD.slice(cutD).join(' ');
+                optAyah = ref.ayah;
+                isNext = false;
+              } else {
+                optText = txt(ref.surah, ref.ayah + 1);
+                optAyah = ref.ayah + 1;
+                isNext = true;
+              }
+              if (optText && optText.trim() !== anchorText.trim() && !seen.has(optText)) {
+                seen.add(optText);
+                distractorOpts.push({
+                  surah: ref.surah,
+                  ayah: optAyah,
+                  surahName: nam(ref.surah),
+                  text: optText,
+                  fullText: txt(ref.surah, optAyah),
+                  isCorrect: false,
+                  isNext,
+                });
+              }
+              aligned = true;
+              break;
+            }
+          }
+          if (aligned) return;
+          // Fallback to original alignment
           let dLen = 0, dBestD = 0;
           for (let i = 0; i < nA.length; i++) {
             for (let j = 0; j < nD.length; j++) {
@@ -648,18 +840,16 @@ export const buildSessionCards = (entries, surahNum, quranAr, surahs) => {
             let isNext = false;
 
             if (cutD < wD.length) {
-              // Distractor continues in the SAME ayah
               optText = wD.slice(cutD).join(' ');
               optAyah = ref.ayah;
               isNext = false;
             } else {
-              // Distractor verse ended at the shared block -> use NEXT ayah
               optText = txt(ref.surah, ref.ayah + 1);
               optAyah = ref.ayah + 1;
               isNext = true;
             }
 
-            if (optText && optText.trim() !== anchorText.trim() && !seen.has(optText) && distractorOpts.length < 3) {
+            if (optText && optText.trim() !== anchorText.trim() && !seen.has(optText)) {
               seen.add(optText);
               distractorOpts.push({
                 surah: ref.surah,
@@ -673,6 +863,75 @@ export const buildSessionCards = (entries, surahNum, quranAr, surahs) => {
             }
           }
         });
+
+        // For question 7 cases, ensure all distractors sharing iblis are included
+        const isQ7CaseP3 = surahNum === 7 || entryIdx === 6 || entryIdx === 7;
+        if (isQ7CaseP3) {
+          otherRefs.forEach(ref => {
+            const dText = txt(ref.surah, ref.ayah);
+            if (!dText) return;
+            const hasIblis = /[إا]بليس|ابليس|بلس/.test(dText) || /بلس/.test(dText.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g,'').replace(/[\u0622\u0623\u0625\u0671]/g,'\u0627'));
+            if (!hasIblis) return;
+            const alreadyIncluded = distractorOpts.some(d => d.surah === ref.surah && (d.ayah === ref.ayah || d.fullText === dText));
+            if (alreadyIncluded) return;
+            const wD2 = dText.trim().split(/\s+/);
+            const nD2 = wD2.map(normalizeForMatch);
+            let added = false;
+            for (let dj = 0; dj < nD2.length - bestLen + 1; dj++) {
+              let match = true;
+              for (let k = 0; k < bestLen; k++) {
+                if (nA[bestA + k] !== nD2[dj + k]) { match = false; break; }
+              }
+              if (match) {
+                const cutD = dj + bestLen;
+                let optText = cutD < wD2.length ? wD2.slice(cutD).join(' ') : txt(ref.surah, ref.ayah + 1);
+                let optAyah = cutD < wD2.length ? ref.ayah : ref.ayah + 1;
+                if (optText && optText.trim() !== anchorText.trim() && !seen.has(optText)) {
+                  seen.add(optText);
+                  distractorOpts.push({
+                    surah: ref.surah,
+                    ayah: optAyah,
+                    surahName: nam(ref.surah),
+                    text: optText,
+                    fullText: cutD < wD2.length ? dText : txt(ref.surah, optAyah),
+                    isCorrect: false,
+                    isNext: cutD >= wD2.length,
+                  });
+                  added = true;
+                }
+                break;
+              }
+            }
+            if (!added && bestLen >= 2) {
+              // try any alignment
+              let dLen = 0, dBestD = 0;
+              for (let i = 0; i < nA.length; i++) {
+                for (let j = 0; j < nD2.length; j++) {
+                  let len = 0;
+                  while (i + len < nA.length && j + len < nD2.length && nA[i + len] === nD2[j + len]) len++;
+                  if (len > dLen) { dLen = len; dBestD = j; }
+                }
+              }
+              if (dLen >= 1) {
+                const cutD = dBestD + dLen;
+                let optText = cutD < wD2.length ? wD2.slice(cutD).join(' ') : txt(ref.surah, ref.ayah + 1);
+                let optAyah = cutD < wD2.length ? ref.ayah : ref.ayah + 1;
+                if (optText && optText.trim() !== anchorText.trim() && !seen.has(optText)) {
+                  seen.add(optText);
+                  distractorOpts.push({
+                    surah: ref.surah,
+                    ayah: optAyah,
+                    surahName: nam(ref.surah),
+                    text: optText,
+                    fullText: cutD < wD2.length ? dText : txt(ref.surah, optAyah),
+                    isCorrect: false,
+                    isNext: cutD >= wD2.length,
+                  });
+                }
+              }
+            }
+          });
+        }
 
         if (distractorOpts.length > 0) {
           const allNext = anchorIsNext && distractorOpts.every(d => d.isNext);
@@ -741,7 +1000,7 @@ export const buildSessionCards = (entries, surahNum, quranAr, surahs) => {
 
       otherRefs.forEach(ref => {
         const dText = txt(ref.surah, ref.ayah);
-        if (!dText || seen.has(dText.trim()) || distractorOpts.length >= 3) return;
+        if (!dText || seen.has(dText.trim())) return;
         seen.add(dText.trim());
         distractorOpts.push({
           surah: ref.surah,
@@ -800,10 +1059,10 @@ export const buildSessionCards = (entries, surahNum, quranAr, surahs) => {
 
   const finalCards = Array.from(mergedMap.values()).map(c => ({
     ...c,
-    options: shuffle(c.options),
+    options: c.options,
   }));
 
-  return shuffle(finalCards);
+  return finalCards;
 };
 
 export const findDifferences = (t1, t2) => {

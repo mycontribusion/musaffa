@@ -52,6 +52,7 @@ export const useStuckDetection = ({
   ayahWordCounts = [],
   lastMatchedExpIdx = -1,
   stuckTimerDuration = 5, // seconds, default 5s
+  turn = 'app',
 }) => {
   const stuckTimerRef = useRef(null);
   const settleTimerRef = useRef(null);
@@ -67,6 +68,10 @@ export const useStuckDetection = ({
   const hintPayloadSnapshotRef = useRef(null);
   const isHintPlayingRef = useRef(false);
   const hintPassedRef = useRef(false);
+  /** Tracks the current turn so timers that fire after the turn changed to
+      'app' (audio playback) can be refused without needing a fresh closure. */
+  const turnRef = useRef(turn);
+  useEffect(() => { turnRef.current = turn; }, [turn]);
   /** Latches once a settle has been reported, so one quiet period reports once. */
   const settleFiredRef = useRef(false);
   const mismatchCountRef = useRef(0);
@@ -132,6 +137,16 @@ export const useStuckDetection = ({
   const triggerHint = useCallback((verseIndex, transcript = '', payload = null) => {
     if (!onStuckRef.current || isHintPlayingRef.current) return;
     if (hintedVerseIndexRef.current === verseIndex) return;
+    // Refuse to fire during the app's turn. A stale timer armed before the
+    // turn changed to 'app' (audio playback) would otherwise pop the red hint
+    // overlay over the Quran recitation. This is the second line of defense
+    // alongside the guard in handleStuck.
+    if (turnRef.current !== 'user') {
+      if (import.meta.env.MODE !== 'production') {
+        console.log('[HINT TRIGGER SKIPPED] Not the user turn — turn is', turnRef.current);
+      }
+      return;
+    }
 
     // Lock immediately — before any async boundary or further state writes — so
     // a second timer that fires in the same event-loop turn cannot also pass the
@@ -303,6 +318,26 @@ export const useStuckDetection = ({
     // If new green word(s) in this verse, reset the timer
     if (highestVerseCorrectIdx > lastCorrectVerseWordIdxRef.current) {
       lastCorrectVerseWordIdxRef.current = highestVerseCorrectIdx;
+
+      // Dismiss the visual hint when the user makes progress in the
+      // currently-hinted verse. The hint should not stay up forever just
+      // because the user recited one word correctly — it should close so
+      // they can continue, and reappear only if they get stuck again.
+      //
+      // `notifyHintEnded` (called by `interruptHint`) re-arms the
+      // no-green-word timer for the same verse, so the hint can come back
+      // if the user stalls on the next word.
+      if (hintedVerseIndexRef.current === verseIndex && isHintPlayingRef.current) {
+        if (import.meta.env.MODE !== 'production') {
+          console.log('[HINT DISMISSED — progress]', { verseIndex, highestVerseCorrectIdx });
+        }
+        interruptHintRef.current?.();
+        // `interruptHint` → `notifyHintEnded` re-arms the timer for this
+        // verse, so the hint can reappear if the user stalls again. The
+        // re-armed timer replaces the one we were about to reset below.
+        return;
+      }
+
       if (noGreenWordArmedRef.current && armedVerseIndexRef.current === verseIndex) {
         // clearNoGreenWordTimer nulls armedVerseIndexRef — re-set it immediately after
         // so the timeout guard (armedVerseIndexRef.current !== verseIndex) can pass.
@@ -334,7 +369,13 @@ export const useStuckDetection = ({
     hintedVerseIndexRef.current = null;
     // Re-arm the 3-second countdown for the same verse. If the user recites
     // a new green word the timer will be reset; if they don't, the hint plays again.
-    if (hintedVerse !== null && hintedVerse !== undefined) {
+    //
+    // Guard: only re-arm when it is still the user's turn. If the turn has
+    // flipped to 'app' (audio playback) in the meantime, re-arming would let a
+    // timer fire during the app's turn and pop the red hint overlay over the
+    // Quran recitation. triggerHint also refuses to fire in that case, but
+    // refusing to arm at all is the cleaner fix.
+    if (hintedVerse !== null && hintedVerse !== undefined && turnRef.current === 'user') {
       clearNoGreenWordTimer();
       lastCorrectVerseWordIdxRef.current = -1; // reset green-word tracker so any new green word extends the window
       armedVerseIndexRef.current = hintedVerse;
@@ -350,6 +391,10 @@ export const useStuckDetection = ({
       }, stuckTimerDuration * 1000);
       if (import.meta.env.MODE !== 'production') {
         console.log('[NO GREEN WORD RE-ARMED — after hint]', { verseIndex: hintedVerse });
+      }
+    } else if (hintedVerse !== null && hintedVerse !== undefined && turnRef.current !== 'user') {
+      if (import.meta.env.MODE !== 'production') {
+        console.log('[NO GREEN WORD NOT RE-ARMED] Turn is not user — turn is', turnRef.current);
       }
     }
   }, [clearNoGreenWordTimer, triggerHint, stuckTimerDuration]);

@@ -1,0 +1,3 @@
+Made the verse reference (surah · surah:ayah) in each option always visible instead of only after answering, in `MutashabihatSession.jsx`.
+
+Removed randomization: cards and options now preserve waqar text order in both `buildSessionCards` and `MutashabihatSession`.

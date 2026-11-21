@@ -181,6 +181,18 @@ const PartnerSession = ({
     if (process.env.NODE_ENV !== 'production') {
       console.log('[HINT HANDLER]', { stuckIndex, hasHint: !!hintAudioRef.current, hasVerse: !!activeChunkSlice[stuckIndex], turn, sttActive });
     }
+    // Guard: never set the visual hint during the app's turn (audio playback).
+    // A stale timer armed before the turn changed can fire while the Quran is
+    // being recited aloud, which is what made the red hint overlay pop up over
+    // the app's turn. Returning early here is the primary defense; the refs in
+    // triggerHint are reset by clearStuckState when the turn changes.
+    if (turn !== 'user') {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[HINT SKIPPED] Not the user turn — turn is', turn);
+      }
+      sttActionsRef.current.notifyHintEnded?.();
+      return;
+    }
     if (hintAudioRef.current || !activeChunkSlice[stuckIndex]) {
       sttActionsRef.current.notifyHintEnded?.();
       return;
@@ -328,7 +340,8 @@ const PartnerSession = ({
       activeChunkSlice,
       quranSimple,
       audioHintsEnabled,
-      params.stuckTimerDuration ?? 5
+      params.stuckTimerDuration ?? 5,
+      turn
     );
 
   sttActionsRef.current = { pauseRecognition, resumeRecognition, notifyHintEnded };

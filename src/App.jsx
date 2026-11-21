@@ -88,25 +88,57 @@ const App = () => {
   const [lastRead, setLastRead] = useLocalStorageState('quran_last_read', []);
   const [detailForceStart, setDetailForceStart] = useState(false);
 
+  // Normalize/deduplicate legacy lastRead entries on load
+  useEffect(() => {
+    setLastRead(prev => {
+      const arr = Array.isArray(prev) ? prev : (prev ? [prev] : []);
+      const seen = new Set();
+      const deduped = [];
+      for (const e of arr) {
+        const m = e.mode || 'surah';
+        const id = m === 'juz' ? `juz:${e.divisionNumber}` : m === 'hizb' ? `hizb:${e.divisionNumber}` : `surah:${e.surahNumber}`;
+        if (seen.has(id)) continue;
+        seen.add(id);
+        deduped.push(e);
+      }
+      return deduped.slice(0, 5);
+    });
+  }, []);
+
   /**
    * Add or update a last-read entry, keeping at most 5 entries sorted by recency.
    * Backward compatible: if stored value is a single object (old format), wraps it in an array.
    */
+  const readIdentity = (e) => {
+    const m = e.mode || 'surah';
+    if (m === 'juz') return `juz:${e.divisionNumber}`;
+    if (m === 'hizb') return `hizb:${e.divisionNumber}`;
+    return `surah:${e.surahNumber}`;
+  };
+
   const updateLastRead = useCallback((entry) => {
     setLastRead(prev => {
       // Backward compatibility: if prev is not an array, wrap it
       const arr = Array.isArray(prev) ? prev : (prev ? [prev] : []);
       const { surahNumber, ayahNumber, mode = 'surah', divisionNumber } = entry;
-      const key = `${surahNumber}:${mode}:${divisionNumber || 0}`;
+      const key = mode === 'juz' ? `juz:${divisionNumber}` : mode === 'hizb' ? `hizb:${divisionNumber}` : `surah:${surahNumber}`;
 
-      // Remove existing entry with same key if present
-      const filtered = arr.filter(e => `${e.surahNumber}:${e.mode || 'surah'}:${e.divisionNumber || 0}` !== key);
+      // Remove existing entry with same identity if present
+      const filtered = arr.filter(e => readIdentity(e) !== key);
 
       // Add new entry at front
       const next = [{ surahNumber, ayahNumber, mode, divisionNumber, updatedAt: Date.now() }, ...filtered];
 
-      // Keep max 5
-      return next.slice(0, 5);
+      // Deduplicate by identity keeping most recent (front), then cap at 5
+      const seen = new Set();
+      const deduped = [];
+      for (const e of next) {
+        const id = readIdentity(e);
+        if (seen.has(id)) continue;
+        seen.add(id);
+        deduped.push(e);
+      }
+      return deduped.slice(0, 5);
     });
   }, [setLastRead]);
   const [wordResults, setWordResults] = useLocalStorageState('quran_word_results', {});

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, CheckCircle2, XCircle, RotateCcw, CircleHelp, Printer } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, RotateCcw, CircleHelp, Printer } from 'lucide-react';
 import { buildSessionCards, seededShuffle } from '../utils/mutashabihatParser';
 
 /**
@@ -77,19 +77,17 @@ const OptionBtn = ({ opt, answered, selected, onClick }) => {
       }}>
         {opt.text}
       </p>
-      {answered && (
-        <span style={{
-          display: 'block',
-          fontSize: 'var(--fs-label)',
-          color: correct ? '#34d399' : 'var(--text-muted)',
-          marginTop: '0.45rem',
-          textAlign: 'left',
-          fontWeight: 700,
-          letterSpacing: '0.04em',
-        }}>
-          {opt.surahName} · {opt.surah}:{opt.ayah}
-        </span>
-      )}
+      <span style={{
+        display: 'block',
+        fontSize: 'var(--fs-label)',
+        color: 'var(--text-muted)',
+        marginTop: '0.45rem',
+        textAlign: 'left',
+        fontWeight: 700,
+        letterSpacing: '0.04em',
+      }}>
+        {opt.surahName} · {opt.surah}:{opt.ayah}
+      </span>
       {answered && (
         <span style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)' }}>
           {opt.isCorrect
@@ -121,7 +119,7 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
           all.push(...buildSessionCards(entries, surahNum, quranAr, surahs));
         }
       });
-      return seededShuffle(all, (sessionKey || 0) + 1);
+      return all;
     }
     if (!allSurahEntries?.length) return [];
     return buildSessionCards(allSurahEntries, surah?.number, quranAr, surahs);
@@ -151,15 +149,28 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
     setSelected(opt);
     const isCorrect = opt.isCorrect;
     if (isCorrect) setScore(s => s + 1);
-    
+
     setAnswersHistory(prev => [...prev, { card: cards[idx], selectedOpt: opt, isCorrect }]);
 
-    setTimeout(() => {
-      if (idx + 1 >= total) { setDone(true); return; }
-      setIdx(i => i + 1);
-      setAnswered(false);
-      setSelected(null);
-    }, 2000);
+    // Advance immediately on click (no delay).
+    if (idx + 1 >= total) { setDone(true); return; }
+    setIdx(i => i + 1);
+    setAnswered(false);
+    setSelected(null);
+  };
+
+  const goPrev = () => {
+    if (idx <= 0) return;
+    setIdx(i => i - 1);
+    setAnswered(false);
+    setSelected(null);
+  };
+
+  const goNext = () => {
+    if (idx + 1 >= total) { setDone(true); return; }
+    setIdx(i => i + 1);
+    setAnswered(false);
+    setSelected(null);
   };
 
   const restart = () => {
@@ -392,6 +403,18 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
         </div>
       </header>
 
+      {/* Forward/backward navigation arrows (above the question) */}
+      <div style={{ maxWidth: 700, margin: '1rem auto 0', padding: '0 1.25rem', display: 'flex', justifyContent: 'space-between', gap: 'var(--space-3)' }}>
+        <button onClick={goPrev} disabled={idx <= 0} aria-label="Previous question"
+          style={{ flex: 1, padding: '0.75rem', borderRadius: '0.9rem', background: 'var(--glass-bg)', border: 'var(--border-hairline)', color: idx <= 0 ? 'var(--text-muted)' : 'var(--text-primary)', cursor: idx <= 0 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: idx <= 0 ? 0.4 : 1 }}>
+          <ChevronLeft size={18} /> Prev
+        </button>
+        <button onClick={goNext} disabled={idx + 1 >= total} aria-label="Next question"
+          style={{ flex: 1, padding: '0.75rem', borderRadius: '0.9rem', background: 'var(--glass-bg)', border: 'var(--border-hairline)', color: idx + 1 >= total ? 'var(--text-muted)' : 'var(--text-primary)', cursor: idx + 1 >= total ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: idx + 1 >= total ? 0.4 : 1 }}>
+          Next <ChevronRight size={18} />
+        </button>
+      </div>
+
       {/* Card */}
       <main style={{ maxWidth: 700, margin: '0 auto', padding: '2rem 1.25rem 5rem' }}>
         <AnimatePresence mode="wait">
@@ -454,7 +477,7 @@ const MutashabihatSession = ({ surah, allSurahEntries, quranAr, surahs, onClose,
                     color: 'var(--text-muted)', textTransform: 'uppercase',
                   }}
                 >
-                  {selected?.isCorrect ? '✓ Correct' : '✗ Incorrect'} · {idx + 1 < total ? 'Next loading…' : 'Session complete'}
+                  {selected?.isCorrect ? '✓ Correct' : '✗ Incorrect'} · {idx + 1 < total ? 'Tap Next or answer' : 'Session complete'}
                 </motion.p>
               )}
             </AnimatePresence>

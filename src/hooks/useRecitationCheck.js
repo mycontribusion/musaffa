@@ -28,6 +28,13 @@ export const useRecitationCheck = (
   quranSimple = null,
   audioHintsEnabled = true,
   stuckTimerDuration = 5,
+  /**
+   * The current turn ('app' or 'user'). Propagated into useStuckDetection so
+   * that stale timers armed before the turn changed to 'app' (audio playback)
+   * can be refused — this is what prevents the red hint overlay from popping
+   * up over the Quran recitation.
+   */
+  turn = 'app',
 ) => {
   // ── liveResults state is OWNED HERE, not inside useRecitationWorker ────────
   const [liveResults, setLiveResults] = useState(null);
@@ -57,6 +64,7 @@ export const useRecitationCheck = (
     ayahWordCounts,
     lastMatchedExpIdx: liveResults?.lastMatchedExpIdx ?? -1,
     stuckTimerDuration,
+    turn,
   });
 
   // ── useSpeechRecognition MUST come before useRecitationWorker ─────────────
@@ -231,6 +239,23 @@ export const useRecitationCheck = (
       clearWorkerResults();
     }
   }, [isActive, startListening]);
+
+  /**
+   * Clear stuck-detection state the moment the turn flips away from the user.
+   *
+   * `isActive` is derived from `turn === 'user'` in PartnerSession, so this
+   * effect runs on the same commit that flips the turn to 'app' (audio
+   * playback). Clearing the timers here — rather than relying solely on the
+   * `isActive` effect above — means there is no window where a stale timer
+   * armed during the user's turn can fire while the Quran is being recited
+   * aloud. The previous `sttActive` effect in PartnerSession ran after this
+   * one, leaving a gap.
+   */
+  useEffect(() => {
+    if (turn !== 'user') {
+      clearStuckState();
+    }
+  }, [turn, clearStuckState]);
 
    return {
      isSupported,
