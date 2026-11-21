@@ -274,8 +274,6 @@ export const useStuckDetection = ({
    */
   const checkGreenWords = useCallback((results, verseIndex) => {
     if (!results || results.length === 0) return;
-    if (hintedVerseIndexRef.current !== null) return; // Don't arm while hint is active
-    if (isHintPlayingRef.current) return;
     if (verseIndex === null || verseIndex === undefined || verseIndex < 0) return;
 
     const verseRanges = verseWordRangesRef.current;
@@ -284,26 +282,31 @@ export const useStuckDetection = ({
 
     const delayMs = stuckTimerDuration * 1000;
 
-    // Check if the active verse has changed
-    if (armedVerseIndexRef.current !== verseIndex) {
-      // New verse became active — clear stale timer first (it nulls armedVerseIndexRef),
-      // then set armedVerseIndexRef to the new verse so the timeout guard can pass.
-      clearNoGreenWordTimer();
-      lastCorrectVerseWordIdxRef.current = -1;
-      armedVerseIndexRef.current = verseIndex;
-      noGreenWordArmedRef.current = true;
-      noGreenWordTimerRef.current = setTimeout(() => {
-        // Guard: verify timer is still armed for this verse
-        if (!noGreenWordArmedRef.current || armedVerseIndexRef.current !== verseIndex) return;
-        noGreenWordTimerRef.current = null;
-        noGreenWordArmedRef.current = false;
+    // Only arm/re-arm the no-green-word timer when the hint is NOT active.
+    // When the hint is active, we only detect dismissal on progress;
+    // re-arming is handled by notifyHintEnded after dismissal.
+    if (!isHintPlayingRef.current) {
+      // Check if the active verse has changed
+      if (armedVerseIndexRef.current !== verseIndex) {
+        // New verse became active — clear stale timer first (it nulls armedVerseIndexRef),
+        // then set armedVerseIndexRef to the new verse so the timeout guard can pass.
+        clearNoGreenWordTimer();
+        lastCorrectVerseWordIdxRef.current = -1;
+        armedVerseIndexRef.current = verseIndex;
+        noGreenWordArmedRef.current = true;
+        noGreenWordTimerRef.current = setTimeout(() => {
+          // Guard: verify timer is still armed for this verse
+          if (!noGreenWordArmedRef.current || armedVerseIndexRef.current !== verseIndex) return;
+          noGreenWordTimerRef.current = null;
+          noGreenWordArmedRef.current = false;
+          if (import.meta.env.MODE !== 'production') {
+            console.log('[NO GREEN WORD STUCK]', { verseIndex, lastCorrectVerseIdx: lastCorrectVerseWordIdxRef.current });
+          }
+          triggerHint(verseIndex, '', latestPayloadRef.current);
+        }, delayMs);
         if (import.meta.env.MODE !== 'production') {
-          console.log('[NO GREEN WORD STUCK]', { verseIndex, lastCorrectVerseIdx: lastCorrectVerseWordIdxRef.current });
+          console.log('[NO GREEN WORD ARMED]', { verseIndex, range: currentRange });
         }
-        triggerHint(verseIndex, '', latestPayloadRef.current);
-      }, delayMs);
-      if (import.meta.env.MODE !== 'production') {
-        console.log('[NO GREEN WORD ARMED]', { verseIndex, range: currentRange });
       }
     }
 
@@ -315,18 +318,18 @@ export const useStuckDetection = ({
       }
     }
 
-    // If new green word(s) in this verse, reset the timer
+    // If new green word(s) in this verse, reset the timer.
+    // Dismiss the visual hint when the user makes progress in the
+    // currently-hinted verse. The hint should not stay up forever just
+    // because the user recited one word correctly — it should close so
+    // they can continue, and reappear only if they get stuck again.
+    //
+    // `notifyHintEnded` (called by `interruptHint`) re-arms the
+    // no-green-word timer for the same verse, so the hint can come back
+    // if the user stalls on the next word.
     if (highestVerseCorrectIdx > lastCorrectVerseWordIdxRef.current) {
       lastCorrectVerseWordIdxRef.current = highestVerseCorrectIdx;
 
-      // Dismiss the visual hint when the user makes progress in the
-      // currently-hinted verse. The hint should not stay up forever just
-      // because the user recited one word correctly — it should close so
-      // they can continue, and reappear only if they get stuck again.
-      //
-      // `notifyHintEnded` (called by `interruptHint`) re-arms the
-      // no-green-word timer for the same verse, so the hint can come back
-      // if the user stalls on the next word.
       if (hintedVerseIndexRef.current === verseIndex && isHintPlayingRef.current) {
         if (import.meta.env.MODE !== 'production') {
           console.log('[HINT DISMISSED — progress]', { verseIndex, highestVerseCorrectIdx });
@@ -338,7 +341,7 @@ export const useStuckDetection = ({
         return;
       }
 
-      if (noGreenWordArmedRef.current && armedVerseIndexRef.current === verseIndex) {
+      if (!isHintPlayingRef.current && noGreenWordArmedRef.current && armedVerseIndexRef.current === verseIndex) {
         // clearNoGreenWordTimer nulls armedVerseIndexRef — re-set it immediately after
         // so the timeout guard (armedVerseIndexRef.current !== verseIndex) can pass.
         clearNoGreenWordTimer();
